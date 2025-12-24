@@ -1,14 +1,29 @@
 {
-  "name": "vue-hook-form",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@vuehookform/core",
+  "version": "0.1.0",
+  "description": "TypeScript-first form library for Vue 3, inspired by React Hook Form. Form-level state management with Zod validation.",
   "type": "module",
+  "main": "./dist/vuehookform.cjs",
+  "module": "./dist/vuehookform.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/vuehookform.js",
+      "require": "./dist/vuehookform.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:lib": "vite build --config vite.config.lib.ts",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
@@ -17,13 +32,33 @@
     "lint": "run-s lint:*",
     "format": "prettier --write --experimental-cli src/",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "prepublishOnly": "npm run build:lib"
   },
-  "dependencies": {
-    "pinia": "^3.0.4",
-    "vue": "^3.5.25",
-    "vue-router": "^4.6.3",
-    "zod": "^4.2.1"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuehookform/vuehookform.git"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "form",
+    "forms",
+    "validation",
+    "zod",
+    "typescript",
+    "hook",
+    "react-hook-form"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuehookform/vuehookform/issues"
+  },
+  "homepage": "https://github.com/vuehookform/vuehookform#readme",
+  "peerDependencies": {
+    "vue": "^3.3.0",
+    "zod": "^3.0.0 || ^4.0.0"
   },
   "devDependencies": {
     "@prettier/plugin-oxc": "^0.0.5",
@@ -42,10 +77,15 @@
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.29.0",
+    "pinia": "^3.0.4",
     "prettier": "3.6.2",
     "typescript": "~5.9.0",
     "vite": "npm:rolldown-vite@latest",
+    "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.16",
-    "vue-tsc": "^3.1.5"
+    "vue": "^3.5.25",
+    "vue-router": "^4.6.3",
+    "vue-tsc": "^3.1.5",
+    "zod": "^4.2.1"
   }
 }

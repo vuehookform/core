@@ -19,16 +19,16 @@
 ### Installation
 
 ```bash
-npm install zod  # Peer dependency
+npm install @vuehookform/core zod
 # or
-bun add zod
+bun add @vuehookform/core zod
 ```
 
 ### Basic Usage
 
 ```vue
 <script setup lang="ts">
-import { useForm } from './lib'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 // 1. Define your schema
