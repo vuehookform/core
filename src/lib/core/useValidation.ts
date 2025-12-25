@@ -1,6 +1,6 @@
 import type { FormContext } from './formContext'
 import type { FieldErrors, FieldError } from '../types'
-import { set, get } from '../utils/paths'
+import { set } from '../utils/paths'
 
 /**
  * Helper to clear errors for a specific field path and its children

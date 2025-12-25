@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { useForm } from '../useForm'
 import { z } from 'zod'
 
@@ -802,7 +802,7 @@ describe('fields (field arrays)', () => {
       })
 
       it('should handle move with negative index', () => {
-        const { fields, getValues } = useForm({
+        const { fields } = useForm({
           schema,
           defaultValues: {
             users: [
@@ -856,7 +856,7 @@ describe('fields (field arrays)', () => {
       })
 
       it('should handle insert with negative index', () => {
-        const { fields, getValues } = useForm({
+        const { fields } = useForm({
           schema,
           defaultValues: {
             users: [{ name: 'John', email: 'john@test.com' }],
@@ -916,7 +916,7 @@ describe('fields (field arrays)', () => {
       })
 
       it('should handle remove with negative index', () => {
-        const { fields, getValues } = useForm({
+        const { fields } = useForm({
           schema,
           defaultValues: {
             users: [{ name: 'John', email: 'john@test.com' }],

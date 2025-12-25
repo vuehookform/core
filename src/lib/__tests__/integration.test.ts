@@ -42,7 +42,7 @@ describe('integration tests', () => {
       const confirmInput = createAndMountInput()
 
       const onSubmit = vi.fn()
-      const { register, handleSubmit, formState, setValue, validate } = useForm(
+      const { register, handleSubmit, formState } = useForm(
         {
           schema,
           defaultValues: { email: '', password: '', confirmPassword: '' },
@@ -151,7 +151,7 @@ describe('integration tests', () => {
     it('should handle nested objects in field arrays', async () => {
       const titleInput = createAndMountInput()
 
-      const { register, fields, handleSubmit, getValues } = useForm({
+      const { register, fields, handleSubmit } = useForm({
         schema: complexSchema,
         defaultValues: {
           title: '',

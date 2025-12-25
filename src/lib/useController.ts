@@ -2,7 +2,6 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { ZodType } from 'zod'
 import type { UseFormReturn, Path, PathValue, InferSchema, FieldState } from './types'
 import { useFormContext } from './context'
-import { get } from './utils/paths'
 
 /**
  * Options for useController composable

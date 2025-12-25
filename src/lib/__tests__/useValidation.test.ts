@@ -438,7 +438,7 @@ describe('useValidation', () => {
     })
 
     it('should clear errors for nested field and children', async () => {
-      const { validate, setValue, clearErrors, formState } = useForm({
+      const { validate, clearErrors, formState } = useForm({
         schema: nestedSchema,
         defaultValues: {
           user: {

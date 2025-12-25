@@ -155,7 +155,7 @@ describe('useForm', () => {
     it('should handle async defaultValues error gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { formState, getValues } = useForm({
+      const { formState } = useForm({
         schema,
         defaultValues: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10))
@@ -213,7 +213,7 @@ describe('useForm', () => {
     })
 
     it('should keep submit count when keepSubmitCount is true', async () => {
-      const { handleSubmit, formState, reset, setValue } = useForm({
+      const { handleSubmit, formState, reset } = useForm({
         schema,
         defaultValues: { email: 'test@test.com', password: 'password123', name: 'Test' },
       })
@@ -229,7 +229,7 @@ describe('useForm', () => {
     })
 
     it('should reset submit count by default', async () => {
-      const { handleSubmit, formState, reset, setValue } = useForm({
+      const { handleSubmit, formState, reset } = useForm({
         schema,
         defaultValues: { email: 'test@test.com', password: 'password123', name: 'Test' },
       })

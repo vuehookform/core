@@ -232,7 +232,7 @@ describe('async validation edge cases', () => {
     })
 
     it('should handle unregister during pending validation', async () => {
-      const { register, unregister, formState } = useForm({ schema })
+      const { register, unregister } = useForm({ schema })
 
       const slowValidator = vi.fn(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100))
@@ -345,7 +345,7 @@ describe('async validation edge cases', () => {
     it('should debounce custom validation when validateDebounce is set', async () => {
       const validator = vi.fn(() => undefined)
 
-      const { register, formState } = useForm({ schema })
+      const { register } = useForm({ schema })
 
       const emailField = register('email', {
         validate: validator,
@@ -516,7 +516,7 @@ describe('async validation edge cases', () => {
     it('should clean up debounce timer on unregister', async () => {
       const validator = vi.fn(() => 'Error')
 
-      const { register, unregister, formState } = useForm({ schema })
+      const { register, unregister } = useForm({ schema })
 
       const emailField = register('email', {
         validate: validator,
