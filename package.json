@@ -88,5 +88,11 @@
     "vue-router": "^4.6.3",
     "vue-tsc": "^3.1.5",
     "zod": "^4.2.1"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "material-icons": "^1.13.14",
+    "material-symbols": "^0.40.2",
+    "tailwindcss": "^4.1.18"
   }
 }
