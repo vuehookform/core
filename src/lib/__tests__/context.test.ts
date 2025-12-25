@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { defineComponent, h, inject } from 'vue'
+import { mount } from '@vue/test-utils'
 import { useForm } from '../useForm'
 import { provideForm, useFormContext, FormContextKey } from '../context'
 import { z } from 'zod'
@@ -12,22 +13,24 @@ const schema = z.object({
 describe('Form Context API', () => {
   describe('provideForm', () => {
     it('should provide form methods to injection key', () => {
-      // Test that provideForm calls provide with correct key
       let providedValue: unknown
 
-      const TestComponent = defineComponent({
+      const ChildComponent = defineComponent({
         setup() {
-          const form = useForm({ schema })
-          provideForm(form)
-
-          // Simulate what a child would receive
-          providedValue = form
+          providedValue = inject(FormContextKey)
           return () => h('div')
         },
       })
 
-      // Create instance to trigger setup
-      TestComponent.setup!({}, { attrs: {}, slots: {}, emit: () => {}, expose: () => {} })
+      const ParentComponent = defineComponent({
+        setup() {
+          const form = useForm({ schema })
+          provideForm(form)
+          return () => h(ChildComponent)
+        },
+      })
+
+      mount(ParentComponent)
 
       expect(providedValue).toBeDefined()
       expect(providedValue).toHaveProperty('register')
@@ -37,23 +40,31 @@ describe('Form Context API', () => {
   })
 
   describe('useFormContext', () => {
+    // Suppress Vue warnings for these tests since we're intentionally testing error cases
+    const suppressWarnings = { global: { config: { warnHandler: () => {} } } }
+
     it('should throw error when used outside provider', () => {
-      // useFormContext relies on inject which returns undefined outside provide scope
-      expect(() => {
-        // This simulates calling useFormContext without a provider
-        const context = inject(FormContextKey)
-        if (!context) {
-          throw new Error(
-            'useFormContext must be used within a component tree where provideForm() has been called.',
-          )
-        }
-      }).toThrow()
+      const TestComponent = defineComponent({
+        setup() {
+          useFormContext()
+          return () => h('div')
+        },
+      })
+
+      expect(() => mount(TestComponent, suppressWarnings)).toThrow()
     })
 
     it('should have meaningful error message', () => {
-      expect(() => {
-        useFormContext()
-      }).toThrow('useFormContext must be used within a component tree')
+      const TestComponent = defineComponent({
+        setup() {
+          useFormContext()
+          return () => h('div')
+        },
+      })
+
+      expect(() => mount(TestComponent, suppressWarnings)).toThrow(
+        'useFormContext must be used within a component tree',
+      )
     })
   })
 
