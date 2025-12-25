@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -67,6 +67,7 @@ export function useForm<TSchema extends ZodType>(
     isLoading: ctx.isLoading.value,
     touchedFields: ctx.touchedFields.value,
     submitCount: ctx.submitCount.value,
+    defaultValuesError: ctx.defaultValuesError.value,
   }))
 
   /**
@@ -78,6 +79,9 @@ export function useForm<TSchema extends ZodType>(
   ) {
     return async (e: Event) => {
       e.preventDefault()
+
+      // Prevent double-submit: ignore if already submitting
+      if (ctx.isSubmitting.value) return
 
       ctx.isSubmitting.value = true
       ctx.submitCount.value++
@@ -121,14 +125,18 @@ export function useForm<TSchema extends ZodType>(
     set(ctx.formData, name, value)
     ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
 
-    // Update input element if it exists
-    const fieldRef = ctx.fieldRefs.get(name)
-    if (fieldRef?.value) {
-      const el = fieldRef.value
-      if (el.type === 'checkbox') {
-        el.checked = value as boolean
-      } else {
-        el.value = value as string
+    // Only update DOM element for uncontrolled inputs
+    // For controlled inputs, Vue reactivity handles the sync through v-model
+    const opts = ctx.fieldOptions.get(name)
+    if (!opts?.controlled) {
+      const fieldRef = ctx.fieldRefs.get(name)
+      if (fieldRef?.value) {
+        const el = fieldRef.value
+        if (el.type === 'checkbox') {
+          el.checked = value as boolean
+        } else {
+          el.value = value as string
+        }
       }
     }
 
@@ -153,6 +161,9 @@ export function useForm<TSchema extends ZodType>(
   function reset(values?: Partial<FormValues>, resetOptions?: ResetOptions): void {
     const opts = resetOptions || {}
 
+    // Increment reset generation to invalidate any in-flight validations
+    ctx.resetGeneration.value++
+
     // Update default values unless keepDefaultValues is true
     if (!opts.keepDefaultValues && values) {
       Object.assign(ctx.defaultValues, values)
@@ -161,8 +172,9 @@ export function useForm<TSchema extends ZodType>(
     // Clear form data
     Object.keys(ctx.formData).forEach((key) => delete ctx.formData[key])
 
-    // Apply new values or defaults
-    const newValues = values || ctx.defaultValues
+    // Apply new values or defaults (deep clone to prevent reference sharing)
+    const sourceValues = values || ctx.defaultValues
+    const newValues = JSON.parse(JSON.stringify(sourceValues))
     Object.assign(ctx.formData, newValues)
 
     // Reset state based on options
@@ -203,22 +215,28 @@ export function useForm<TSchema extends ZodType>(
 
   /**
    * Watch field value(s) reactively
+   * @overload Watch all form values
+   * @overload Watch a single field
+   * @overload Watch multiple fields
    */
-  function watch<TPath extends Path<FormValues>>(name?: TPath | TPath[]) {
+  function watch(): ComputedRef<FormValues>
+  function watch<TPath extends Path<FormValues>>(name: TPath): ComputedRef<PathValue<FormValues, TPath>>
+  function watch<TPath extends Path<FormValues>>(names: TPath[]): ComputedRef<Partial<FormValues>>
+  function watch<TPath extends Path<FormValues>>(
+    name?: TPath | TPath[],
+  ): ComputedRef<FormValues | PathValue<FormValues, TPath> | Partial<FormValues>> {
     return computed(() => {
       if (!name) {
-        return ctx.formData
+        return ctx.formData as FormValues
       }
       if (Array.isArray(name)) {
-        return name.reduce(
-          (acc, n) => {
-            acc[n] = get(ctx.formData, n)
-            return acc
-          },
-          {} as Record<TPath, unknown>,
-        )
+        const result: Record<string, unknown> = {}
+        for (const n of name) {
+          result[n] = get(ctx.formData, n)
+        }
+        return result as Partial<FormValues>
       }
-      return get(ctx.formData, name)
+      return get(ctx.formData, name) as PathValue<FormValues, TPath>
     })
   }
 

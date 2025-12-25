@@ -14,6 +14,8 @@ import type {
 export interface FieldArrayState {
   items: Ref<FieldArrayItem[]>
   values: unknown[]
+  // Index cache for O(1) index lookups, shared across fields() calls
+  indexCache: Map<string, number>
 }
 
 /**
@@ -41,6 +43,7 @@ export interface FormContext<FormValues> {
   isSubmitting: Ref<boolean>
   isLoading: Ref<boolean>
   submitCount: Ref<number>
+  defaultValuesError: Ref<unknown>
 
   // Field tracking
   fieldRefs: Map<string, Ref<HTMLInputElement | null>>
@@ -51,6 +54,9 @@ export interface FormContext<FormValues> {
   // Debounce tracking for async validation
   debounceTimers: Map<string, ReturnType<typeof setTimeout>>
   validationRequestIds: Map<string, number>
+
+  // Reset generation counter (used to cancel stale validations after reset)
+  resetGeneration: Ref<number>
 
   // Options
   options: UseFormOptions<ZodType>
@@ -83,7 +89,10 @@ export function createFormContext<TSchema extends ZodType>(
       })
       .catch((error) => {
         console.error('Failed to load async default values:', error)
+        defaultValuesError.value = error
         isLoading.value = false
+        // Call error callback if provided
+        options.onDefaultValuesError?.(error)
       })
   } else if (options.defaultValues) {
     // Sync default values
@@ -98,6 +107,7 @@ export function createFormContext<TSchema extends ZodType>(
   const dirtyFields = shallowRef<Record<string, boolean>>({})
   const isSubmitting = ref(false)
   const submitCount = ref(0)
+  const defaultValuesError = ref<unknown>(null)
 
   // Field registration tracking
   const fieldRefs = new Map<string, Ref<HTMLInputElement | null>>()
@@ -113,6 +123,9 @@ export function createFormContext<TSchema extends ZodType>(
   const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   const validationRequestIds = new Map<string, number>()
 
+  // Reset generation counter (incremented on each reset to invalidate in-flight validations)
+  const resetGeneration = ref(0)
+
   return {
     formData,
     defaultValues,
@@ -122,12 +135,14 @@ export function createFormContext<TSchema extends ZodType>(
     isSubmitting,
     isLoading,
     submitCount,
+    defaultValuesError,
     fieldRefs,
     fieldOptions,
     fieldArrays,
     fieldHandlers,
     debounceTimers,
     validationRequestIds,
+    resetGeneration,
     options: options as UseFormOptions<ZodType>,
   }
 }

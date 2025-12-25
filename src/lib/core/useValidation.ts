@@ -81,8 +81,16 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
    * Validate a single field or entire form
    */
   async function validate(fieldPath?: string): Promise<boolean> {
+    // Capture reset generation before async validation
+    const generationAtStart = ctx.resetGeneration.value
+
     // Use safeParseAsync to avoid throwing
     const result = await ctx.options.schema.safeParseAsync(ctx.formData)
+
+    // Check if form was reset during validation - if so, discard stale results
+    if (ctx.resetGeneration.value !== generationAtStart) {
+      return true // Form was reset, don't update errors
+    }
 
     if (result.success) {
       // Clear errors on success

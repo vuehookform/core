@@ -8,6 +8,9 @@ import type {
 } from '../types'
 import { get, set, unset } from '../utils/paths'
 
+// Monotonic counter for validation request IDs (avoids race conditions)
+let validationRequestCounter = 0
+
 /**
  * Create field registration functions
  */
@@ -50,7 +53,12 @@ export function createFieldRegistration<FormValues>(
       /**
        * Run custom field validation with optional debouncing
        */
-      const runCustomValidation = async (fieldName: string, value: unknown, requestId: number) => {
+      const runCustomValidation = async (
+        fieldName: string,
+        value: unknown,
+        requestId: number,
+        resetGenAtStart: number,
+      ) => {
         const fieldOpts = ctx.fieldOptions.get(fieldName)
         if (!fieldOpts?.validate || fieldOpts.disabled) {
           return
@@ -62,6 +70,11 @@ export function createFieldRegistration<FormValues>(
         const latestRequestId = ctx.validationRequestIds.get(fieldName)
         if (requestId !== latestRequestId) {
           return // Stale request, ignore result
+        }
+
+        // Check if form was reset during validation
+        if (ctx.resetGeneration.value !== resetGenAtStart) {
+          return // Form was reset, discard stale results
         }
 
         if (error) {
@@ -99,9 +112,12 @@ export function createFieldRegistration<FormValues>(
         // Custom validation with optional debouncing
         const fieldOpts = ctx.fieldOptions.get(name)
         if (fieldOpts?.validate && !fieldOpts.disabled) {
-          // Generate a new request ID for race condition handling
-          const requestId = Date.now() + Math.random()
+          // Generate a new request ID for race condition handling (monotonic counter)
+          const requestId = ++validationRequestCounter
           ctx.validationRequestIds.set(name, requestId)
+
+          // Capture reset generation before starting async validation
+          const resetGenAtStart = ctx.resetGeneration.value
 
           const debounceMs = fieldOpts.validateDebounce || 0
 
@@ -115,13 +131,13 @@ export function createFieldRegistration<FormValues>(
             // Set new debounce timer
             const timer = setTimeout(() => {
               ctx.debounceTimers.delete(name)
-              runCustomValidation(name, value, requestId)
+              runCustomValidation(name, value, requestId, resetGenAtStart)
             }, debounceMs)
 
             ctx.debounceTimers.set(name, timer)
           } else {
             // No debounce, run immediately
-            await runCustomValidation(name, value, requestId)
+            await runCustomValidation(name, value, requestId, resetGenAtStart)
           }
         }
       }
@@ -167,8 +183,17 @@ export function createFieldRegistration<FormValues>(
           }
         }
 
-        // Handle shouldUnregister when element is removed (ref becomes null)
+        // Handle cleanup when element is removed (ref becomes null)
         if (previousEl && !el) {
+          // Always clear debounce timers to prevent memory leaks
+          // (timers hold references to form context via closure)
+          const timer = ctx.debounceTimers.get(name)
+          if (timer) {
+            clearTimeout(timer)
+            ctx.debounceTimers.delete(name)
+          }
+          ctx.validationRequestIds.delete(name)
+
           const shouldUnreg = opts?.shouldUnregister ?? ctx.options.shouldUnregister ?? false
 
           if (shouldUnreg) {
@@ -193,14 +218,6 @@ export function createFieldRegistration<FormValues>(
             ctx.fieldRefs.delete(name)
             ctx.fieldOptions.delete(name)
             ctx.fieldHandlers.delete(name)
-
-            // Clean up debounce timers
-            const timer = ctx.debounceTimers.get(name)
-            if (timer) {
-              clearTimeout(timer)
-              ctx.debounceTimers.delete(name)
-            }
-            ctx.validationRequestIds.delete(name)
           }
         }
       }
@@ -228,9 +245,27 @@ export function createFieldRegistration<FormValues>(
   }
 
   /**
-   * Unregister a field to clean up refs and options
+   * Unregister a field to clean up refs, options, and form data
    */
   function unregister<TPath extends Path<FormValues>>(name: TPath): void {
+    // Remove form data for this field
+    unset(ctx.formData, name)
+
+    // Clear errors for this field
+    const newErrors = { ...ctx.errors.value }
+    delete newErrors[name as keyof typeof newErrors]
+    ctx.errors.value = newErrors as FieldErrors<FormValues>
+
+    // Clear touched/dirty state
+    const newTouched = { ...ctx.touchedFields.value }
+    delete newTouched[name]
+    ctx.touchedFields.value = newTouched
+
+    const newDirty = { ...ctx.dirtyFields.value }
+    delete newDirty[name]
+    ctx.dirtyFields.value = newDirty
+
+    // Clean up refs, options, and handlers
     ctx.fieldRefs.delete(name)
     ctx.fieldOptions.delete(name)
     ctx.fieldHandlers.delete(name)

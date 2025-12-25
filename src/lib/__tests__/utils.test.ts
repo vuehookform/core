@@ -256,14 +256,14 @@ describe('path utilities', () => {
       })
     })
 
-    it('should throw when intermediate path is null', () => {
+    it('should gracefully return when intermediate path is null', () => {
       const obj: Record<string, unknown> = {
         user: null,
       }
 
-      // Current implementation throws when trying to access property of null
-      // This documents the actual behavior - could be improved in future
-      expect(() => unset(obj, 'user.name')).toThrow()
+      // Should not throw - gracefully handles null intermediate paths
+      expect(() => unset(obj, 'user.name')).not.toThrow()
+      expect(obj.user).toBeNull() // Object unchanged
     })
 
     it('should do nothing when intermediate path is a primitive', () => {

@@ -88,6 +88,8 @@ export interface FormState<T> {
   dirtyFields: Record<string, boolean>
   /** Number of times form has been submitted */
   submitCount: number
+  /** Error that occurred while loading async default values */
+  defaultValuesError: unknown
 }
 
 /**
@@ -225,6 +227,8 @@ export interface UseFormOptions<TSchema extends ZodType> {
   reValidateMode?: ValidationMode
   /** Remove field data when unmounted (default: false) */
   shouldUnregister?: boolean
+  /** Callback when async default values fail to load */
+  onDefaultValuesError?: (error: unknown) => void
 }
 
 /**
