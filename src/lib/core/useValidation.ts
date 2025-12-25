@@ -22,7 +22,7 @@ function clearFieldErrors<T>(
  * Group errors by field path for multi-error support
  */
 function groupErrorsByPath(
-  issues: Array<{ path: (string | number)[]; message: string; code: string }>,
+  issues: Array<{ path: PropertyKey[]; message: string; code: string }>,
 ): Map<string, Array<{ type: string; message: string }>> {
   const grouped = new Map<string, Array<{ type: string; message: string }>>()
 
@@ -42,9 +42,14 @@ function groupErrorsByPath(
  * Multiple errors = FieldError with types
  */
 function createFieldError(errors: Array<{ type: string; message: string }>): string | FieldError {
+  const firstError = errors[0]
+  if (!firstError) {
+    return ''
+  }
+
   if (errors.length === 1) {
     // Single error - return string for backward compatibility
-    return errors[0].message
+    return firstError.message
   }
 
   // Multiple errors - return structured FieldError
@@ -62,8 +67,8 @@ function createFieldError(errors: Array<{ type: string; message: string }>): str
   }
 
   return {
-    type: errors[0].type,
-    message: errors[0].message,
+    type: firstError.type,
+    message: firstError.message,
     types,
   }
 }

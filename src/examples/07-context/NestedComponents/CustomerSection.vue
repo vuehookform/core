@@ -42,7 +42,7 @@ const { register, formState } = useFormContext<OrderSchema>()
 const errors = computed(() => {
   const customerErrors = formState.value.errors.customer
   if (typeof customerErrors === 'object' && customerErrors !== null) {
-    return customerErrors
+    return customerErrors as { name?: unknown; email?: unknown }
   }
   return { name: undefined, email: undefined }
 })

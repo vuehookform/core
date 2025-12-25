@@ -57,7 +57,7 @@ const { register, formState } = useFormContext<SettingsSchema>()
 const errors = computed(() => {
   const profileErrors = formState.value.errors.profile
   if (typeof profileErrors === 'object' && profileErrors !== null) {
-    return profileErrors
+    return profileErrors as { displayName?: unknown; bio?: unknown; avatarUrl?: unknown }
   }
   return { displayName: undefined, bio: undefined, avatarUrl: undefined }
 })

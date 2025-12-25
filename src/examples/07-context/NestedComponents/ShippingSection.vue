@@ -46,7 +46,7 @@ const { register, formState } = useFormContext<OrderSchema>()
 const errors = computed(() => {
   const shippingErrors = formState.value.errors.shipping
   if (typeof shippingErrors === 'object' && shippingErrors !== null) {
-    return shippingErrors
+    return shippingErrors as { address?: unknown; city?: unknown }
   }
   return { address: undefined, city: undefined }
 })

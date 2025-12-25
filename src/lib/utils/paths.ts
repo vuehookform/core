@@ -2,8 +2,8 @@
  * Get value from object using dot notation path
  * @example get({ user: { name: 'John' } }, 'user.name') => 'John'
  */
-export function get(obj: Record<string, unknown>, path: string): unknown {
-  if (!path) return obj
+export function get(obj: unknown, path: string): unknown {
+  if (!path || obj === null || obj === undefined) return obj
 
   const keys = path.split('.')
   let result: unknown = obj
