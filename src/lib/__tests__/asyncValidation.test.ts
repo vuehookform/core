@@ -423,7 +423,7 @@ describe('async validation edge cases', () => {
     })
 
     it('should handle race conditions with debounced async validators', async () => {
-      let callOrder: string[] = []
+      const callOrder: string[] = []
 
       const slowValidator = vi.fn(async (value: unknown) => {
         const val = value as string
