@@ -111,7 +111,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       }
 
       // Update only this field's errors (merge with existing), with multi-error support
-      let newErrors = clearFieldErrors(ctx.errors.value, fieldPath)
+      const newErrors = clearFieldErrors(ctx.errors.value, fieldPath)
       const grouped = groupErrorsByPath(fieldErrors)
 
       for (const [path, errors] of grouped) {
