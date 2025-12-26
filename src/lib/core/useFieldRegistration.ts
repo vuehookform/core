@@ -187,6 +187,15 @@ export function createFieldRegistration<FormValues>(
         if (!currentFieldRef) return
 
         const previousEl = currentFieldRef.value
+        // Skip if same element - prevents triggering Vue reactivity unnecessarily
+        if (previousEl === el) return
+
+        // For fields with multiple elements (like radio buttons in v-for), only store the first one.
+        // This prevents "Maximum recursive updates exceeded" when Vue re-binds refs on re-render:
+        // - Without this check: radio5 → radio1 → radio2... triggers infinite updates
+        // - With this check: we keep the first element and skip subsequent overwrites
+        if (previousEl && el) return
+
         currentFieldRef.value = el as HTMLInputElement | null
 
         // Set initial value for uncontrolled inputs

@@ -45,14 +45,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useFormContext } from '../../../lib'
 import type { FeedbackSchema } from './schema'
 
 const { register, formState } = useFormContext<FeedbackSchema>()
 
-// Textarea binding (cast to avoid Vue template type inference issue)
-const commentBinding = computed(() => register('comment') as unknown as Record<string, unknown>)
+// Textarea binding - cast to avoid Vue template type inference issue with textarea
+const commentBinding = register('comment') as unknown as Record<string, unknown>
 </script>
 
 <style scoped>
