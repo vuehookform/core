@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-700">
+  <div class="min-h-screen bg-linear-to-br from-indigo-500 via-purple-500 to-purple-700">
     <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col gap-6">
       <!-- Header -->
       <DocsHeader @toggle-drawer="drawerOpen = true" />
@@ -8,7 +8,9 @@
       <div class="flex gap-6">
         <!-- Desktop Sidebar -->
         <aside class="hidden lg:block w-64 shrink-0">
-          <div class="bg-white rounded-xl shadow-lg sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+          <div
+            class="bg-white rounded-xl shadow-lg sticky top-15 max-h-[calc(100vh-3rem)] overflow-y-auto"
+          >
             <DocsSidebar />
           </div>
         </aside>
