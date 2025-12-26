@@ -15,12 +15,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24
 
       - name: Clean node_modules and lock file
         run: rm -rf node_modules package-lock.json
@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # - name: Run linters
-      #   run: npm run lint
+      - name: Run linters
+        run: npm run lint
 
   test:
     name: Run Tests
@@ -37,12 +37,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24
 
       - name: Clean node_modules and lock file
         run: rm -rf node_modules package-lock.json
@@ -59,12 +59,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24
 
       - name: Clean node_modules and lock file
         run: rm -rf node_modules package-lock.json
