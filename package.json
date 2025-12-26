@@ -33,6 +33,7 @@
     "format": "prettier --write --experimental-cli src/",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build:lib"
   },
   "repository": {
