@@ -20,6 +20,14 @@ import { createFormContext } from './core/formContext'
 import { createValidation } from './core/useValidation'
 import { createFieldRegistration } from './core/useFieldRegistration'
 import { createFieldArrayManager } from './core/useFieldArray'
+import { syncUncontrolledInputs, updateDomElement } from './core/domSync'
+import {
+  markFieldDirty,
+  markFieldTouched,
+  clearFieldDirty,
+  clearFieldTouched,
+  clearFieldErrors,
+} from './core/fieldState'
 
 /**
  * Main form management composable
@@ -140,16 +148,7 @@ export function useForm<TSchema extends ZodType>(
 
       try {
         // Collect values from uncontrolled inputs
-        for (const [name, fieldRef] of ctx.fieldRefs.entries()) {
-          const el = fieldRef.value
-          if (el) {
-            const opts = ctx.fieldOptions.get(name)
-            if (!opts?.controlled) {
-              const value = el.type === 'checkbox' ? el.checked : el.value
-              set(ctx.formData, name, value)
-            }
-          }
-        }
+        syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
 
         // Validate entire form
         const isValid = await validate()
@@ -188,12 +187,12 @@ export function useForm<TSchema extends ZodType>(
 
     // shouldDirty (default: true)
     if (setValueOptions?.shouldDirty !== false) {
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, name)
     }
 
     // shouldTouch (default: false)
     if (setValueOptions?.shouldTouch) {
-      ctx.touchedFields.value = { ...ctx.touchedFields.value, [name]: true }
+      markFieldTouched(ctx.touchedFields, name)
     }
 
     // Only update DOM element for uncontrolled inputs
@@ -202,12 +201,7 @@ export function useForm<TSchema extends ZodType>(
     if (!opts?.controlled) {
       const fieldRef = ctx.fieldRefs.get(name)
       if (fieldRef?.value) {
-        const el = fieldRef.value
-        if (el.type === 'checkbox') {
-          el.checked = value as boolean
-        } else {
-          el.value = value as string
-        }
+        updateDomElement(fieldRef.value, value)
       }
     }
 
@@ -328,27 +322,17 @@ export function useForm<TSchema extends ZodType>(
 
     // Conditionally clear errors
     if (!opts.keepError) {
-      const newErrors = { ...ctx.errors.value }
-      for (const key of Object.keys(newErrors)) {
-        if (key === name || key.startsWith(`${name}.`)) {
-          delete newErrors[key as keyof typeof newErrors]
-        }
-      }
-      ctx.errors.value = newErrors as FieldErrors<FormValues>
+      clearFieldErrors(ctx.errors, name)
     }
 
     // Conditionally clear dirty state
     if (!opts.keepDirty) {
-      const newDirty = { ...ctx.dirtyFields.value }
-      delete newDirty[name]
-      ctx.dirtyFields.value = newDirty
+      clearFieldDirty(ctx.dirtyFields, name)
     }
 
     // Conditionally clear touched state
     if (!opts.keepTouched) {
-      const newTouched = { ...ctx.touchedFields.value }
-      delete newTouched[name]
-      ctx.touchedFields.value = newTouched
+      clearFieldTouched(ctx.touchedFields, name)
     }
 
     // Update DOM element for uncontrolled inputs
@@ -356,20 +340,7 @@ export function useForm<TSchema extends ZodType>(
     if (!fieldOpts?.controlled) {
       const fieldRef = ctx.fieldRefs.get(name)
       if (fieldRef?.value) {
-        const el = fieldRef.value
-        if (clonedValue !== undefined) {
-          if (el.type === 'checkbox') {
-            el.checked = clonedValue as boolean
-          } else {
-            el.value = clonedValue as string
-          }
-        } else {
-          if (el.type === 'checkbox') {
-            el.checked = false
-          } else {
-            el.value = ''
-          }
-        }
+        updateDomElement(fieldRef.value, clonedValue ?? (fieldRef.value.type === 'checkbox' ? false : ''))
       }
     }
   }
@@ -416,18 +387,9 @@ export function useForm<TSchema extends ZodType>(
     }
 
     const fieldsToClean = Array.isArray(name) ? name : [name]
-    const newErrors = { ...ctx.errors.value }
-
     for (const field of fieldsToClean) {
-      // Clear exact path and any nested paths
-      for (const key of Object.keys(newErrors)) {
-        if (key === field || key.startsWith(`${field}.`)) {
-          delete newErrors[key as keyof typeof newErrors]
-        }
-      }
+      clearFieldErrors(ctx.errors, field)
     }
-
-    ctx.errors.value = newErrors as FieldErrors<FormValues>
   }
 
   /**
@@ -459,16 +421,7 @@ export function useForm<TSchema extends ZodType>(
     nameOrNames?: TPath | TPath[],
   ): FormValues | PathValue<FormValues, TPath> | Partial<FormValues> {
     // Sync values from uncontrolled inputs before returning
-    for (const [name, fieldRef] of ctx.fieldRefs.entries()) {
-      const el = fieldRef.value
-      if (el) {
-        const opts = ctx.fieldOptions.get(name)
-        if (!opts?.controlled) {
-          const value = el.type === 'checkbox' ? el.checked : el.value
-          set(ctx.formData, name, value)
-        }
-      }
-    }
+    syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
 
     if (nameOrNames === undefined) {
       // Return all values
