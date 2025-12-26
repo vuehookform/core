@@ -6,7 +6,7 @@ import { useController } from '../../useController'
 import { useFormState } from '../../useFormState'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(2),
   age: z.number().optional(),
   address: z

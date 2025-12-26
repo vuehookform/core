@@ -160,7 +160,7 @@ describe('register deps option', () => {
   it('should work with nested field paths as deps', async () => {
     const nestedDepsSchema = z.object({
       user: z.object({
-        email: z.string().email(),
+        email: z.email(),
         confirmEmail: z.string(),
       }),
     })

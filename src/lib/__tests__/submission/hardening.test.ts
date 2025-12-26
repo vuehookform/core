@@ -5,7 +5,7 @@ import { set, unset, generateId } from '../../utils/paths'
 import { waitFor, createInputEvent } from '../helpers/test-utils'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   name: z.string().min(2),
 })
@@ -14,7 +14,7 @@ const arraySchema = z.object({
   users: z.array(
     z.object({
       name: z.string().min(1),
-      email: z.string().email(),
+      email: z.email(),
     }),
   ),
 })

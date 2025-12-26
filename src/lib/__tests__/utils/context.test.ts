@@ -6,7 +6,7 @@ import { provideForm, useFormContext, FormContextKey } from '../../context'
 import { z } from 'zod'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(2),
 })
 

@@ -17,7 +17,7 @@ import { createMockInput, mountElement, createBlurEvent, schemas } from '../help
 // Schema for nested field tests
 const nestedSchema = z.object({
   user: z.object({
-    email: z.string().email(),
+    email: z.email(),
     profile: z.object({
       name: z.string().min(2),
     }),

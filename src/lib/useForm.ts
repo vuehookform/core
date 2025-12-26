@@ -383,7 +383,9 @@ export function useForm<TSchema extends ZodType>(
   /**
    * Clear errors for one or more fields, or all errors
    */
-  function clearErrors<TPath extends Path<FormValues>>(name?: TPath | TPath[]): void {
+  function clearErrors<TPath extends Path<FormValues>>(
+    name?: TPath | TPath[] | 'root' | `root.${string}`,
+  ): void {
     if (name === undefined) {
       // Clear all errors
       ctx.errors.value = {} as FieldErrors<FormValues>

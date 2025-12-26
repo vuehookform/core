@@ -11,7 +11,7 @@ const schema = z.object({
 
 const nestedSchema = z.object({
   user: z.object({
-    email: z.string().email(),
+    email: z.email(),
     profile: z.object({
       bio: z.string().min(10, 'Bio must be at least 10 characters'),
       age: z.number().min(0, 'Age must be positive').optional(),
@@ -515,7 +515,7 @@ describe('useValidation', () => {
   describe('validatingFields state', () => {
     it('should track validating state during validation', async () => {
       const schema = z.object({
-        email: z.string().email(),
+        email: z.email(),
       })
       const { formState, validate } = useForm({ schema })
 
@@ -538,7 +538,7 @@ describe('useValidation', () => {
 
     it('should clear validating state on form reset', async () => {
       const schema = z.object({
-        email: z.string().email(),
+        email: z.email(),
       })
       const { formState, reset } = useForm({ schema })
 

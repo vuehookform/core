@@ -138,7 +138,7 @@ const ContextInput = defineComponent({
     code: `// Parent still needs to create and provide the form
 const profileSchema = z.object({
   username: z.string().min(3),
-  email: z.string().email(),
+  email: z.email(),
   bio: z.string().max(200).optional(),
   website: z.string().url().optional(),
 })

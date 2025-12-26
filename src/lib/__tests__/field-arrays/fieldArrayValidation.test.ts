@@ -7,7 +7,7 @@ const schema = z.object({
   users: z.array(
     z.object({
       name: z.string().min(1),
-      email: z.string().email(),
+      email: z.email(),
     }),
   ),
 })

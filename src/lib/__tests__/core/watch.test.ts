@@ -4,14 +4,14 @@ import { z } from 'zod'
 import { nextTick } from 'vue'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   name: z.string().min(2),
 })
 
 const nestedSchema = z.object({
   user: z.object({
-    email: z.string().email(),
+    email: z.email(),
     profile: z.object({
       bio: z.string(),
       age: z.number(),

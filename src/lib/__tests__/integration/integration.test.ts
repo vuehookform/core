@@ -137,7 +137,7 @@ describe('integration tests', () => {
       users: z.array(
         z.object({
           name: z.string().min(2),
-          email: z.string().email(),
+          email: z.email(),
           address: z.object({
             city: z.string().min(1),
             country: z.string().min(1),
@@ -236,7 +236,7 @@ describe('integration tests', () => {
 
   describe('dynamic field registration', () => {
     const schema = z.object({
-      email: z.string().email(),
+      email: z.email(),
       password: z.string().min(8),
       phone: z.string().optional(),
     })
@@ -320,7 +320,7 @@ describe('integration tests', () => {
 
   describe('server-side error simulation', () => {
     const schema = z.object({
-      email: z.string().email(),
+      email: z.email(),
       password: z.string().min(8),
     })
 
@@ -385,7 +385,7 @@ describe('integration tests', () => {
 
   describe('form reset scenarios', () => {
     const schema = z.object({
-      email: z.string().email(),
+      email: z.email(),
       name: z.string().min(2),
     })
 

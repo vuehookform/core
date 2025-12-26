@@ -257,7 +257,7 @@ describe('async validation edge cases', () => {
       vi.useRealTimers() // Use real timers for this test
 
       const asyncSchema = z.object({
-        email: z.string().email(),
+        email: z.email(),
         username: z.string().refine(
           async (val) => {
             // Simulate API call to check username availability
@@ -285,7 +285,7 @@ describe('async validation edge cases', () => {
       vi.useRealTimers() // Use real timers for this test
 
       const asyncSchema = z.object({
-        email: z.string().email(),
+        email: z.email(),
         username: z.string().refine(
           async (val) => {
             await new Promise((resolve) => setTimeout(resolve, 10))

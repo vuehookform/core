@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { nextTick } from 'vue'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   name: z.string().min(2),
   rememberMe: z.boolean().optional(),
@@ -445,7 +445,7 @@ describe('register', () => {
   describe('nested fields', () => {
     const nestedSchema = z.object({
       user: z.object({
-        email: z.string().email(),
+        email: z.email(),
         profile: z.object({
           bio: z.string(),
         }),
@@ -487,7 +487,7 @@ describe('register', () => {
 
   describe('input type handling', () => {
     const extendedSchema = z.object({
-      email: z.string().email(),
+      email: z.email(),
       password: z.string().min(8),
       name: z.string().min(2),
       bio: z.string().optional(),

@@ -64,7 +64,7 @@ const codeText = `import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8)
 })
 

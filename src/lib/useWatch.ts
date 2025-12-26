@@ -1,6 +1,6 @@
 import { computed, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
-import type { UseFormReturn, Path, InferSchema } from './types'
+import type { UseFormReturn, Path, PathValue, InferSchema } from './types'
 import { useFormContext } from './context'
 import { get } from './utils/paths'
 
@@ -44,10 +44,26 @@ export interface UseWatchOptions<
  * const status = useWatch({ name: 'status', defaultValue: 'pending' })
  * ```
  */
+export function useWatch<TSchema extends ZodType>(
+  options?: Omit<UseWatchOptions<TSchema, Path<InferSchema<TSchema>>>, 'name'>,
+): ComputedRef<InferSchema<TSchema>>
+
+export function useWatch<
+  TSchema extends ZodType,
+  TPath extends Path<InferSchema<TSchema>>,
+>(options: UseWatchOptions<TSchema, TPath> & { name: TPath }): ComputedRef<PathValue<InferSchema<TSchema>, TPath>>
+
+export function useWatch<
+  TSchema extends ZodType,
+  TPath extends Path<InferSchema<TSchema>>,
+>(options: UseWatchOptions<TSchema, TPath> & { name: TPath[] }): ComputedRef<Partial<InferSchema<TSchema>>>
+
 export function useWatch<
   TSchema extends ZodType,
   TPath extends Path<InferSchema<TSchema>> = Path<InferSchema<TSchema>>,
->(options: UseWatchOptions<TSchema, TPath> = {}): ComputedRef<unknown> {
+>(
+  options: UseWatchOptions<TSchema, TPath> = {} as UseWatchOptions<TSchema, TPath>,
+): ComputedRef<InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>> {
   const { control, name, defaultValue } = options
 
   // Get form control from context if not provided
@@ -72,5 +88,5 @@ export function useWatch<
     // Watch single field
     const value = get(form.getValues(), name)
     return value ?? defaultValue
-  })
+  }) as ComputedRef<InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>>
 }

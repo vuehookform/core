@@ -86,21 +86,23 @@ export type ArrayPath<T> = {
  * type ItemType = PathValue<Form, 'items.0'>      // { id: number }
  * type ItemId = PathValue<Form, 'items.0.id'>     // number
  */
-export type PathValue<T, P extends string> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? PathValue<T[K], Rest>
-    : T extends Array<infer U>
-      ? K extends `${number}`
-        ? PathValue<U, Rest>
+export type PathValue<T, P extends string> = T extends unknown
+  ? P extends `${infer K}.${infer Rest}`
+    ? K extends keyof T
+      ? PathValue<T[K], Rest>
+      : T extends Array<infer U>
+        ? K extends `${number}`
+          ? PathValue<U, Rest>
+          : never
         : never
-      : never
-  : P extends keyof T
-    ? T[P]
-    : T extends Array<infer U>
-      ? P extends `${number}`
-        ? U
+    : P extends keyof T
+      ? T[P]
+      : T extends Array<infer U>
+        ? P extends `${number}`
+          ? U
+          : never
         : never
-      : never
+  : never
 
 /**
  * Single field error with type and message
@@ -575,9 +577,15 @@ export interface UseFormReturn<TSchema extends ZodType> {
 
   /**
    * Watch field value(s) reactively
-   * @param name - Field path or array of paths (optional - watches all if not provided)
+   * @overload Watch all form values
+   * @overload Watch single field value by path
+   * @overload Watch multiple field values by paths array
    */
-  watch: <TPath extends Path<InferSchema<TSchema>>>(name?: TPath | TPath[]) => ComputedRef<unknown>
+  watch: {
+    (): ComputedRef<InferSchema<TSchema>>
+    <TPath extends Path<InferSchema<TSchema>>>(name: TPath): ComputedRef<PathValue<InferSchema<TSchema>, TPath>>
+    <TPath extends Path<InferSchema<TSchema>>>(names: TPath[]): ComputedRef<Partial<InferSchema<TSchema>>>
+  }
 
   /**
    * Manually trigger validation
@@ -589,7 +597,9 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * Clear errors for specified fields or all errors
    * @param name - Optional field path or array of paths
    */
-  clearErrors: <TPath extends Path<InferSchema<TSchema>>>(name?: TPath | TPath[]) => void
+  clearErrors: <TPath extends Path<InferSchema<TSchema>>>(
+    name?: TPath | TPath[] | 'root' | `root.${string}`,
+  ) => void
 
   /**
    * Set an error for a specific field

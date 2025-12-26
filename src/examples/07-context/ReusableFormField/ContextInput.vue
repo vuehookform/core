@@ -88,7 +88,7 @@ if (props.maxLength) {
   const watched = watchField(props.name as never)
   watch(
     watched,
-    (val) => {
+    (val: unknown) => {
       currentLength.value = typeof val === 'string' ? val.length : 0
     },
     { immediate: true },

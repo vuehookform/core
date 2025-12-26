@@ -5,13 +5,13 @@ import { z } from 'zod'
  */
 export const schemas = {
   basic: z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().min(8),
     name: z.string().min(2),
   }),
 
   withOptional: z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().min(8),
     name: z.string().min(2),
     rememberMe: z.boolean().optional(),
@@ -19,7 +19,7 @@ export const schemas = {
 
   nested: z.object({
     user: z.object({
-      email: z.string().email(),
+      email: z.email(),
       profile: z.object({
         bio: z.string(),
         age: z.number().optional(),
@@ -31,7 +31,7 @@ export const schemas = {
     users: z.array(
       z.object({
         name: z.string().min(1),
-        email: z.string().email(),
+        email: z.email(),
       }),
     ),
   }),
@@ -41,7 +41,7 @@ export const schemas = {
   }),
 
   extended: z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().min(8),
     name: z.string().min(2),
     bio: z.string().optional(),

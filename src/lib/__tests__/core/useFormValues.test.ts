@@ -4,7 +4,7 @@ import { useForm } from '../../useForm'
 import { z } from 'zod'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   name: z.string().min(2),
 })
