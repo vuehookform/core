@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
 import {
   createMockInput,
   createInputEvent,
   mountElement,
-} from './test-utils'
+} from '../helpers/test-utils'
 
 const schema = z.object({
   email: z.string().email(),

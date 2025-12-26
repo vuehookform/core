@@ -1,5 +1,5 @@
 import type { FormContext } from './formContext'
-import type { FieldErrors, FieldError } from '../types'
+import type { FieldErrors, FieldError, FieldErrorValue, CriteriaMode } from '../types'
 import { set } from '../utils/paths'
 
 /**
@@ -16,6 +16,19 @@ function clearFieldErrors<T>(
     }
   }
   return newErrors as FieldErrors<T>
+}
+
+/**
+ * Helper to mark a field as validating
+ */
+function setValidating<T>(ctx: FormContext<T>, fieldPath: string, isValidating: boolean): void {
+  if (isValidating) {
+    ctx.validatingFields.value = { ...ctx.validatingFields.value, [fieldPath]: true }
+  } else {
+    const newValidating = { ...ctx.validatingFields.value }
+    delete newValidating[fieldPath]
+    ctx.validatingFields.value = newValidating
+  }
 }
 
 /**
@@ -38,15 +51,24 @@ function groupErrorsByPath(
 
 /**
  * Convert grouped errors to FieldError format
- * Single error = string (backward compatible)
- * Multiple errors = FieldError with types
+ * criteriaMode: 'firstError' - always returns first error message (string)
+ * criteriaMode: 'all' - returns structured FieldError with all error types
  */
-function createFieldError(errors: Array<{ type: string; message: string }>): string | FieldError {
+function createFieldError(
+  errors: Array<{ type: string; message: string }>,
+  criteriaMode: CriteriaMode = 'firstError',
+): string | FieldError {
   const firstError = errors[0]
   if (!firstError) {
     return ''
   }
 
+  // criteriaMode: 'firstError' - always return just the first error message
+  if (criteriaMode === 'firstError') {
+    return firstError.message
+  }
+
+  // criteriaMode: 'all' - return structured FieldError with all types
   if (errors.length === 1) {
     // Single error - return string for backward compatibility
     return firstError.message
@@ -78,69 +100,152 @@ function createFieldError(errors: Array<{ type: string; message: string }>): str
  */
 export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   /**
+   * Schedule error display with optional delay (P2: delayError feature)
+   * If delayError > 0, the error will be shown after the delay.
+   * If the field becomes valid before the delay completes, the error won't be shown.
+   */
+  function scheduleError(fieldPath: string, error: FieldErrorValue): void {
+    const delayMs = ctx.options.delayError || 0
+
+    if (delayMs <= 0) {
+      // No delay - set error immediately using set() to maintain nested structure
+      const newErrors = { ...ctx.errors.value }
+      set(newErrors, fieldPath, error)
+      ctx.errors.value = newErrors as FieldErrors<FormValues>
+      return
+    }
+
+    // Cancel any existing timer for this field
+    const existingTimer = ctx.errorDelayTimers.get(fieldPath)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+    }
+
+    // Store pending error
+    ctx.pendingErrors.set(fieldPath, error)
+
+    // Schedule delayed error display
+    const timer = setTimeout(() => {
+      ctx.errorDelayTimers.delete(fieldPath)
+      const pendingError = ctx.pendingErrors.get(fieldPath)
+      if (pendingError !== undefined) {
+        ctx.pendingErrors.delete(fieldPath)
+        // Use set() to maintain nested structure
+        const newErrors = { ...ctx.errors.value }
+        set(newErrors, fieldPath, pendingError)
+        ctx.errors.value = newErrors as FieldErrors<FormValues>
+      }
+    }, delayMs)
+
+    ctx.errorDelayTimers.set(fieldPath, timer)
+  }
+
+  /**
+   * Cancel pending error and clear existing error for a field (P2: delayError feature)
+   */
+  function cancelError(fieldPath: string): FieldErrors<FormValues> {
+    // Cancel any pending delayed error
+    const timer = ctx.errorDelayTimers.get(fieldPath)
+    if (timer) {
+      clearTimeout(timer)
+      ctx.errorDelayTimers.delete(fieldPath)
+    }
+    ctx.pendingErrors.delete(fieldPath)
+
+    // Clear existing error
+    return clearFieldErrors(ctx.errors.value, fieldPath)
+  }
+
+  /**
+   * Clear all pending errors and timers (called on form reset)
+   */
+  function clearAllPendingErrors(): void {
+    for (const timer of ctx.errorDelayTimers.values()) {
+      clearTimeout(timer)
+    }
+    ctx.errorDelayTimers.clear()
+    ctx.pendingErrors.clear()
+  }
+
+  /**
    * Validate a single field or entire form
    */
   async function validate(fieldPath?: string): Promise<boolean> {
     // Capture reset generation before async validation
     const generationAtStart = ctx.resetGeneration.value
 
-    // Use safeParseAsync to avoid throwing
-    const result = await ctx.options.schema.safeParseAsync(ctx.formData)
+    // Get criteriaMode from options (default: 'firstError')
+    const criteriaMode = ctx.options.criteriaMode || 'firstError'
 
-    // Check if form was reset during validation - if so, discard stale results
-    if (ctx.resetGeneration.value !== generationAtStart) {
-      return true // Form was reset, don't update errors
-    }
+    // P2: Mark field(s) as validating
+    const validatingKey = fieldPath || '_form'
+    setValidating(ctx, validatingKey, true)
 
-    if (result.success) {
-      // Clear errors on success
-      if (fieldPath) {
-        ctx.errors.value = clearFieldErrors(ctx.errors.value, fieldPath)
-      } else {
-        ctx.errors.value = {} as FieldErrors<FormValues>
+    try {
+      // Use safeParseAsync to avoid throwing
+      const result = await ctx.options.schema.safeParseAsync(ctx.formData)
+
+      // Check if form was reset during validation - if so, discard stale results
+      if (ctx.resetGeneration.value !== generationAtStart) {
+        return true // Form was reset, don't update errors
       }
-      return true
-    }
 
-    // Validation failed - process errors
-    const zodErrors = result.error.issues
-
-    if (fieldPath) {
-      // Single field validation - filter to only this field's errors
-      const fieldErrors = zodErrors.filter((issue) => {
-        const path = issue.path.join('.')
-        return path === fieldPath || path.startsWith(`${fieldPath}.`)
-      })
-
-      if (fieldErrors.length === 0) {
-        // This specific field is valid, clear its errors
-        ctx.errors.value = clearFieldErrors(ctx.errors.value, fieldPath)
+      if (result.success) {
+        // Clear errors on success
+        if (fieldPath) {
+          ctx.errors.value = cancelError(fieldPath)
+        } else {
+          // Full form valid - clear all pending errors and timers
+          clearAllPendingErrors()
+          ctx.errors.value = {} as FieldErrors<FormValues>
+        }
         return true
       }
 
-      // Update only this field's errors (merge with existing), with multi-error support
-      const newErrors = clearFieldErrors(ctx.errors.value, fieldPath)
-      const grouped = groupErrorsByPath(fieldErrors)
+      // Validation failed - process errors
+      const zodErrors = result.error.issues
 
-      for (const [path, errors] of grouped) {
-        set(newErrors, path, createFieldError(errors))
+      if (fieldPath) {
+        // Single field validation - filter to only this field's errors
+        const fieldErrors = zodErrors.filter((issue) => {
+          const path = issue.path.join('.')
+          return path === fieldPath || path.startsWith(`${fieldPath}.`)
+        })
+
+        if (fieldErrors.length === 0) {
+          // This specific field is valid, clear its errors
+          ctx.errors.value = cancelError(fieldPath)
+          return true
+        }
+
+        // Cancel existing errors for this field first
+        ctx.errors.value = cancelError(fieldPath)
+
+        // Schedule errors (with optional delay)
+        const grouped = groupErrorsByPath(fieldErrors)
+        for (const [path, errors] of grouped) {
+          scheduleError(path, createFieldError(errors, criteriaMode))
+        }
+
+        return false
       }
 
-      ctx.errors.value = newErrors as FieldErrors<FormValues>
+      // Full form validation with multi-error support
+      // Clear all pending errors first
+      clearAllPendingErrors()
+      ctx.errors.value = {} as FieldErrors<FormValues>
+
+      const grouped = groupErrorsByPath(zodErrors)
+      for (const [path, errors] of grouped) {
+        scheduleError(path, createFieldError(errors, criteriaMode))
+      }
+
       return false
+    } finally {
+      // P2: Clear validating state
+      setValidating(ctx, validatingKey, false)
     }
-
-    // Full form validation with multi-error support
-    const newErrors: Record<string, string | FieldError> = {}
-    const grouped = groupErrorsByPath(zodErrors)
-
-    for (const [path, errors] of grouped) {
-      set(newErrors, path, createFieldError(errors))
-    }
-
-    ctx.errors.value = newErrors as FieldErrors<FormValues>
-    return false
   }
 
-  return { validate }
+  return { validate, clearAllPendingErrors }
 }

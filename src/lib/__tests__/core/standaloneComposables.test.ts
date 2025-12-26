@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { useForm } from '../useForm'
-import { useWatch } from '../useWatch'
-import { useController } from '../useController'
-import { useFormState } from '../useFormState'
+import { useForm } from '../../useForm'
+import { useWatch } from '../../useWatch'
+import { useController } from '../../useController'
+import { useFormState } from '../../useFormState'
 
 const schema = z.object({
   email: z.string().email(),
@@ -85,7 +85,7 @@ describe('useWatch', () => {
 
   describe('exports', () => {
     it('should export useWatch from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.useWatch).toBeDefined()
     })
   })
@@ -188,7 +188,7 @@ describe('useController', () => {
 
   describe('exports', () => {
     it('should export useController from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.useController).toBeDefined()
     })
   })
@@ -259,7 +259,7 @@ describe('useFormState', () => {
 
   describe('exports', () => {
     it('should export useFormState from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.useFormState).toBeDefined()
     })
   })

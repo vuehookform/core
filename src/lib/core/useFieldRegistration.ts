@@ -4,6 +4,7 @@ import type {
   RegisterOptions,
   RegisterReturn,
   FieldErrors,
+  UnregisterOptions,
   Path,
 } from '../types'
 import { get, set, unset } from '../utils/paths'
@@ -101,12 +102,21 @@ export function createFieldRegistration<FormValues>(
         ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
 
         // Validate based on mode
-        if (
+        const shouldValidate =
           ctx.options.mode === 'onChange' ||
           (ctx.options.mode === 'onTouched' && ctx.touchedFields.value[name]) ||
           (ctx.touchedFields.value[name] && ctx.options.reValidateMode === 'onChange')
-        ) {
+
+        if (shouldValidate) {
           await validate(name)
+
+          // Trigger validation for dependent fields (deps option)
+          const fieldOpts = ctx.fieldOptions.get(name)
+          if (fieldOpts?.deps && fieldOpts.deps.length > 0) {
+            for (const depField of fieldOpts.deps) {
+              validate(depField)
+            }
+          }
         }
 
         // Custom validation with optional debouncing
@@ -150,12 +160,21 @@ export function createFieldRegistration<FormValues>(
         ctx.touchedFields.value = { ...ctx.touchedFields.value, [name]: true }
 
         // Validate based on mode
-        if (
+        const shouldValidate =
           ctx.options.mode === 'onBlur' ||
           ctx.options.mode === 'onTouched' ||
           (ctx.submitCount.value > 0 && ctx.options.reValidateMode === 'onBlur')
-        ) {
+
+        if (shouldValidate) {
           await validate(name)
+
+          // Trigger validation for dependent fields (deps option)
+          const fieldOpts = ctx.fieldOptions.get(name)
+          if (fieldOpts?.deps && fieldOpts.deps.length > 0) {
+            for (const depField of fieldOpts.deps) {
+              validate(depField)
+            }
+          }
         }
       }
 
@@ -247,30 +266,44 @@ export function createFieldRegistration<FormValues>(
   /**
    * Unregister a field to clean up refs, options, and form data
    */
-  function unregister<TPath extends Path<FormValues>>(name: TPath): void {
-    // Remove form data for this field
-    unset(ctx.formData, name)
+  function unregister<TPath extends Path<FormValues>>(
+    name: TPath,
+    options?: UnregisterOptions,
+  ): void {
+    const opts = options || {}
 
-    // Clear errors for this field
-    const newErrors = { ...ctx.errors.value }
-    delete newErrors[name as keyof typeof newErrors]
-    ctx.errors.value = newErrors as FieldErrors<FormValues>
+    // Conditionally remove form data for this field
+    if (!opts.keepValue) {
+      unset(ctx.formData, name)
+    }
 
-    // Clear touched/dirty state
-    const newTouched = { ...ctx.touchedFields.value }
-    delete newTouched[name]
-    ctx.touchedFields.value = newTouched
+    // Conditionally clear errors for this field
+    if (!opts.keepError) {
+      const newErrors = { ...ctx.errors.value }
+      delete newErrors[name as keyof typeof newErrors]
+      ctx.errors.value = newErrors as FieldErrors<FormValues>
+    }
 
-    const newDirty = { ...ctx.dirtyFields.value }
-    delete newDirty[name]
-    ctx.dirtyFields.value = newDirty
+    // Conditionally clear touched state
+    if (!opts.keepTouched) {
+      const newTouched = { ...ctx.touchedFields.value }
+      delete newTouched[name]
+      ctx.touchedFields.value = newTouched
+    }
 
-    // Clean up refs, options, and handlers
+    // Conditionally clear dirty state
+    if (!opts.keepDirty) {
+      const newDirty = { ...ctx.dirtyFields.value }
+      delete newDirty[name]
+      ctx.dirtyFields.value = newDirty
+    }
+
+    // Always clean up refs, options, and handlers (internal state)
     ctx.fieldRefs.delete(name)
     ctx.fieldOptions.delete(name)
     ctx.fieldHandlers.delete(name)
 
-    // Clean up debounce timers
+    // Always clean up debounce timers
     const timer = ctx.debounceTimers.get(name)
     if (timer) {
       clearTimeout(timer)

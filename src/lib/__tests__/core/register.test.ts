@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
 import { nextTick } from 'vue'
 

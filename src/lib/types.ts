@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from 'vue'
+import type { ComputedRef, MaybeRef, Ref } from 'vue'
 import type { ZodType, z } from 'zod'
 
 /**
@@ -82,6 +82,12 @@ export interface FormState<T> {
   isSubmitting: boolean
   /** Whether async default values are loading */
   isLoading: boolean
+  /** Whether form is ready (initialization complete, not loading) */
+  isReady: boolean
+  /** Whether any field is currently being validated */
+  isValidating: boolean
+  /** Record of fields currently being validated */
+  validatingFields: Record<string, boolean>
   /** Record of touched field paths */
   touchedFields: Record<string, boolean>
   /** Record of dirty field paths */
@@ -90,6 +96,10 @@ export interface FormState<T> {
   submitCount: number
   /** Error that occurred while loading async default values */
   defaultValuesError: unknown
+  /** Whether form has been submitted at least once */
+  isSubmitted: boolean
+  /** Whether the last submission was successful */
+  isSubmitSuccessful: boolean
 }
 
 /**
@@ -125,6 +135,50 @@ export interface SetFocusOptions {
 }
 
 /**
+ * Options for setValue()
+ */
+export interface SetValueOptions {
+  /** Trigger validation after setting value (default: false) */
+  shouldValidate?: boolean
+  /** Mark field as dirty (default: true) */
+  shouldDirty?: boolean
+  /** Mark field as touched (default: false) */
+  shouldTouch?: boolean
+}
+
+/**
+ * Options for resetField()
+ */
+export interface ResetFieldOptions {
+  /** Keep validation errors after reset */
+  keepError?: boolean
+  /** Keep dirty state after reset */
+  keepDirty?: boolean
+  /** Keep touched state after reset */
+  keepTouched?: boolean
+  /** New default value (updates stored default) */
+  defaultValue?: unknown
+}
+
+/**
+ * Options for unregister()
+ */
+export interface UnregisterOptions {
+  /** Keep the field value in form data */
+  keepValue?: boolean
+  /** Keep validation errors */
+  keepError?: boolean
+  /** Keep dirty state */
+  keepDirty?: boolean
+  /** Keep touched state */
+  keepTouched?: boolean
+  /** Keep the default value */
+  keepDefaultValue?: boolean
+  /** Don't re-evaluate isValid */
+  keepIsValid?: boolean
+}
+
+/**
  * Options for reset()
  */
 export interface ResetOptions {
@@ -140,6 +194,8 @@ export interface ResetOptions {
   keepDefaultValues?: boolean
   /** Keep isSubmitting state after reset */
   keepIsSubmitting?: boolean
+  /** Keep isSubmitSuccessful state after reset */
+  keepIsSubmitSuccessful?: boolean
 }
 
 /**
@@ -156,6 +212,8 @@ export interface RegisterOptions {
   validateDebounce?: number
   /** Remove field data when unmounted (overrides global shouldUnregister option) */
   shouldUnregister?: boolean
+  /** Dependent fields to re-validate when this field changes */
+  deps?: string[]
 }
 
 /**
@@ -187,31 +245,70 @@ export interface FieldArrayItem {
 }
 
 /**
+ * Focus options for field array operations
+ */
+export interface FieldArrayFocusOptions {
+  /** Whether to focus after operation (default: true for append/prepend/insert) */
+  shouldFocus?: boolean
+  /** Which item index to focus relative to added items (default: 0 = first added) */
+  focusIndex?: number
+  /** Field name within the item to focus (e.g., 'name' for items.X.name) */
+  focusName?: string
+}
+
+/**
+ * Rules for validating field arrays
+ */
+export interface FieldArrayRules<T = unknown> {
+  /** Minimum number of items required */
+  minLength?: { value: number; message: string }
+  /** Maximum number of items allowed */
+  maxLength?: { value: number; message: string }
+  /** Custom validation function - return error message or true if valid */
+  validate?: (items: T[]) => string | true | Promise<string | true>
+}
+
+/**
+ * Options for configuring field arrays
+ */
+export interface FieldArrayOptions<T = unknown> {
+  /** Validation rules for the array itself */
+  rules?: FieldArrayRules<T>
+}
+
+/**
  * API for managing dynamic field arrays
  */
 export interface FieldArray {
   /** Current field items with metadata */
   value: FieldArrayItem[]
-  /** Append item to end of array */
-  append: (value: unknown) => void
-  /** Prepend item to beginning of array */
-  prepend: (value: unknown) => void
+  /** Append item(s) to end of array */
+  append: (value: unknown | unknown[], options?: FieldArrayFocusOptions) => void
+  /** Prepend item(s) to beginning of array */
+  prepend: (value: unknown | unknown[], options?: FieldArrayFocusOptions) => void
   /** Remove item at index */
   remove: (index: number) => void
-  /** Insert item at index */
-  insert: (index: number, value: unknown) => void
+  /** Insert item(s) at index */
+  insert: (index: number, value: unknown | unknown[], options?: FieldArrayFocusOptions) => void
   /** Swap two items */
   swap: (indexA: number, indexB: number) => void
   /** Move item from one index to another */
   move: (from: number, to: number) => void
   /** Update item at index (preserves key/identity) */
   update: (index: number, value: unknown) => void
+  /** Replace all items with new values */
+  replace: (values: unknown[]) => void
 }
 
 /**
  * Async default values function type
  */
 export type AsyncDefaultValues<T> = () => Promise<Partial<T>>
+
+/**
+ * Criteria mode for error collection
+ */
+export type CriteriaMode = 'firstError' | 'all'
 
 /**
  * Options for useForm composable
@@ -229,6 +326,22 @@ export interface UseFormOptions<TSchema extends ZodType> {
   shouldUnregister?: boolean
   /** Callback when async default values fail to load */
   onDefaultValuesError?: (error: unknown) => void
+  /** Focus first field with error on submit (default: true) */
+  shouldFocusError?: boolean
+  /** How to collect validation errors: 'firstError' or 'all' (default: 'firstError') */
+  criteriaMode?: CriteriaMode
+  /** Delay before displaying validation errors in milliseconds (default: 0 = no delay) */
+  delayError?: number
+  /**
+   * External values to sync to form. Changes update formData without marking dirty.
+   * Useful for server-fetched data or parent component state.
+   */
+  values?: MaybeRef<Partial<InferSchema<TSchema>>>
+  /**
+   * External/server errors to merge with validation errors.
+   * Useful for server-side validation errors.
+   */
+  errors?: MaybeRef<Partial<FieldErrors<InferSchema<TSchema>>>>
 }
 
 /**
@@ -249,8 +362,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * Unregister a field to clean up refs and options
    * Call this when a field is unmounted to prevent memory leaks
    * @param name - Field path to unregister
+   * @param options - Options for what state to preserve
    */
-  unregister: <TPath extends Path<InferSchema<TSchema>>>(name: TPath) => void
+  unregister: <TPath extends Path<InferSchema<TSchema>>>(
+    name: TPath,
+    options?: UnregisterOptions,
+  ) => void
 
   /**
    * Handle form submission
@@ -268,17 +385,23 @@ export interface UseFormReturn<TSchema extends ZodType> {
   /**
    * Manage dynamic field arrays
    * @param name - Array field path
+   * @param options - Optional configuration including rules
    */
-  fields: <TPath extends Path<InferSchema<TSchema>>>(name: TPath) => FieldArray
+  fields: <TPath extends Path<InferSchema<TSchema>>>(
+    name: TPath,
+    options?: FieldArrayOptions,
+  ) => FieldArray
 
   /**
    * Set field value programmatically
    * @param name - Field path
    * @param value - New value
+   * @param options - Options for validation/dirty/touched behavior
    */
   setValue: <TPath extends Path<InferSchema<TSchema>>>(
     name: TPath,
     value: PathValue<InferSchema<TSchema>, TPath>,
+    options?: SetValueOptions,
   ) => void
 
   /**
@@ -295,6 +418,16 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * @param options - Optional reset options
    */
   reset: (values?: Partial<InferSchema<TSchema>>, options?: ResetOptions) => void
+
+  /**
+   * Reset an individual field to its default value
+   * @param name - Field path
+   * @param options - Options for what state to preserve
+   */
+  resetField: <TPath extends Path<InferSchema<TSchema>>>(
+    name: TPath,
+    options?: ResetFieldOptions,
+  ) => void
 
   /**
    * Watch field value(s) reactively

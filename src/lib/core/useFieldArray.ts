@@ -1,6 +1,12 @@
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import type { FormContext } from './formContext'
-import type { FieldArray, FieldArrayItem, Path } from '../types'
+import type {
+  FieldArray,
+  FieldArrayItem,
+  FieldArrayOptions,
+  FieldArrayFocusOptions,
+  Path,
+} from '../types'
 import { get, set, generateId } from '../utils/paths'
 
 /**
@@ -9,11 +15,17 @@ import { get, set, generateId } from '../utils/paths'
 export function createFieldArrayManager<FormValues>(
   ctx: FormContext<FormValues>,
   validate: (fieldPath?: string) => Promise<boolean>,
+  setFocus: (name: string) => void,
 ) {
   /**
    * Manage dynamic field arrays
+   * @param name - Array field path
+   * @param options - Optional configuration including rules
    */
-  function fields<TPath extends Path<FormValues>>(name: TPath): FieldArray {
+  function fields<TPath extends Path<FormValues>>(
+    name: TPath,
+    options?: FieldArrayOptions,
+  ): FieldArray {
     // Get or create field array entry
     let fieldArray = ctx.fieldArrays.get(name)
 
@@ -24,6 +36,8 @@ export function createFieldArrayManager<FormValues>(
         values: existingValues,
         // Index cache stored on fieldArray for O(1) lookups, shared across fields() calls
         indexCache: new Map<string, number>(),
+        // P2: Store rules for validation
+        rules: options?.rules,
       }
       ctx.fieldArrays.set(name, fieldArray)
 
@@ -31,6 +45,9 @@ export function createFieldArrayManager<FormValues>(
       if (!get(ctx.formData, name)) {
         set(ctx.formData, name, [] as unknown[])
       }
+    } else if (options?.rules) {
+      // Update rules if provided on subsequent calls
+      fieldArray.rules = options.rules
     }
 
     // Capture reference for closures
@@ -72,23 +89,104 @@ export function createFieldArrayManager<FormValues>(
       rebuildIndexCache()
     }
 
-    const append = (value: unknown) => {
+    /**
+     * P2: Handle focus after array operations
+     */
+    const handleFocus = async (
+      baseIndex: number,
+      addedCount: number,
+      focusOptions?: FieldArrayFocusOptions,
+    ) => {
+      // Default shouldFocus to false (opt-in behavior)
+      if (!focusOptions?.shouldFocus) return
+
+      // Wait for DOM to update
+      await nextTick()
+
+      // Determine which item to focus (relative index within added items)
+      const focusItemOffset = focusOptions?.focusIndex ?? 0
+      const targetIndex = baseIndex + Math.min(focusItemOffset, addedCount - 1)
+
+      // Build the full field path
+      let fieldPath = `${name}.${targetIndex}`
+      if (focusOptions?.focusName) {
+        fieldPath = `${fieldPath}.${focusOptions.focusName}`
+      }
+
+      // Use setFocus from useForm
+      setFocus(fieldPath)
+    }
+
+    /**
+     * P2: Normalize input to always be an array (supports batch operations)
+     */
+    const normalizeToArray = <T>(value: T | T[]): T[] => {
+      return Array.isArray(value) ? value : [value]
+    }
+
+    const append = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions) => {
+      const values = normalizeToArray(value)
+      if (values.length === 0) return
+
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
-      const newValues = [...currentValues, value]
+      const insertIndex = currentValues.length // Items will be added starting at this index
+
+      // P2: Check maxLength rule before adding
+      const rules = fa.rules
+      if (rules?.maxLength && currentValues.length + values.length > rules.maxLength.value) {
+        return // Reject operation - maxLength exceeded
+      }
+
+      // Update form data (batch)
+      const newValues = [...currentValues, ...values]
       set(ctx.formData, name, newValues)
 
-      fa.items.value = [...fa.items.value, createItem(generateId())]
+      // Create items with unique keys (batch)
+      const newItems = values.map(() => createItem(generateId()))
+      fa.items.value = [...fa.items.value, ...newItems]
       rebuildIndexCache()
 
+      // Mark dirty (single update for batch)
       ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+
+      // P2: Handle focus
+      handleFocus(insertIndex, values.length, focusOptions)
     }
 
-    const prepend = (value: unknown) => {
-      insert(0, value)
+    const prepend = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions) => {
+      const values = normalizeToArray(value)
+      if (values.length === 0) return
+
+      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+
+      // P2: Check maxLength rule before adding
+      const rules = fa.rules
+      if (rules?.maxLength && currentValues.length + values.length > rules.maxLength.value) {
+        return // Reject operation - maxLength exceeded
+      }
+
+      // Update form data (batch)
+      const newValues = [...values, ...currentValues]
+      set(ctx.formData, name, newValues)
+
+      // Create items with unique keys (batch)
+      const newItems = values.map(() => createItem(generateId()))
+      fa.items.value = [...newItems, ...fa.items.value]
+      rebuildIndexCache()
+
+      // Mark dirty
+      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+
+      if (ctx.options.mode === 'onChange') {
+        validate(name)
+      }
+
+      // P2: Handle focus (items added at index 0)
+      handleFocus(0, values.length, focusOptions)
     }
 
     const update = (index: number, value: unknown) => {
@@ -110,6 +208,16 @@ export function createFieldArrayManager<FormValues>(
 
     const removeAt = (index: number) => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
+
+      // Bounds check
+      if (index < 0 || index >= currentValues.length) return
+
+      // P2: Check minLength rule before removing
+      const rules = fa.rules
+      if (rules?.minLength && currentValues.length - 1 < rules.minLength.value) {
+        return // Reject operation - minLength would be violated
+      }
+
       const newValues = currentValues.filter((_: unknown, i: number) => i !== index)
       set(ctx.formData, name, newValues)
 
@@ -125,23 +233,38 @@ export function createFieldArrayManager<FormValues>(
       }
     }
 
-    const insert = (index: number, value: unknown) => {
+    const insert = (
+      index: number,
+      value: unknown | unknown[],
+      focusOptions?: FieldArrayFocusOptions,
+    ) => {
+      const values = normalizeToArray(value)
+      if (values.length === 0) return
+
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
+
+      // P2: Check maxLength rule before adding
+      const rules = fa.rules
+      if (rules?.maxLength && currentValues.length + values.length > rules.maxLength.value) {
+        return // Reject operation - maxLength exceeded
+      }
 
       // Bounds validation: clamp index to valid range [0, length]
       const clampedIndex = Math.max(0, Math.min(index, currentValues.length))
 
+      // Update form data (batch)
       const newValues = [
         ...currentValues.slice(0, clampedIndex),
-        value,
+        ...values,
         ...currentValues.slice(clampedIndex),
       ]
       set(ctx.formData, name, newValues)
 
-      const newItem = createItem(generateId())
+      // Create items with unique keys (batch)
+      const newItems = values.map(() => createItem(generateId()))
       fa.items.value = [
         ...fa.items.value.slice(0, clampedIndex),
-        newItem,
+        ...newItems,
         ...fa.items.value.slice(clampedIndex),
       ]
       rebuildIndexCache()
@@ -151,6 +274,9 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+
+      // P2: Handle focus
+      handleFocus(clampedIndex, values.length, focusOptions)
     }
 
     const swap = (indexA: number, indexB: number) => {
@@ -222,6 +348,28 @@ export function createFieldArrayManager<FormValues>(
       }
     }
 
+    const replace = (newValues: unknown[]) => {
+      // Validate input is array
+      if (!Array.isArray(newValues)) {
+        return
+      }
+
+      // Update form data with new values
+      set(ctx.formData, name, newValues)
+
+      // Create new items with fresh keys for each value
+      fa.items.value = newValues.map(() => createItem(generateId()))
+      rebuildIndexCache()
+
+      // Mark as dirty
+      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+
+      // Validate if needed
+      if (ctx.options.mode === 'onChange') {
+        validate(name)
+      }
+    }
+
     return {
       value: fa.items.value,
       append,
@@ -231,6 +379,7 @@ export function createFieldArrayManager<FormValues>(
       swap,
       move,
       update,
+      replace,
     }
   }
 

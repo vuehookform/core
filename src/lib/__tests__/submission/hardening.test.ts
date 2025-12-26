@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
-import { get, set, unset, generateId } from '../utils/paths'
-import { waitFor, createInputEvent } from './test-utils'
+import { get, set, unset, generateId } from '../../utils/paths'
+import { waitFor, createInputEvent } from '../helpers/test-utils'
 
 const schema = z.object({
   email: z.string().email(),

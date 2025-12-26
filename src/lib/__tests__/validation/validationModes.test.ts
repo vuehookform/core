@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
 
 const schema = z.object({

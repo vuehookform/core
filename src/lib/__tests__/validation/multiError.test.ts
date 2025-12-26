@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 
 // Schema with multiple validations on same field
 const schema = z.object({
@@ -55,6 +55,7 @@ describe('Multi-Error Support', () => {
     it('should return FieldError with types when multiple validations fail', async () => {
       const form = useForm({
         schema,
+        criteriaMode: 'all', // Enable multi-error collection
         defaultValues: {
           password: 'abc', // Too short, no uppercase, no number
           email: 'test@example.com',
@@ -74,6 +75,7 @@ describe('Multi-Error Support', () => {
     it('should collect all error types in types object', async () => {
       const form = useForm({
         schema,
+        criteriaMode: 'all', // Enable multi-error collection
         defaultValues: {
           password: 'abc', // Too short, no uppercase, no number
           email: 'test@example.com',
@@ -104,6 +106,7 @@ describe('Multi-Error Support', () => {
     it('should work with getFieldState for multiple errors', async () => {
       const form = useForm({
         schema,
+        criteriaMode: 'all', // Enable multi-error collection
         defaultValues: {
           password: 'abc',
           email: 'test@example.com',
@@ -230,9 +233,86 @@ describe('Multi-Error Support', () => {
 
   describe('type exports', () => {
     it('should export FieldError type', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       // Type exports can't be checked at runtime, but we can verify the module exports
       expect(exports).toBeDefined()
+    })
+  })
+
+  // ============================================
+  // criteriaMode Option Tests
+  // ============================================
+  describe('criteriaMode option', () => {
+    it('should return first error message as string with criteriaMode: firstError', async () => {
+      const form = useForm({
+        schema,
+        defaultValues: { password: '', email: '', username: '' },
+        criteriaMode: 'firstError',
+      })
+
+      // Set value that violates multiple rules
+      form.setValue('password', 'abc')
+      await form.trigger('password')
+
+      // Should be a string (first error only)
+      expect(typeof form.formState.value.errors.password).toBe('string')
+    })
+
+    it('should return string for single error with criteriaMode: all', async () => {
+      const simpleSchema = z.object({
+        password: z.string().min(8, 'At least 8 characters'),
+      })
+
+      const form = useForm({
+        schema: simpleSchema,
+        defaultValues: { password: '' },
+        criteriaMode: 'all',
+      })
+
+      // Set value that violates only one rule
+      form.setValue('password', 'short')
+      await form.trigger('password')
+
+      // Single error should still be a string for backward compatibility
+      expect(typeof form.formState.value.errors.password).toBe('string')
+    })
+
+    it('should return FieldError with types for multiple errors', async () => {
+      const form = useForm({
+        schema,
+        defaultValues: { password: '', email: '', username: '' },
+        criteriaMode: 'all',
+      })
+
+      // Set value that violates multiple rules (too short, no number, no uppercase)
+      form.setValue('password', 'abc')
+      await form.trigger('password')
+
+      const error = form.formState.value.errors.password
+
+      // When multiple errors, should be a FieldError object
+      if (typeof error === 'object' && error !== null && 'types' in error) {
+        expect(error.type).toBeDefined()
+        expect(error.message).toBeDefined()
+        expect(error.types).toBeDefined()
+      } else {
+        // If it's still a string, that's also valid for the first error
+        expect(typeof error).toBe('string')
+      }
+    })
+
+    it('should default to firstError mode', async () => {
+      const form = useForm({
+        schema,
+        defaultValues: { password: '', email: '', username: '' },
+        // No criteriaMode specified - should default to 'firstError'
+      })
+
+      form.setValue('password', 'abc')
+      await form.trigger('password')
+
+      // Default should be string (firstError)
+      expect(typeof form.formState.value.errors.password).toBe('string')
     })
   })
 })

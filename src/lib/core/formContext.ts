@@ -1,12 +1,15 @@
-import { reactive, ref, shallowRef, type Ref, type ShallowRef } from 'vue'
+import { reactive, ref, shallowRef, watch, toValue, type Ref, type ShallowRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
   FieldErrors,
+  FieldErrorValue,
   InferSchema,
   RegisterOptions,
   FieldArrayItem,
+  FieldArrayRules,
 } from '../types'
+import { set } from '../utils/paths'
 
 /**
  * Internal state for field array management
@@ -16,6 +19,8 @@ export interface FieldArrayState {
   values: unknown[]
   // Index cache for O(1) index lookups, shared across fields() calls
   indexCache: Map<string, number>
+  // Validation rules for the array itself (minLength, maxLength, custom)
+  rules?: FieldArrayRules
 }
 
 /**
@@ -44,6 +49,17 @@ export interface FormContext<FormValues> {
   isLoading: Ref<boolean>
   submitCount: Ref<number>
   defaultValuesError: Ref<unknown>
+  isSubmitSuccessful: Ref<boolean>
+
+  // P2: Validation state tracking
+  validatingFields: ShallowRef<Record<string, boolean>>
+
+  // P2: External errors from server/parent (merged with validation errors)
+  externalErrors: ShallowRef<FieldErrors<FormValues>>
+
+  // P2: Delayed error display tracking
+  errorDelayTimers: Map<string, ReturnType<typeof setTimeout>>
+  pendingErrors: Map<string, FieldErrorValue>
 
   // Field tracking
   fieldRefs: Map<string, Ref<HTMLInputElement | null>>
@@ -108,6 +124,17 @@ export function createFormContext<TSchema extends ZodType>(
   const isSubmitting = ref(false)
   const submitCount = ref(0)
   const defaultValuesError = ref<unknown>(null)
+  const isSubmitSuccessful = ref(false)
+
+  // P2: Validation state tracking - which fields are currently validating
+  const validatingFields = shallowRef<Record<string, boolean>>({})
+
+  // P2: External errors from server/parent
+  const externalErrors = shallowRef<FieldErrors<FormValues>>({})
+
+  // P2: Delayed error display tracking
+  const errorDelayTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const pendingErrors = new Map<string, FieldErrorValue>()
 
   // Field registration tracking
   const fieldRefs = new Map<string, Ref<HTMLInputElement | null>>()
@@ -126,6 +153,64 @@ export function createFormContext<TSchema extends ZodType>(
   // Reset generation counter (incremented on each reset to invalidate in-flight validations)
   const resetGeneration = ref(0)
 
+  // P2: Watch external values prop for changes
+  if (options.values !== undefined) {
+    // Set initial values from prop (if provided and not loading async defaults)
+    const initialValues = toValue(options.values)
+    if (initialValues && !isAsyncDefaults) {
+      for (const [key, value] of Object.entries(initialValues)) {
+        if (value !== undefined) {
+          set(formData, key, value)
+        }
+      }
+    }
+
+    // Watch for changes - update formData without marking dirty
+    watch(
+      () => toValue(options.values),
+      (newValues) => {
+        if (newValues) {
+          for (const [key, value] of Object.entries(newValues)) {
+            if (value !== undefined) {
+              set(formData, key, value)
+
+              // Also update DOM elements for uncontrolled fields
+              const fieldRef = fieldRefs.get(key)
+              const opts = fieldOptions.get(key)
+              if (fieldRef?.value && !opts?.controlled) {
+                const el = fieldRef.value
+                if (el.type === 'checkbox') {
+                  el.checked = value as boolean
+                } else {
+                  el.value = value as string
+                }
+              }
+            }
+          }
+        }
+      },
+      { deep: true },
+    )
+  }
+
+  // P2: Watch external errors prop for changes
+  if (options.errors !== undefined) {
+    // Set initial external errors
+    const initialErrors = toValue(options.errors)
+    if (initialErrors) {
+      externalErrors.value = initialErrors as FieldErrors<FormValues>
+    }
+
+    // Watch for changes
+    watch(
+      () => toValue(options.errors),
+      (newErrors) => {
+        externalErrors.value = (newErrors || {}) as FieldErrors<FormValues>
+      },
+      { deep: true },
+    )
+  }
+
   return {
     formData,
     defaultValues,
@@ -136,6 +221,11 @@ export function createFormContext<TSchema extends ZodType>(
     isLoading,
     submitCount,
     defaultValuesError,
+    isSubmitSuccessful,
+    validatingFields,
+    externalErrors,
+    errorDelayTimers,
+    pendingErrors,
     fieldRefs,
     fieldOptions,
     fieldArrays,

@@ -8,7 +8,9 @@ import type {
   FieldState,
   ErrorOption,
   SetFocusOptions,
+  SetValueOptions,
   ResetOptions,
+  ResetFieldOptions,
   InferSchema,
   Path,
   PathValue,
@@ -45,30 +47,79 @@ export function useForm<TSchema extends ZodType>(
   const ctx = createFormContext(options)
 
   // Create validation functions
-  const { validate } = createValidation<FormValues>(ctx)
+  const { validate, clearAllPendingErrors } = createValidation<FormValues>(ctx)
 
   // Create field registration functions
   const { register, unregister } = createFieldRegistration<FormValues>(ctx, validate)
 
-  // Create field array manager
-  const { fields } = createFieldArrayManager<FormValues>(ctx, validate)
+  // Define setFocus early so it can be passed to field array manager
+  function setFocus<TPath extends Path<FormValues>>(
+    name: TPath,
+    focusOptions?: SetFocusOptions,
+  ): void {
+    const fieldRef = ctx.fieldRefs.get(name)
+
+    if (!fieldRef?.value) {
+      return
+    }
+
+    const el = fieldRef.value
+
+    // Check if element is focusable
+    if (typeof el.focus === 'function') {
+      el.focus()
+
+      // Select text if requested and element supports selection
+      if (
+        focusOptions?.shouldSelect &&
+        el instanceof HTMLInputElement &&
+        typeof el.select === 'function'
+      ) {
+        el.select()
+      }
+    }
+  }
+
+  // Create field array manager (pass setFocus for P2 focusOptions feature)
+  // Wrap setFocus to accept string instead of Path<FormValues> for field array use
+  const setFocusWrapper = (name: string) => setFocus(name as Path<FormValues>)
+  const { fields } = createFieldArrayManager<FormValues>(ctx, validate, setFocusWrapper)
 
   /**
    * Get current form state
    */
-  const formState = computed<FormState<FormValues>>(() => ({
-    errors: ctx.errors.value,
-    isDirty: Object.keys(ctx.dirtyFields.value).some((k) => ctx.dirtyFields.value[k]),
-    dirtyFields: ctx.dirtyFields.value,
-    isValid:
-      (ctx.submitCount.value > 0 || Object.keys(ctx.touchedFields.value).length > 0) &&
-      Object.keys(ctx.errors.value).length === 0,
-    isSubmitting: ctx.isSubmitting.value,
-    isLoading: ctx.isLoading.value,
-    touchedFields: ctx.touchedFields.value,
-    submitCount: ctx.submitCount.value,
-    defaultValuesError: ctx.defaultValuesError.value,
-  }))
+  const formState = computed<FormState<FormValues>>(() => {
+    // P2: Merge internal validation errors with external errors
+    // External errors take precedence (server knows best)
+    const mergedErrors = {
+      ...ctx.errors.value,
+      ...ctx.externalErrors.value,
+    } as FieldErrors<FormValues>
+
+    return {
+      errors: mergedErrors,
+      isDirty: Object.keys(ctx.dirtyFields.value).some((k) => ctx.dirtyFields.value[k]),
+      dirtyFields: ctx.dirtyFields.value,
+      isValid:
+        (ctx.submitCount.value > 0 || Object.keys(ctx.touchedFields.value).length > 0) &&
+        Object.keys(mergedErrors).length === 0,
+      isSubmitting: ctx.isSubmitting.value,
+      isLoading: ctx.isLoading.value,
+      // P2: isReady - form initialization complete
+      isReady: !ctx.isLoading.value,
+      // P2: isValidating - any field is currently being validated
+      isValidating: Object.keys(ctx.validatingFields.value).some(
+        (k) => ctx.validatingFields.value[k],
+      ),
+      // P2: validatingFields - which fields are currently validating
+      validatingFields: ctx.validatingFields.value,
+      touchedFields: ctx.touchedFields.value,
+      submitCount: ctx.submitCount.value,
+      defaultValuesError: ctx.defaultValuesError.value,
+      isSubmitted: ctx.submitCount.value > 0,
+      isSubmitSuccessful: ctx.isSubmitSuccessful.value,
+    }
+  })
 
   /**
    * Handle form submission
@@ -85,6 +136,7 @@ export function useForm<TSchema extends ZodType>(
 
       ctx.isSubmitting.value = true
       ctx.submitCount.value++
+      ctx.isSubmitSuccessful.value = false
 
       try {
         // Collect values from uncontrolled inputs
@@ -105,9 +157,18 @@ export function useForm<TSchema extends ZodType>(
         if (isValid) {
           // Call success handler with validated data
           await onValid(ctx.formData as FormValues)
+          ctx.isSubmitSuccessful.value = true
         } else {
-          // Call error handler if provided
-          onInvalid?.(ctx.errors.value)
+          // Call error handler if provided (use merged errors from formState)
+          onInvalid?.(formState.value.errors)
+
+          // Focus first error field if shouldFocusError is enabled (default: true)
+          if (options.shouldFocusError !== false) {
+            const firstErrorField = Object.keys(formState.value.errors)[0]
+            if (firstErrorField) {
+              setFocus(firstErrorField as Path<FormValues>)
+            }
+          }
         }
       } finally {
         ctx.isSubmitting.value = false
@@ -121,9 +182,19 @@ export function useForm<TSchema extends ZodType>(
   function setValue<TPath extends Path<FormValues>>(
     name: TPath,
     value: PathValue<FormValues, TPath>,
+    setValueOptions?: SetValueOptions,
   ): void {
     set(ctx.formData, name, value)
-    ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+
+    // shouldDirty (default: true)
+    if (setValueOptions?.shouldDirty !== false) {
+      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+    }
+
+    // shouldTouch (default: false)
+    if (setValueOptions?.shouldTouch) {
+      ctx.touchedFields.value = { ...ctx.touchedFields.value, [name]: true }
+    }
 
     // Only update DOM element for uncontrolled inputs
     // For controlled inputs, Vue reactivity handles the sync through v-model
@@ -140,8 +211,8 @@ export function useForm<TSchema extends ZodType>(
       }
     }
 
-    // Validate if needed
-    if (options.mode === 'onChange' || ctx.touchedFields.value[name]) {
+    // shouldValidate (default: false)
+    if (setValueOptions?.shouldValidate) {
       validate(name)
     }
   }
@@ -163,6 +234,10 @@ export function useForm<TSchema extends ZodType>(
 
     // Increment reset generation to invalidate any in-flight validations
     ctx.resetGeneration.value++
+
+    // P2: Clear all pending error timers and validating state
+    clearAllPendingErrors()
+    ctx.validatingFields.value = {}
 
     // Update default values unless keepDefaultValues is true
     if (!opts.keepDefaultValues && values) {
@@ -193,6 +268,9 @@ export function useForm<TSchema extends ZodType>(
     if (!opts.keepIsSubmitting) {
       ctx.isSubmitting.value = false
     }
+    if (!opts.keepIsSubmitSuccessful) {
+      ctx.isSubmitSuccessful.value = false
+    }
 
     // Always clear field arrays (they'll be recreated on next access)
     ctx.fieldArrays.clear()
@@ -207,6 +285,89 @@ export function useForm<TSchema extends ZodType>(
             el.checked = value as boolean
           } else {
             el.value = value as string
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Reset an individual field to its default value
+   */
+  function resetField<TPath extends Path<FormValues>>(
+    name: TPath,
+    resetFieldOptions?: ResetFieldOptions,
+  ): void {
+    const opts = resetFieldOptions || {}
+
+    // Increment reset generation to invalidate pending validations
+    ctx.resetGeneration.value++
+
+    // P2: Clear error delay timer for this field
+    const errorTimer = ctx.errorDelayTimers.get(name)
+    if (errorTimer) {
+      clearTimeout(errorTimer)
+      ctx.errorDelayTimers.delete(name)
+    }
+    ctx.pendingErrors.delete(name)
+
+    // Get default value (use provided or stored default)
+    let defaultValue = opts.defaultValue
+    if (defaultValue === undefined) {
+      defaultValue = get(ctx.defaultValues, name)
+    } else {
+      // Update stored default if new one provided
+      set(ctx.defaultValues, name, defaultValue)
+    }
+
+    // Update form data (deep clone to prevent reference sharing)
+    const clonedValue = defaultValue !== undefined
+      ? JSON.parse(JSON.stringify(defaultValue))
+      : undefined
+    set(ctx.formData, name, clonedValue)
+
+    // Conditionally clear errors
+    if (!opts.keepError) {
+      const newErrors = { ...ctx.errors.value }
+      for (const key of Object.keys(newErrors)) {
+        if (key === name || key.startsWith(`${name}.`)) {
+          delete newErrors[key as keyof typeof newErrors]
+        }
+      }
+      ctx.errors.value = newErrors as FieldErrors<FormValues>
+    }
+
+    // Conditionally clear dirty state
+    if (!opts.keepDirty) {
+      const newDirty = { ...ctx.dirtyFields.value }
+      delete newDirty[name]
+      ctx.dirtyFields.value = newDirty
+    }
+
+    // Conditionally clear touched state
+    if (!opts.keepTouched) {
+      const newTouched = { ...ctx.touchedFields.value }
+      delete newTouched[name]
+      ctx.touchedFields.value = newTouched
+    }
+
+    // Update DOM element for uncontrolled inputs
+    const fieldOpts = ctx.fieldOptions.get(name)
+    if (!fieldOpts?.controlled) {
+      const fieldRef = ctx.fieldRefs.get(name)
+      if (fieldRef?.value) {
+        const el = fieldRef.value
+        if (clonedValue !== undefined) {
+          if (el.type === 'checkbox') {
+            el.checked = clonedValue as boolean
+          } else {
+            el.value = clonedValue as string
+          }
+        } else {
+          if (el.type === 'checkbox') {
+            el.checked = false
+          } else {
+            el.value = ''
           }
         }
       }
@@ -367,36 +528,6 @@ export function useForm<TSchema extends ZodType>(
     return await validate(name)
   }
 
-  /**
-   * Programmatically focus a field
-   */
-  function setFocus<TPath extends Path<FormValues>>(
-    name: TPath,
-    focusOptions?: SetFocusOptions,
-  ): void {
-    const fieldRef = ctx.fieldRefs.get(name)
-
-    if (!fieldRef?.value) {
-      return
-    }
-
-    const el = fieldRef.value
-
-    // Check if element is focusable
-    if (typeof el.focus === 'function') {
-      el.focus()
-
-      // Select text if requested and element supports selection
-      if (
-        focusOptions?.shouldSelect &&
-        el instanceof HTMLInputElement &&
-        typeof el.select === 'function'
-      ) {
-        el.select()
-      }
-    }
-  }
-
   return {
     register,
     unregister,
@@ -406,6 +537,7 @@ export function useForm<TSchema extends ZodType>(
     setValue,
     getValue,
     reset,
+    resetField,
     watch,
     validate,
     clearErrors,

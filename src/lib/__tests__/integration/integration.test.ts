@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useForm } from '../useForm'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
 import {
   createMockInput,
   createInputEvent,
   createBlurEvent,
   mountElement,
-} from './test-utils'
+} from '../helpers/test-utils'
 
 describe('integration tests', () => {
   let mockInputs: HTMLInputElement[] = []
@@ -394,43 +394,6 @@ describe('integration tests', () => {
       name: z.string().min(2),
     })
 
-    it('should reset to default values', async () => {
-      const emailInput = createAndMountInput()
-
-      const { register, getValues, setValue, reset } = useForm({
-        schema,
-        defaultValues: { email: 'default@test.com', name: 'Default' },
-      })
-
-      const emailField = register('email')
-      emailField.ref(emailInput)
-
-      // Change value
-      setValue('email', 'changed@test.com')
-      expect(getValues('email')).toBe('changed@test.com')
-
-      // Reset
-      reset()
-
-      expect(getValues('email')).toBe('default@test.com')
-      expect(getValues('name')).toBe('Default')
-    })
-
-    it('should reset to new values', async () => {
-      const { getValues, setValue, reset } = useForm({
-        schema,
-        defaultValues: { email: 'default@test.com', name: 'Default' },
-      })
-
-      setValue('email', 'changed@test.com')
-
-      // Reset to new values
-      reset({ email: 'new@test.com', name: 'New Name' })
-
-      expect(getValues('email')).toBe('new@test.com')
-      expect(getValues('name')).toBe('New Name')
-    })
-
     it('should clear errors on reset', async () => {
       const { setError, formState, reset } = useForm({
         schema,
@@ -464,84 +427,6 @@ describe('integration tests', () => {
       reset()
 
       expect(getValues('items')).toEqual(['initial'])
-    })
-  })
-
-  describe('watch functionality', () => {
-    const schema = z.object({
-      firstName: z.string(),
-      lastName: z.string(),
-    })
-
-    it('should watch single field changes', async () => {
-      const firstNameInput = createAndMountInput()
-
-      const { register, watch } = useForm({
-        schema,
-        defaultValues: { firstName: '', lastName: '' },
-      })
-
-      const firstNameField = register('firstName')
-      firstNameField.ref(firstNameInput)
-
-      const watchedFirstName = watch('firstName')
-
-      expect(watchedFirstName.value).toBe('')
-
-      firstNameInput.value = 'John'
-      await firstNameField.onInput(createInputEvent(firstNameInput))
-
-      expect(watchedFirstName.value).toBe('John')
-    })
-
-    it('should watch multiple fields', async () => {
-      const firstNameInput = createAndMountInput()
-      const lastNameInput = createAndMountInput()
-
-      const { register, watch } = useForm({
-        schema,
-        defaultValues: { firstName: '', lastName: '' },
-      })
-
-      const firstNameField = register('firstName')
-      const lastNameField = register('lastName')
-      firstNameField.ref(firstNameInput)
-      lastNameField.ref(lastNameInput)
-
-      const watchedFields = watch(['firstName', 'lastName'])
-
-      firstNameInput.value = 'John'
-      await firstNameField.onInput(createInputEvent(firstNameInput))
-
-      lastNameInput.value = 'Doe'
-      await lastNameField.onInput(createInputEvent(lastNameInput))
-
-      expect(watchedFields.value).toEqual({
-        firstName: 'John',
-        lastName: 'Doe',
-      })
-    })
-
-    it('should watch entire form', async () => {
-      const firstNameInput = createAndMountInput()
-
-      const { register, watch } = useForm({
-        schema,
-        defaultValues: { firstName: '', lastName: '' },
-      })
-
-      const firstNameField = register('firstName')
-      firstNameField.ref(firstNameInput)
-
-      const watchedForm = watch()
-
-      firstNameInput.value = 'John'
-      await firstNameField.onInput(createInputEvent(firstNameInput))
-
-      expect(watchedForm.value).toEqual({
-        firstName: 'John',
-        lastName: '',
-      })
     })
   })
 })

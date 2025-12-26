@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { defineComponent, h, inject } from 'vue'
 import { mount } from '@vue/test-utils'
-import { useForm } from '../useForm'
-import { provideForm, useFormContext, FormContextKey } from '../context'
+import { useForm } from '../../useForm'
+import { provideForm, useFormContext, FormContextKey } from '../../context'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -102,17 +102,17 @@ describe('Form Context API', () => {
 
   describe('exports', () => {
     it('should export provideForm from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.provideForm).toBeDefined()
     })
 
     it('should export useFormContext from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.useFormContext).toBeDefined()
     })
 
     it('should export FormContextKey from index', async () => {
-      const exports = await import('../index')
+      const exports = await import('../../index')
       expect(exports.FormContextKey).toBeDefined()
     })
   })

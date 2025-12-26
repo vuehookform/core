@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { useForm } from '../useForm'
+import { nextTick } from 'vue'
+import { useForm } from '../../useForm'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -516,6 +517,43 @@ describe('useValidation', () => {
         type: 'server',
         message: 'Email already exists',
       })
+    })
+  })
+
+  describe('validatingFields state', () => {
+    it('should track validating state during validation', async () => {
+      const schema = z.object({
+        email: z.string().email(),
+      })
+      const { formState, validate } = useForm({ schema })
+
+      // Before validation
+      expect(formState.value.validatingFields).toEqual({})
+      expect(formState.value.isValidating).toBe(false)
+
+      // Start validation
+      const validationPromise = validate('email')
+
+      // During validation (state should be set synchronously before await)
+      await nextTick()
+
+      // After validation completes
+      await validationPromise
+
+      expect(formState.value.validatingFields).toEqual({})
+      expect(formState.value.isValidating).toBe(false)
+    })
+
+    it('should clear validating state on form reset', async () => {
+      const schema = z.object({
+        email: z.string().email(),
+      })
+      const { formState, reset } = useForm({ schema })
+
+      // Reset should clear validating state
+      reset()
+
+      expect(formState.value.validatingFields).toEqual({})
     })
   })
 })

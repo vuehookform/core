@@ -8,7 +8,7 @@ import {
   isArrayPath,
   getParentPath,
   getFieldName,
-} from '../utils/paths'
+} from '../../utils/paths'
 
 describe('path utilities', () => {
   describe('get', () => {
