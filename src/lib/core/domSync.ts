@@ -17,7 +17,7 @@ export function syncUncontrolledInputs(
   fieldOptions: Map<string, RegisterOptions>,
   formData: Record<string, unknown>,
 ): void {
-  for (const [name, fieldRef] of fieldRefs.entries()) {
+  for (const [name, fieldRef] of Array.from(fieldRefs.entries())) {
     const el = fieldRef.value
     if (el) {
       const opts = fieldOptions.get(name)

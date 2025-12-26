@@ -270,7 +270,7 @@ export function useForm<TSchema extends ZodType>(
     ctx.fieldArrays.clear()
 
     // Update input elements
-    for (const [name, fieldRef] of ctx.fieldRefs.entries()) {
+    for (const [name, fieldRef] of Array.from(ctx.fieldRefs.entries())) {
       const el = fieldRef.value
       if (el) {
         const value = get(newValues as Record<string, unknown>, name)
