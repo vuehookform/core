@@ -438,15 +438,15 @@ describe('controlled inputs', () => {
 
         // Watch for changes
         const values: string[] = []
-        values.push(watchedEmail.value)
+        values.push(watchedEmail.value as string)
 
         setValue('email', 'first@test.com')
         await nextTick()
-        values.push(watchedEmail.value)
+        values.push(watchedEmail.value as string)
 
         setValue('email', 'second@test.com')
         await nextTick()
-        values.push(watchedEmail.value)
+        values.push(watchedEmail.value as string)
 
         expect(values).toEqual(['', 'first@test.com', 'second@test.com'])
       })
