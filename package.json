@@ -36,7 +36,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build:lib",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -68,8 +69,8 @@
     "zod": "^3.0.0 || ^4.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.18",
     "@prettier/plugin-oxc": "^0.0.5",
+    "@tailwindcss/vite": "^4.1.18",
     "@tsconfig/node24": "^24.0.3",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^6.0.2",
@@ -81,11 +82,16 @@
     "eslint-plugin-oxlint": "~1.29.0",
     "eslint-plugin-vue": "~10.5.1",
     "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
+    "lint-staged": "^16.2.7",
+    "material-icons": "^1.13.14",
+    "material-symbols": "^0.40.2",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.29.0",
     "pinia": "^3.0.4",
     "prettier": "3.6.2",
+    "tailwindcss": "^4.1.18",
     "typescript": "~5.9.0",
     "vite": "npm:rolldown-vite@latest",
     "vite-plugin-compression2": "^2.4.0",
@@ -94,9 +100,15 @@
     "vue": "^3.5.25",
     "vue-router": "^4.6.3",
     "vue-tsc": "^3.1.5",
-    "zod": "^4.2.1",
-    "material-icons": "^1.13.14",
-    "material-symbols": "^0.40.2",
-    "tailwindcss": "^4.1.18"
+    "zod": "^4.2.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue}": [
+      "oxlint --fix -D correctness",
+      "eslint --fix"
+    ],
+    "*.{ts,tsx,vue,json,md}": [
+      "prettier --write --experimental-cli"
+    ]
   }
 }
