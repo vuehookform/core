@@ -78,6 +78,53 @@ export function validatePathSyntax(path: string): string | null {
 }
 
 /**
+ * Traverse a Zod schema following a dot-notation path
+ * Returns the schema at the end of the path, or error info if invalid
+ */
+function traverseSchemaPath(
+  schema: ZodType,
+  path: string,
+): { schema: ZodType } | { error: string; availableFields?: string[]; segmentIndex: number } {
+  const segments = path.split('.')
+  let currentSchema: ZodType = schema
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]
+    if (!segment) continue
+
+    currentSchema = unwrapSchema(currentSchema)
+
+    if (isZodObject(currentSchema)) {
+      const shape = currentSchema.shape as Record<string, ZodType>
+      if (segment in shape) {
+        const nextSchema = shape[segment]
+        if (nextSchema) {
+          currentSchema = nextSchema
+          continue
+        }
+      }
+      return {
+        error: `Field "${segments.slice(0, i + 1).join('.')}" does not exist in schema`,
+        availableFields: Object.keys(shape),
+        segmentIndex: i,
+      }
+    }
+
+    if (isZodArray(currentSchema) && /^\d+$/.test(segment)) {
+      currentSchema = currentSchema.element
+      continue
+    }
+
+    return {
+      error: `Cannot navigate path "${path}" at segment "${segment}"`,
+      segmentIndex: i,
+    }
+  }
+
+  return { schema: currentSchema }
+}
+
+/**
  * Check if a path exists in a Zod schema
  * This is a runtime check to validate paths against the schema structure
  */
@@ -88,49 +135,16 @@ export function validatePathAgainstSchema(
   if (!__DEV__) return { valid: true }
 
   try {
-    const segments = path.split('.')
-    let currentSchema: ZodType = schema
-
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i]
-      if (segment === undefined) continue
-
-      // Unwrap optional/nullable/default types
-      currentSchema = unwrapSchema(currentSchema)
-
-      // Handle ZodObject
-      if (isZodObject(currentSchema)) {
-        const shape = currentSchema.shape as Record<string, ZodType>
-        if (segment in shape) {
-          const nextSchema = shape[segment]
-          if (nextSchema) {
-            currentSchema = nextSchema
-            continue
-          }
-        }
-        return {
-          valid: false,
-          reason: `Field "${segments.slice(0, i + 1).join('.')}" does not exist in schema`,
-          availableFields: Object.keys(shape),
-        }
-      }
-
-      // Handle ZodArray (for numeric indices)
-      if (isZodArray(currentSchema) && /^\d+$/.test(segment)) {
-        currentSchema = currentSchema.element
-        continue
-      }
-
-      // If we got here, we can't navigate further
+    const result = traverseSchemaPath(schema, path)
+    if ('error' in result) {
       return {
         valid: false,
-        reason: `Cannot navigate path "${path}" at segment "${segment}"`,
+        reason: result.error,
+        availableFields: result.availableFields,
       }
     }
-
     return { valid: true }
   } catch {
-    // If schema introspection fails, don't block - just skip validation
     return { valid: true }
   }
 }
@@ -142,36 +156,9 @@ export function isArrayFieldInSchema(schema: ZodType, path: string): boolean | n
   if (!__DEV__) return null
 
   try {
-    const segments = path.split('.')
-    let currentSchema: ZodType = schema
-
-    for (const segment of segments) {
-      if (!segment) continue
-      currentSchema = unwrapSchema(currentSchema)
-
-      if (isZodObject(currentSchema)) {
-        const shape = currentSchema.shape as Record<string, ZodType>
-        if (segment in shape) {
-          const nextSchema = shape[segment]
-          if (nextSchema) {
-            currentSchema = nextSchema
-            continue
-          }
-        }
-        return null // Path doesn't exist
-      }
-
-      if (isZodArray(currentSchema) && /^\d+$/.test(segment)) {
-        currentSchema = currentSchema.element
-        continue
-      }
-
-      return null // Can't navigate
-    }
-
-    // Check if final schema is an array
-    currentSchema = unwrapSchema(currentSchema)
-    return isZodArray(currentSchema)
+    const result = traverseSchemaPath(schema, path)
+    if ('error' in result) return null
+    return isZodArray(unwrapSchema(result.schema))
   } catch {
     return null
   }

@@ -44,13 +44,3 @@ export function updateDomElement(el: HTMLInputElement, value: unknown): void {
     el.value = value as string
   }
 }
-
-/**
- * Get value from a DOM element based on its type
- *
- * @param el - The DOM input element
- * @returns The current value (checked state for checkboxes, value for others)
- */
-export function getDomElementValue(el: HTMLInputElement): unknown {
-  return el.type === 'checkbox' ? el.checked : el.value
-}

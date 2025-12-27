@@ -97,15 +97,21 @@ export function useForm<TSchema extends ZodType>(
   const { fields } = createFieldArrayManager<FormValues>(ctx, validate, setFocusWrapper)
 
   /**
-   * Get current form state
+   * Get merged errors (internal validation + external/server errors)
+   * External errors take precedence (server knows best)
    */
-  const formState = computed<FormState<FormValues>>(() => {
-    // P2: Merge internal validation errors with external errors
-    // External errors take precedence (server knows best)
-    const mergedErrors = {
+  function getMergedErrors(): FieldErrors<FormValues> {
+    return {
       ...ctx.errors.value,
       ...ctx.externalErrors.value,
     } as FieldErrors<FormValues>
+  }
+
+  /**
+   * Get current form state
+   */
+  const formState = computed<FormState<FormValues>>(() => {
+    const mergedErrors = getMergedErrors()
 
     return {
       errors: mergedErrors,
@@ -451,11 +457,7 @@ export function useForm<TSchema extends ZodType>(
   function hasErrors<TPath extends Path<FormValues>>(
     fieldPath?: TPath | 'root' | `root.${string}`,
   ): boolean {
-    // Get merged errors (internal + external)
-    const mergedErrors = {
-      ...ctx.errors.value,
-      ...ctx.externalErrors.value,
-    }
+    const mergedErrors = getMergedErrors()
 
     if (fieldPath === undefined) {
       // Check if form has any errors
@@ -477,11 +479,7 @@ export function useForm<TSchema extends ZodType>(
   function getErrors<TPath extends Path<FormValues>>(
     fieldPath?: TPath | 'root' | `root.${string}`,
   ): FieldErrors<FormValues> | FieldErrorValue | undefined {
-    // Get merged errors (internal + external)
-    const mergedErrors = {
-      ...ctx.errors.value,
-      ...ctx.externalErrors.value,
-    } as FieldErrors<FormValues>
+    const mergedErrors = getMergedErrors()
 
     if (fieldPath === undefined) {
       // Return all errors

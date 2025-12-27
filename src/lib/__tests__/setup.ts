@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach, vi } from 'vitest'
+import { beforeAll, afterAll, beforeEach } from 'vitest'
 import { clearWarningCache } from '../utils/devWarnings'
 
 const originalWarn = console.warn
