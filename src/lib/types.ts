@@ -221,6 +221,8 @@ export interface FormState<T> {
   isSubmitted: boolean
   /** Whether the last submission was successful */
   isSubmitSuccessful: boolean
+  /** Whether the form is disabled */
+  disabled: boolean
 }
 
 /**
@@ -398,6 +400,8 @@ export interface RegisterReturn<TValue = unknown> {
   onBlur: (e: Event) => void
   /** Current value (for controlled mode) - only present when controlled: true */
   value?: Ref<TValue>
+  /** Disabled state from form-level disabled option */
+  disabled?: boolean
 }
 
 /**
@@ -687,6 +691,42 @@ export interface UseFormOptions<TSchema extends ZodType> {
    * ```
    */
   errors?: MaybeRef<Partial<FieldErrors<InferSchema<TSchema>>>>
+
+  /**
+   * Disable the entire form. When true:
+   * - All registered fields receive `disabled` attribute
+   * - Form submission is prevented
+   * - Can be reactive (MaybeRef) to toggle dynamically
+   *
+   * @example Disable form during submission
+   * ```ts
+   * const isSubmitting = ref(false)
+   *
+   * useForm({
+   *   schema,
+   *   disabled: isSubmitting
+   * })
+   * ```
+   */
+  disabled?: MaybeRef<boolean>
+
+  /**
+   * Enable browser's native validation API.
+   * When true:
+   * - Calls setCustomValidity() on inputs with error messages
+   * - Enables :valid/:invalid CSS pseudo-selectors
+   * - Shows native browser validation tooltips
+   *
+   * @example
+   * ```ts
+   * useForm({ schema, shouldUseNativeValidation: true })
+   *
+   * // CSS styling:
+   * // input:invalid { border-color: red; }
+   * // input:valid { border-color: green; }
+   * ```
+   */
+  shouldUseNativeValidation?: boolean
 }
 
 /**

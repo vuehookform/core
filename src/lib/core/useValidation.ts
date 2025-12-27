@@ -97,6 +97,32 @@ function createFieldError(
  */
 export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   /**
+   * Apply native validation to a field's DOM element.
+   * Sets the custom validity message for browser validation UI.
+   */
+  function applyNativeValidation(fieldPath: string, errorMessage: string | null): void {
+    if (!ctx.options.shouldUseNativeValidation) return
+
+    const fieldRef = ctx.fieldRefs.get(fieldPath)
+    const el = fieldRef?.value
+
+    if (el && 'setCustomValidity' in el) {
+      ;(el as HTMLInputElement).setCustomValidity(errorMessage || '')
+    }
+  }
+
+  /**
+   * Clear native validation on all registered fields
+   */
+  function clearAllNativeValidation(): void {
+    if (!ctx.options.shouldUseNativeValidation) return
+
+    for (const [path] of ctx.fieldRefs) {
+      applyNativeValidation(path, null)
+    }
+  }
+
+  /**
    * Schedule error display with optional delay (delayError feature)
    * If delayError > 0, the error will be shown after the delay.
    * If the field becomes valid before the delay completes, the error won't be shown.
@@ -104,11 +130,17 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   function scheduleError(fieldPath: string, error: FieldErrorValue): void {
     const delayMs = ctx.options.delayError || 0
 
+    // Get error message for native validation
+    const errorMessage = typeof error === 'string' ? error : error.message
+
     if (delayMs <= 0) {
       // No delay - set error immediately using set() to maintain nested structure
       const newErrors = { ...ctx.errors.value }
       set(newErrors, fieldPath, error)
       ctx.errors.value = newErrors as FieldErrors<FormValues>
+
+      // Apply native validation
+      applyNativeValidation(fieldPath, errorMessage)
       return
     }
 
@@ -131,6 +163,9 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
         const newErrors = { ...ctx.errors.value }
         set(newErrors, fieldPath, pendingError)
         ctx.errors.value = newErrors as FieldErrors<FormValues>
+
+        // Apply native validation after delay
+        applyNativeValidation(fieldPath, errorMessage)
       }
     }, delayMs)
 
@@ -148,6 +183,9 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       ctx.errorDelayTimers.delete(fieldPath)
     }
     ctx.pendingErrors.delete(fieldPath)
+
+    // Clear native validation
+    applyNativeValidation(fieldPath, null)
 
     // Clear existing error
     return clearFieldErrors(ctx.errors.value, fieldPath)
@@ -195,6 +233,9 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
           // Full form valid - clear all pending errors and timers
           clearAllPendingErrors()
           ctx.errors.value = {} as FieldErrors<FormValues>
+
+          // Clear native validation on all fields
+          clearAllNativeValidation()
         }
         return true
       }

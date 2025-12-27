@@ -154,6 +154,7 @@ export function useForm<TSchema extends ZodType>(
       defaultValuesError: ctx.defaultValuesError.value,
       isSubmitted: ctx.submitCount.value > 0,
       isSubmitSuccessful: ctx.isSubmitSuccessful.value,
+      disabled: ctx.isDisabled.value,
     }
   })
 
@@ -166,6 +167,9 @@ export function useForm<TSchema extends ZodType>(
   ) {
     return async (e: Event) => {
       e.preventDefault()
+
+      // Prevent submission if form is disabled
+      if (ctx.isDisabled.value) return
 
       // Prevent double-submit: ignore if already submitting
       if (ctx.isSubmitting.value) return

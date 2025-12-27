@@ -282,6 +282,8 @@ export function createFieldRegistration<FormValues>(
       ref: handlers.refCallback,
       onInput: handlers.onInput,
       onBlur: handlers.onBlur,
+      // Add form-level disabled
+      ...(ctx.isDisabled.value && { disabled: true }),
       ...(registerOptions?.controlled && {
         value: computed({
           get: () => get(ctx.formData, name),

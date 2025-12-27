@@ -7,7 +7,7 @@ A TypeScript-first form library for Vue 3, inspired by React Hook Form.
 ## Features
 
 - **TypeScript First** - Perfect type inference with zero manual typing
-- **Zero Config** - Works out of the box with sensible defaults
+- **Field Arrays** - Dynamic lists with stable keys built-in
 - **Performant** - Minimal re-renders using uncontrolled inputs
 - **Zod Native** - First-class Zod integration for validation
 - **Tiny Bundle** - < 5kb gzipped, tree-shakable
@@ -102,6 +102,9 @@ useForm({
   // mode: 'onTouched', // Validate after field is touched
 })
 ```
+
+- `disabled: ref(true)` - Disable entire form (reactive, blocks submission)
+- `shouldUseNativeValidation: true` - Enable CSS `:valid`/`:invalid` selectors
 
 ## Tips
 

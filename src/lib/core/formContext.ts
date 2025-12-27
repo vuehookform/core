@@ -74,6 +74,9 @@ export interface FormContext<FormValues> {
   // Reset generation counter (used to cancel stale validations after reset)
   resetGeneration: Ref<number>
 
+  // Form-wide disabled state
+  isDisabled: Ref<boolean>
+
   // Options
   options: UseFormOptions<ZodType>
 }
@@ -152,6 +155,20 @@ export function createFormContext<TSchema extends ZodType>(
 
   // Reset generation counter (incremented on each reset to invalidate in-flight validations)
   const resetGeneration = ref(0)
+
+  // Form-wide disabled state (supports MaybeRef)
+  const isDisabled = ref(false)
+  if (options.disabled !== undefined) {
+    const initialDisabled = toValue(options.disabled)
+    isDisabled.value = initialDisabled ?? false
+
+    watch(
+      () => toValue(options.disabled),
+      (newDisabled) => {
+        isDisabled.value = newDisabled ?? false
+      },
+    )
+  }
 
   // Watch external values prop for changes
   if (options.values !== undefined) {
@@ -233,6 +250,7 @@ export function createFormContext<TSchema extends ZodType>(
     debounceTimers,
     validationRequestIds,
     resetGeneration,
+    isDisabled,
     options: options as UseFormOptions<ZodType>,
   }
 }
