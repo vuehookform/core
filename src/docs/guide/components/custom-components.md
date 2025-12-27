@@ -164,22 +164,21 @@ const { control, handleSubmit } = useForm({ schema })
 
 ## Using Form Context
 
-For deeply nested components, use FormProvider and useFormContext:
+For deeply nested components, use provideForm and useFormContext:
 
 ```vue
 <!-- Form wrapper -->
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema })
+provideForm(form) // Make form available to all descendants
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <slot />
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <slot />
+  </form>
 </template>
 ```
 

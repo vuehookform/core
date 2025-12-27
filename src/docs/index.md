@@ -1,13 +1,13 @@
 ---
 layout: home
-title: Vue Hook Form - Performant, Type-Safe Forms
+title: Vue Hook Form - TypeScript-first Form Library
 titleTemplate: false
 description: Type-safe, performant form library for Vue 3 with Zod validation. Build forms with minimal boilerplate and perfect TypeScript inference.
 
 head:
   - - meta
     - property: og:title
-      content: Vue Hook Form - Performant, Type-Safe Forms
+      content: Vue Hook Form - TypeScript-first Form Library
   - - meta
     - property: og:description
       content: Type-safe, performant form library for Vue 3 with Zod validation. Build forms with minimal boilerplate and perfect TypeScript inference.

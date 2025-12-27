@@ -75,6 +75,21 @@ const form = useForm({
 })
 ```
 
+### reValidateMode
+
+**Type:** `'onSubmit' | 'onBlur' | 'onChange'`\
+**Default:** `'onChange'`
+
+When to re-validate after the first submission. This allows different validation behavior before vs after the user submits.
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onSubmit',
+  reValidateMode: 'onChange', // After first submit, validate on every change
+})
+```
+
 ### disabled
 
 **Type:** `Ref<boolean> | boolean`\
@@ -131,8 +146,9 @@ Register an input field.
 {
   name: string
   ref: (el: HTMLElement | null) => void
-  onChange: (e: Event) => void
+  onInput: (e: Event) => void
   onBlur: (e: Event) => void
+  disabled?: boolean  // Present when form is disabled
 }
 ```
 
@@ -142,8 +158,9 @@ Register an input field.
 {
   value: Ref<T>
   name: string
-  onChange: (e: Event) => void
+  onInput: (e: Event) => void
   onBlur: (e: Event) => void
+  disabled?: boolean  // Present when form is disabled
 }
 ```
 
@@ -281,9 +298,9 @@ await trigger(['email', 'password']) // Validate multiple fields
 ### watch
 
 ```typescript
-watch(): Ref<T>
-watch(name: Path<T>): Ref<any>
-watch(names: Path<T>[]): Ref<any[]>
+watch(): ComputedRef<T>
+watch(name: Path<T>): ComputedRef<PathValue<T, Path>>
+watch(names: Path<T>[]): ComputedRef<Partial<T>>
 ```
 
 Watch field values reactively.
@@ -291,7 +308,10 @@ Watch field values reactively.
 ```typescript
 const allValues = watch()
 const email = watch('email')
-const [email, name] = watch(['email', 'name'])
+
+// Multiple fields returns an object, not a tuple
+const credentials = watch(['email', 'password'])
+// Access: credentials.value.email, credentials.value.password
 ```
 
 ### setError

@@ -160,14 +160,44 @@ interface FormState<T> {
   submitCount: number
 
   /**
-   * Set of touched field names
+   * Record of touched field names
    */
-  touchedFields: Set<string>
+  touchedFields: Record<string, boolean>
 
   /**
-   * Set of dirty field names
+   * Record of dirty field names
    */
-  dirtyFields: Set<string>
+  dirtyFields: Record<string, boolean>
+
+  /**
+   * True while async default values are loading
+   */
+  isLoading: boolean
+
+  /**
+   * True when form is ready (inverse of isLoading)
+   */
+  isReady: boolean
+
+  /**
+   * True while any field is validating asynchronously
+   */
+  isValidating: boolean
+
+  /**
+   * Record of fields currently validating
+   */
+  validatingFields: Record<string, boolean>
+
+  /**
+   * Error from loading async default values
+   */
+  defaultValuesError: unknown
+
+  /**
+   * True when form is disabled
+   */
+  disabled: boolean
 }
 ```
 
@@ -239,6 +269,23 @@ interface FieldArrayReturn<T> {
    * @returns false if minLength would be violated
    */
   remove: (index: number) => boolean
+
+  /**
+   * Remove all items from array
+   * @returns false if minLength would be violated
+   */
+  removeAll: () => boolean
+
+  /**
+   * Remove multiple items by indices
+   * @returns false if minLength would be violated
+   */
+  removeMany: (indices: number[]) => boolean
+
+  /**
+   * Update item at index while preserving its key
+   */
+  update: (index: number, value: T) => void
 
   /**
    * Swap two items
@@ -329,16 +376,18 @@ Return value of `register()`.
 interface RegisterReturn {
   name: string
   ref: (el: HTMLElement | null) => void
-  onChange: (e: Event) => void
+  onInput: (e: Event) => void
   onBlur: (e: Event) => void
+  disabled?: boolean // Present when form is disabled
 }
 
 // Controlled mode
 interface ControlledRegisterReturn {
   value: Ref<T>
   name: string
-  onChange: (e: Event) => void
+  onInput: (e: Event) => void
   onBlur: (e: Event) => void
+  disabled?: boolean // Present when form is disabled
 }
 ```
 

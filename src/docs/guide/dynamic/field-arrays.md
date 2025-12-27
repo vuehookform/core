@@ -142,6 +142,34 @@ field.remove()
 // Returns false if minLength would be violated
 ```
 
+### removeAll
+
+Remove all items from array:
+
+```typescript
+items.removeAll()
+
+// Returns false if minLength would be violated
+```
+
+### removeMany
+
+Remove multiple items by indices:
+
+```typescript
+items.removeMany([0, 2, 4]) // Remove items at indices 0, 2, and 4
+
+// Returns false if minLength would be violated
+```
+
+### update
+
+Update item at index while preserving its stable key:
+
+```typescript
+items.update(0, { name: 'Updated name', quantity: 5 })
+```
+
 ### swap
 
 Swap two items:

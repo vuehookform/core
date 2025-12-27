@@ -101,19 +101,21 @@ formState.value.submitCount // number
 
 ### touchedFields
 
-Set of fields that have been interacted with (blurred):
+Record of fields that have been interacted with (blurred):
 
 ```typescript
-formState.value.touchedFields // Set<string>
+formState.value.touchedFields // Record<string, boolean>
 
 // Check if specific field was touched
-formState.value.touchedFields.has('email') // boolean
+formState.value.touchedFields['email'] // boolean
+// or
+formState.value.touchedFields.email // boolean
 ```
 
 ```vue
 <template>
   <!-- Only show error after user interacts with field -->
-  <span v-if="formState.value.touchedFields.has('email') && formState.value.errors.email">
+  <span v-if="formState.value.touchedFields['email'] && formState.value.errors.email">
     {{ formState.value.errors.email }}
   </span>
 </template>
@@ -121,13 +123,15 @@ formState.value.touchedFields.has('email') // boolean
 
 ### dirtyFields
 
-Set of fields that have been modified from their default values:
+Record of fields that have been modified from their default values:
 
 ```typescript
-formState.value.dirtyFields // Set<string>
+formState.value.dirtyFields // Record<string, boolean>
 
 // Check if specific field is dirty
-formState.value.dirtyFields.has('email') // boolean
+formState.value.dirtyFields['email'] // boolean
+// or
+formState.value.dirtyFields.email // boolean
 ```
 
 ## Common Patterns

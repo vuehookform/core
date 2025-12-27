@@ -159,20 +159,19 @@ Share form across deeply nested components.
 
 ```vue
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema })
+provideForm(form) // Make form available to all descendants
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <PersonalInfoSection />
-      <AddressSection />
-      <PreferencesSection />
-      <SubmitButton />
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <PersonalInfoSection />
+    <AddressSection />
+    <PreferencesSection />
+    <SubmitButton />
+  </form>
 </template>
 ```
 

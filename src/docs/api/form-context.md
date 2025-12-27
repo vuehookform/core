@@ -10,42 +10,43 @@ Form context allows child components to access the form without prop drilling. T
 - Reusable form field components
 - Multi-step forms
 
-## FormProvider
+## provideForm
 
-Wraps a component tree and provides form context to all descendants.
+Provides form context to all descendant components.
 
 ### Import
 
 ```typescript
-import { FormProvider } from '@vuehookform/core'
+import { provideForm } from '@vuehookform/core'
 ```
 
 ### Usage
 
 ```vue
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema })
+
+// Make form available to all descendant components
+provideForm(form)
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <!-- Child components can access form -->
-      <EmailField />
-      <PasswordField />
-      <SubmitButton />
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <!-- Child components can access form via useFormContext -->
+    <EmailField />
+    <PasswordField />
+    <SubmitButton />
+  </form>
 </template>
 ```
 
-### Props
+### Parameters
 
-| Prop   | Type               | Required | Description                    |
-| ------ | ------------------ | -------- | ------------------------------ |
-| `form` | `UseFormReturn<T>` | Yes      | The form object from `useForm` |
+| Parameter | Type               | Required | Description                    |
+| --------- | ------------------ | -------- | ------------------------------ |
+| `form`    | `UseFormReturn<T>` | Yes      | The form object from `useForm` |
 
 ## useFormContext
 
@@ -129,21 +130,20 @@ Usage:
 
 ```vue
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 import TextField from './TextField.vue'
 
 const form = useForm({ schema })
+provideForm(form)
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <TextField name="firstName" label="First Name" />
-      <TextField name="lastName" label="Last Name" />
-      <TextField name="email" label="Email" type="email" />
-      <button type="submit">Submit</button>
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <TextField name="firstName" label="First Name" />
+    <TextField name="lastName" label="Last Name" />
+    <TextField name="email" label="Email" type="email" />
+    <button type="submit">Submit</button>
+  </form>
 </template>
 ```
 
@@ -193,49 +193,72 @@ const { register } = useFormContext()
 ```vue
 <!-- ContactForm.vue -->
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 import TextField from './TextField.vue'
 import AddressSection from './AddressSection.vue'
 import SubmitButton from './SubmitButton.vue'
 
 const form = useForm({ schema })
+provideForm(form)
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <TextField name="name" label="Name" />
-      <TextField name="email" label="Email" type="email" />
+  <form @submit="form.handleSubmit(onSubmit)">
+    <TextField name="name" label="Name" />
+    <TextField name="email" label="Email" type="email" />
 
-      <!-- Nested component has access to form context -->
-      <AddressSection />
+    <!-- Nested component has access to form context -->
+    <AddressSection />
 
-      <SubmitButton label="Save Contact" />
-    </form>
-  </FormProvider>
+    <SubmitButton label="Save Contact" />
+  </form>
 </template>
 ```
 
 ### Multiple Forms
 
-Each `FormProvider` creates its own context:
+For multiple forms on the same page, create separate wrapper components that each call `provideForm()`:
 
 ```vue
+<!-- ShippingForm.vue -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema: shippingSchema })
+provideForm(form)
+</script>
+
+<template>
+  <form @submit="form.handleSubmit(onShipping)">
+    <h2>Shipping Address</h2>
+    <AddressFields />
+  </form>
+</template>
+```
+
+```vue
+<!-- BillingForm.vue -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema: billingSchema })
+provideForm(form)
+</script>
+
+<template>
+  <form @submit="form.handleSubmit(onBilling)">
+    <h2>Billing Address</h2>
+    <AddressFields />
+  </form>
+</template>
+```
+
+```vue
+<!-- Parent component -->
 <template>
   <div class="two-forms">
-    <FormProvider :form="shippingForm">
-      <form @submit="shippingForm.handleSubmit(onShipping)">
-        <h2>Shipping Address</h2>
-        <AddressFields />
-      </form>
-    </FormProvider>
-
-    <FormProvider :form="billingForm">
-      <form @submit="billingForm.handleSubmit(onBilling)">
-        <h2>Billing Address</h2>
-        <AddressFields />
-      </form>
-    </FormProvider>
+    <ShippingForm />
+    <BillingForm />
   </div>
 </template>
 ```
@@ -263,12 +286,12 @@ register('nonexistent') // Type error
 
 ## Error Handling
 
-`useFormContext` throws if used outside a `FormProvider`:
+`useFormContext` throws if used outside a component where `provideForm()` was called:
 
 ```typescript
-// This will throw if no FormProvider ancestor exists
+// This will throw if provideForm() was not called in a parent component
 const form = useFormContext()
-// Error: useFormContext must be used within a FormProvider
+// Error: useFormContext must be used within a component tree where provideForm() has been called
 ```
 
-Always ensure components using `useFormContext` are descendants of a `FormProvider`.
+Always ensure components using `useFormContext` are descendants of a component that calls `provideForm()`.

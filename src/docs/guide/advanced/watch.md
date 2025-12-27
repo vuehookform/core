@@ -34,7 +34,7 @@ const allValues = watch()
 
 ```typescript
 const email = watch('email')
-// Returns: Ref<string>
+// Returns: ComputedRef<string>
 
 // Use in template or computed
 console.log(email.value)
@@ -43,18 +43,18 @@ console.log(email.value)
 ### Multiple Fields
 
 ```typescript
-const [email, password] = watch(['email', 'password'])
-// Returns: Ref<[string, string]>
+const credentials = watch(['email', 'password'])
+// Returns: ComputedRef<{ email?: string, password?: string }>
 
-// Access individual values
-console.log(email.value, password.value)
+// Access individual values via the object
+console.log(credentials.value.email, credentials.value.password)
 ```
 
 ### All Fields
 
 ```typescript
 const allValues = watch()
-// Returns: Ref<FormValues>
+// Returns: ComputedRef<FormValues>
 
 // Access any field
 console.log(allValues.value.email)

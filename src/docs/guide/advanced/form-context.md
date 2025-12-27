@@ -8,11 +8,11 @@ Form context uses Vue's provide/inject to make form methods and state available 
 
 ## Setting Up Context
 
-Wrap your form with `FormProvider`:
+Call `provideForm()` in your setup script:
 
 ```vue
 <script setup>
-import { useForm, FormProvider } from '@vuehookform/core'
+import { useForm, provideForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -21,6 +21,7 @@ const schema = z.object({
 })
 
 const form = useForm({ schema })
+provideForm(form) // Make form available to all descendants
 
 const onSubmit = (data) => {
   console.log(data)
@@ -28,12 +29,10 @@ const onSubmit = (data) => {
 </script>
 
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <PersonalInfo />
-      <FormActions />
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <PersonalInfo />
+    <FormActions />
+  </form>
 </template>
 ```
 
@@ -143,15 +142,20 @@ const { register, formState } = useFormContext()
 Usage:
 
 ```vue
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema })
+provideForm(form)
+</script>
+
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <FormField name="firstName" label="First Name" />
-      <FormField name="lastName" label="Last Name" />
-      <FormField name="email" label="Email" type="email" />
-      <button type="submit">Submit</button>
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <FormField name="firstName" label="First Name" />
+    <FormField name="lastName" label="Last Name" />
+    <FormField name="email" label="Email" type="email" />
+    <button type="submit">Submit</button>
+  </form>
 </template>
 ```
 
@@ -161,12 +165,17 @@ Context flows through any depth of nesting:
 
 ```vue
 <!-- ContactForm.vue -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema })
+provideForm(form)
+</script>
+
 <template>
-  <FormProvider :form="form">
-    <form @submit="form.handleSubmit(onSubmit)">
-      <ContactInfo />
-    </form>
-  </FormProvider>
+  <form @submit="form.handleSubmit(onSubmit)">
+    <ContactInfo />
+  </form>
 </template>
 ```
 
@@ -233,49 +242,73 @@ register('invalid') // Type error
 
 ## Multiple Forms
 
-Each `FormProvider` creates its own context:
+For multiple forms, create separate wrapper components that each call `provideForm()`:
 
 ```vue
+<!-- ShippingFormWrapper.vue -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema: shippingSchema })
+provideForm(form)
+</script>
+
+<template>
+  <form @submit="form.handleSubmit(onShipping)">
+    <h2>Shipping</h2>
+    <AddressFields />
+  </form>
+</template>
+```
+
+```vue
+<!-- BillingFormWrapper.vue -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+
+const form = useForm({ schema: billingSchema })
+provideForm(form)
+</script>
+
+<template>
+  <form @submit="form.handleSubmit(onBilling)">
+    <h2>Billing</h2>
+    <AddressFields />
+    <!-- Same component, different form -->
+  </form>
+</template>
+```
+
+```vue
+<!-- Parent component -->
 <template>
   <div class="side-by-side">
-    <FormProvider :form="shippingForm">
-      <form @submit="shippingForm.handleSubmit(onShipping)">
-        <h2>Shipping</h2>
-        <AddressFields />
-      </form>
-    </FormProvider>
-
-    <FormProvider :form="billingForm">
-      <form @submit="billingForm.handleSubmit(onBilling)">
-        <h2>Billing</h2>
-        <AddressFields />
-        <!-- Same component, different form -->
-      </form>
-    </FormProvider>
+    <ShippingFormWrapper />
+    <BillingFormWrapper />
   </div>
 </template>
 ```
 
 ## Error Handling
 
-`useFormContext` throws if used outside a provider:
+`useFormContext` throws if used outside a component where `provideForm()` was called:
 
 ```typescript
-// This throws if no FormProvider ancestor exists
+// This throws if provideForm() was not called in a parent component
 const form = useFormContext()
-// Error: useFormContext must be used within a FormProvider
+// Error: useFormContext must be used within a component tree where provideForm() has been called
 ```
 
 Handle this gracefully in reusable components:
 
 ```typescript
 import { inject } from 'vue'
-import { FORM_CONTEXT_KEY } from '@vuehookform/core'
+import { FormContextKey } from '@vuehookform/core'
 
 // Check if context exists
-const context = inject(FORM_CONTEXT_KEY, null)
+const context = inject(FormContextKey, null)
 if (!context) {
-  console.warn('Component used outside FormProvider')
+  console.warn('Component used outside form context')
 }
 ```
 
