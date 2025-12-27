@@ -26,13 +26,6 @@ const router = createRouter({
     return { top: 0 }
   },
   routes: [
-    // Landing page
-    {
-      path: '/',
-      name: 'landing',
-      component: () => import('@/views/LandingPage.vue'),
-    },
-
     // Docs section with layout wrapper
     {
       path: '/docs',
@@ -60,7 +53,7 @@ const router = createRouter({
     // Catch-all redirect
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/',
+      redirect: '/docs',
     },
   ],
 })
