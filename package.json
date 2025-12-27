@@ -91,6 +91,7 @@
     "material-icons": "^1.13.14",
     "material-symbols": "^0.40.2",
     "npm-run-all2": "^8.0.4",
+    "oxc-minify": "^0.105.0",
     "oxlint": "~1.29.0",
     "pinia": "^3.0.4",
     "prettier": "3.6.2",
