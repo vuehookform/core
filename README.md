@@ -10,7 +10,7 @@ A TypeScript-first form library for Vue 3, inspired by React Hook Form.
 - **Field Arrays** - Dynamic lists with stable keys built-in
 - **Performant** - Minimal re-renders using uncontrolled inputs
 - **Zod Native** - First-class Zod integration for validation
-- **Tiny Bundle** - < 5kb gzipped, tree-shakable
+- **Tiny Bundle** - ~10kb gzipped, tree-shakable
 - **UI Agnostic** - Works with any UI library or custom components
 
 ## Quick Start
