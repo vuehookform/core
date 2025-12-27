@@ -29,9 +29,105 @@ export function createFieldArrayManager<FormValues>(
   setFocus: (name: string) => void,
 ) {
   /**
-   * Manage dynamic field arrays
-   * @param name - Array field path
-   * @param options - Optional configuration including rules
+   * Manage dynamic field arrays with stable keys for Vue reconciliation.
+   *
+   * @param name - Array field path (must be an array in schema)
+   * @param options - Optional configuration including validation rules
+   * @returns FieldArray API with all array manipulation methods
+   *
+   * @example Basic field array usage
+   * ```ts
+   * const schema = z.object({
+   *   addresses: z.array(z.object({
+   *     street: z.string(),
+   *     city: z.string()
+   *   })).min(1)
+   * })
+   *
+   * const { fields, register } = useForm({
+   *   schema,
+   *   defaultValues: { addresses: [{ street: '', city: '' }] }
+   * })
+   *
+   * const addressFields = fields('addresses')
+   * ```
+   *
+   * @example Template usage with stable keys (CRITICAL)
+   * ```vue
+   * <template>
+   *   <div v-for="field in addressFields.value" :key="field.key">
+   *     <!-- IMPORTANT: Use field.key for :key, NOT the index! -->
+   *     <!-- Using index causes inputs to show wrong values when items are reordered -->
+   *
+   *     <input v-bind="register(`addresses.${field.index}.street`)" />
+   *     <input v-bind="register(`addresses.${field.index}.city`)" />
+   *     <button @click="field.remove()">Remove</button>
+   *   </div>
+   *
+   *   <button @click="addressFields.append({ street: '', city: '' })">
+   *     Add Address
+   *   </button>
+   * </template>
+   * ```
+   *
+   * @example With minLength/maxLength rules
+   * ```ts
+   * const items = fields('items', {
+   *   rules: {
+   *     minLength: { value: 1, message: 'At least one item required' },
+   *     maxLength: { value: 10, message: 'Maximum 10 items' }
+   *   }
+   * })
+   *
+   * // Operations that violate rules are rejected with console warning in dev
+   * items.removeAll()  // Rejected if minLength > 0
+   * items.append(newItem)  // Rejected if already at maxLength
+   * ```
+   *
+   * @example Array operations
+   * ```ts
+   * // Add to end
+   * addressFields.append({ street: '', city: '' })
+   *
+   * // Add multiple at once
+   * addressFields.append([
+   *   { street: '123 Main St', city: 'NYC' },
+   *   { street: '456 Oak Ave', city: 'LA' }
+   * ])
+   *
+   * // Add to beginning
+   * addressFields.prepend({ street: '', city: '' })
+   *
+   * // Insert at specific index
+   * addressFields.insert(1, { street: '', city: '' })
+   *
+   * // Reorder items
+   * addressFields.swap(0, 1)  // Swap first and second
+   * addressFields.move(2, 0)  // Move third to first position
+   *
+   * // Update in place (preserves key)
+   * addressFields.update(0, { street: 'Updated', city: 'Updated' })
+   *
+   * // Remove
+   * addressFields.remove(0)  // Remove first
+   * addressFields.removeMany([0, 2, 4])  // Remove multiple
+   * addressFields.removeAll()  // Remove all (respects minLength)
+   *
+   * // Replace all
+   * addressFields.replace([{ street: 'New', city: 'New' }])
+   * ```
+   *
+   * @example Focus after adding (accessibility)
+   * ```ts
+   * // Focus first field of new item after append
+   * addressFields.append({ street: '', city: '' }, {
+   *   shouldFocus: true,
+   *   focusName: 'street'  // Focus addresses.X.street
+   * })
+   * ```
+   *
+   * @see FieldArrayItem - Item metadata with key, index, remove()
+   * @see FieldArrayFocusOptions - Auto-focus after append/prepend/insert
    */
   function fields<TPath extends Path<FormValues>>(
     name: TPath,
@@ -156,9 +252,9 @@ export function createFieldArrayManager<FormValues>(
       return Array.isArray(value) ? value : [value]
     }
 
-    const append = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions) => {
+    const append = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions): boolean => {
       const values = normalizeToArray(value)
-      if (values.length === 0) return
+      if (values.length === 0) return true
 
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
       const insertIndex = currentValues.length // Items will be added starting at this index
@@ -172,7 +268,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.maxLength.value,
           })
         }
-        return // Reject operation - maxLength exceeded
+        return false // Reject operation - maxLength exceeded
       }
 
       // Update form data (batch)
@@ -193,11 +289,15 @@ export function createFieldArrayManager<FormValues>(
 
       // Handle focus
       handleFocus(insertIndex, values.length, focusOptions)
+      return true
     }
 
-    const prepend = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions) => {
+    const prepend = (
+      value: unknown | unknown[],
+      focusOptions?: FieldArrayFocusOptions,
+    ): boolean => {
       const values = normalizeToArray(value)
-      if (values.length === 0) return
+      if (values.length === 0) return true
 
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
@@ -210,7 +310,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.maxLength.value,
           })
         }
-        return // Reject operation - maxLength exceeded
+        return false // Reject operation - maxLength exceeded
       }
 
       // Update form data (batch)
@@ -231,15 +331,16 @@ export function createFieldArrayManager<FormValues>(
 
       // Handle focus (items added at index 0)
       handleFocus(0, values.length, focusOptions)
+      return true
     }
 
-    const update = (index: number, value: unknown) => {
+    const update = (index: number, value: unknown): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
       if (index < 0 || index >= currentValues.length) {
         if (__DEV__) {
           warnArrayIndexOutOfBounds('update', name, index, currentValues.length)
         }
-        return // Invalid index, do nothing
+        return false // Invalid index
       }
       const newValues = [...currentValues]
       newValues[index] = value
@@ -251,9 +352,10 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
-    const removeAt = (index: number) => {
+    const removeAt = (index: number): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
       // Bounds check
@@ -261,7 +363,7 @@ export function createFieldArrayManager<FormValues>(
         if (__DEV__) {
           warnArrayIndexOutOfBounds('remove', name, index, currentValues.length)
         }
-        return
+        return false
       }
 
       // Check minLength rule before removing
@@ -273,7 +375,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.minLength.value,
           })
         }
-        return // Reject operation - minLength would be violated
+        return false // Reject operation - minLength would be violated
       }
 
       const newValues = currentValues.filter((_: unknown, i: number) => i !== index)
@@ -289,15 +391,16 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
     const insert = (
       index: number,
       value: unknown | unknown[],
       focusOptions?: FieldArrayFocusOptions,
-    ) => {
+    ): boolean => {
       const values = normalizeToArray(value)
-      if (values.length === 0) return
+      if (values.length === 0) return true
 
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
@@ -310,7 +413,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.maxLength.value,
           })
         }
-        return // Reject operation - maxLength exceeded
+        return false // Reject operation - maxLength exceeded
       }
 
       // Bounds validation: clamp index to valid range [0, length]
@@ -341,9 +444,10 @@ export function createFieldArrayManager<FormValues>(
 
       // Handle focus
       handleFocus(clampedIndex, values.length, focusOptions)
+      return true
     }
 
-    const swap = (indexA: number, indexB: number) => {
+    const swap = (indexA: number, indexB: number): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
       // Bounds validation: reject invalid indices
@@ -357,7 +461,7 @@ export function createFieldArrayManager<FormValues>(
           const invalidIndex = indexA < 0 || indexA >= currentValues.length ? indexA : indexB
           warnArrayIndexOutOfBounds('swap', name, invalidIndex, currentValues.length)
         }
-        return // Invalid indices, do nothing
+        return false // Invalid indices
       }
 
       const newValues = [...currentValues]
@@ -380,9 +484,10 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
-    const move = (from: number, to: number) => {
+    const move = (from: number, to: number): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
       // Bounds validation: reject invalid indices
@@ -391,7 +496,7 @@ export function createFieldArrayManager<FormValues>(
           const invalidIndex = from < 0 || from >= currentValues.length ? from : to
           warnArrayIndexOutOfBounds('move', name, invalidIndex, currentValues.length)
         }
-        return // Invalid indices, do nothing
+        return false // Invalid indices
       }
 
       const newValues = [...currentValues]
@@ -418,12 +523,13 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
-    const replace = (newValues: unknown[]) => {
+    const replace = (newValues: unknown[]): boolean => {
       // Validate input is array
       if (!Array.isArray(newValues)) {
-        return
+        return false
       }
 
       // Update form data with new values
@@ -440,9 +546,10 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
-    const removeAll = () => {
+    const removeAll = (): boolean => {
       // Check minLength rule - if minLength > 0, reject
       const rules = fa.rules
       if (rules?.minLength && rules.minLength.value > 0) {
@@ -452,7 +559,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.minLength.value,
           })
         }
-        return // Reject operation - minLength would be violated
+        return false // Reject operation - minLength would be violated
       }
 
       // Clear form data array
@@ -468,15 +575,16 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
-    const removeMany = (indices: number[]) => {
+    const removeMany = (indices: number[]): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
       // Validate indices and filter to valid ones
       const validIndices = indices.filter((i) => i >= 0 && i < currentValues.length)
 
-      if (validIndices.length === 0) return
+      if (validIndices.length === 0) return true
 
       // Check minLength rule
       const rules = fa.rules
@@ -488,7 +596,7 @@ export function createFieldArrayManager<FormValues>(
             limit: rules.minLength.value,
           })
         }
-        return // Reject operation - minLength would be violated
+        return false // Reject operation - minLength would be violated
       }
 
       // Sort descending to remove from highest index first (prevents shifting issues)
@@ -510,6 +618,7 @@ export function createFieldArrayManager<FormValues>(
       if (ctx.options.mode === 'onChange') {
         validate(name)
       }
+      return true
     }
 
     return {

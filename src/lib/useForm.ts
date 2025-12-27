@@ -18,7 +18,13 @@ import type {
   SetErrorsOptions,
 } from './types'
 import { get, set } from './utils/paths'
-import { __DEV__, validatePathSyntax, warnInvalidPath } from './utils/devWarnings'
+import {
+  __DEV__,
+  validatePathSyntax,
+  validatePathAgainstSchema,
+  warnInvalidPath,
+  warnPathNotInSchema,
+} from './utils/devWarnings'
 import { createFormContext } from './core/formContext'
 import { createValidation } from './core/useValidation'
 import { createFieldRegistration } from './core/useFieldRegistration'
@@ -68,6 +74,19 @@ export function useForm<TSchema extends ZodType>(
     name: TPath,
     focusOptions?: SetFocusOptions,
   ): void {
+    // Dev-mode path validation
+    if (__DEV__) {
+      const syntaxError = validatePathSyntax(name)
+      if (syntaxError) {
+        warnInvalidPath('setFocus', name, syntaxError)
+      } else {
+        const schemaResult = validatePathAgainstSchema(ctx.options.schema, name)
+        if (!schemaResult.valid) {
+          warnPathNotInSchema('setFocus', name, schemaResult.availableFields)
+        }
+      }
+    }
+
     const fieldRef = ctx.fieldRefs.get(name)
 
     if (!fieldRef?.value) {
@@ -185,7 +204,45 @@ export function useForm<TSchema extends ZodType>(
   }
 
   /**
-   * Set field value programmatically
+   * Set a field value programmatically. Supports nested paths and
+   * optional validation/dirty/touched behavior control.
+   *
+   * @param name - Field path (e.g., 'email' or 'user.address.city')
+   * @param value - New value (typed based on path)
+   * @param options - Control side effects (validation, dirty, touched)
+   *
+   * @example Basic usage - sets value and marks dirty (default)
+   * ```ts
+   * setValue('email', 'user@example.com')
+   * // Equivalent to: setValue('email', '...', { shouldDirty: true })
+   * ```
+   *
+   * @example Set value from API without marking dirty
+   * ```ts
+   * // When populating from server data, don't mark as user-changed
+   * setValue('email', serverData.email, { shouldDirty: false })
+   * ```
+   *
+   * @example Set value and immediately validate
+   * ```ts
+   * setValue('quantity', newQty, { shouldValidate: true })
+   * // Useful for fields that affect other validations
+   * ```
+   *
+   * @example Set value and mark as touched
+   * ```ts
+   * setValue('terms', true, { shouldTouch: true })
+   * // Simulates user interaction with the field
+   * ```
+   *
+   * @example Set nested array item value
+   * ```ts
+   * setValue('addresses.0.city', 'New York')
+   * setValue(`addresses.${index}.zipCode`, '10001')
+   * ```
+   *
+   * @see reset - Reset entire form to default values
+   * @see resetField - Reset a single field to its default
    */
   function setValue<TPath extends Path<FormValues>>(
     name: TPath,
@@ -197,6 +254,11 @@ export function useForm<TSchema extends ZodType>(
       const syntaxError = validatePathSyntax(name)
       if (syntaxError) {
         warnInvalidPath('setValue', name, syntaxError)
+      } else {
+        const schemaResult = validatePathAgainstSchema(ctx.options.schema, name)
+        if (!schemaResult.valid) {
+          warnPathNotInSchema('setValue', name, schemaResult.availableFields)
+        }
       }
     }
 
@@ -300,6 +362,19 @@ export function useForm<TSchema extends ZodType>(
     name: TPath,
     resetFieldOptions?: ResetFieldOptions,
   ): void {
+    // Dev-mode path validation
+    if (__DEV__) {
+      const syntaxError = validatePathSyntax(name)
+      if (syntaxError) {
+        warnInvalidPath('resetField', name, syntaxError)
+      } else {
+        const schemaResult = validatePathAgainstSchema(ctx.options.schema, name)
+        if (!schemaResult.valid) {
+          warnPathNotInSchema('resetField', name, schemaResult.availableFields)
+        }
+      }
+    }
+
     const opts = resetFieldOptions || {}
 
     // Increment reset generation to invalidate pending validations
@@ -356,10 +431,55 @@ export function useForm<TSchema extends ZodType>(
   }
 
   /**
-   * Watch field value(s) reactively
+   * Watch field value(s) reactively. Returns a ComputedRef that updates
+   * whenever the watched field(s) change.
+   *
    * @overload Watch all form values
+   * @returns ComputedRef containing all form values
+   *
+   * @example Watch all values for debugging or live preview
+   * ```ts
+   * const allValues = watch()
+   * // In template: {{ allValues.value }}
+   * // Returns: { email: 'user@example.com', name: 'John', addresses: [...] }
+   * ```
+   *
    * @overload Watch a single field
+   * @param name - Field path (e.g., 'email' or 'user.address.city')
+   * @returns ComputedRef containing the field's current value
+   *
+   * @example Watch single field for conditional UI
+   * ```ts
+   * const accountType = watch('accountType')
+   *
+   * // In template:
+   * // <div v-if="accountType.value === 'business'">
+   * //   <BusinessFields />
+   * // </div>
+   * ```
+   *
+   * @example Watch nested field
+   * ```ts
+   * const city = watch('user.address.city')
+   * console.log(city.value) // 'New York'
+   * ```
+   *
    * @overload Watch multiple fields
+   * @param names - Array of field paths
+   * @returns ComputedRef containing an object with the watched fields
+   *
+   * @example Watch multiple fields for computed values
+   * ```ts
+   * const priceFields = watch(['quantity', 'price'])
+   *
+   * const total = computed(() => {
+   *   const q = Number(priceFields.value.quantity) || 0
+   *   const p = Number(priceFields.value.price) || 0
+   *   return (q * p).toFixed(2)
+   * })
+   * ```
+   *
+   * @see useWatch - Standalone composable for watching from child components
    */
   function watch(): ComputedRef<FormValues>
   function watch<TPath extends Path<FormValues>>(
@@ -369,6 +489,22 @@ export function useForm<TSchema extends ZodType>(
   function watch<TPath extends Path<FormValues>>(
     name?: TPath | TPath[],
   ): ComputedRef<FormValues | PathValue<FormValues, TPath> | Partial<FormValues>> {
+    // Dev-mode path validation
+    if (__DEV__ && name) {
+      const names = Array.isArray(name) ? name : [name]
+      for (const n of names) {
+        const syntaxError = validatePathSyntax(n)
+        if (syntaxError) {
+          warnInvalidPath('watch', n, syntaxError)
+        } else {
+          const schemaResult = validatePathAgainstSchema(ctx.options.schema, n)
+          if (!schemaResult.valid) {
+            warnPathNotInSchema('watch', n, schemaResult.availableFields)
+          }
+        }
+      }
+    }
+
     return computed(() => {
       if (!name) {
         return ctx.formData as FormValues
@@ -390,6 +526,23 @@ export function useForm<TSchema extends ZodType>(
   function clearErrors<TPath extends Path<FormValues>>(
     name?: TPath | TPath[] | 'root' | `root.${string}`,
   ): void {
+    // Dev-mode path validation (skip for 'root' paths)
+    if (__DEV__ && name && !String(name).startsWith('root')) {
+      const names = Array.isArray(name) ? name : [name]
+      for (const n of names) {
+        if (String(n).startsWith('root')) continue
+        const syntaxError = validatePathSyntax(n)
+        if (syntaxError) {
+          warnInvalidPath('clearErrors', n, syntaxError)
+        } else {
+          const schemaResult = validatePathAgainstSchema(ctx.options.schema, n)
+          if (!schemaResult.valid) {
+            warnPathNotInSchema('clearErrors', n, schemaResult.availableFields)
+          }
+        }
+      }
+    }
+
     if (name === undefined) {
       // Clear all errors
       ctx.errors.value = {} as FieldErrors<FormValues>
@@ -487,7 +640,49 @@ export function useForm<TSchema extends ZodType>(
   }
 
   /**
-   * Get form values - all values, single field, or multiple fields
+   * Get current form values synchronously. For uncontrolled inputs,
+   * this syncs DOM values before returning.
+   *
+   * @overload Get all form values
+   * @returns Complete form data object (deep copy)
+   *
+   * @example Get all values for logging or API call
+   * ```ts
+   * const allData = getValues()
+   * console.log(allData) // { email: '...', name: '...', addresses: [...] }
+   * await api.saveDraft(allData)
+   * ```
+   *
+   * @overload Get a single field value
+   * @param name - Field path
+   * @returns The field's current value (typed based on path)
+   *
+   * @example Get specific field value
+   * ```ts
+   * const email = getValues('email') // string
+   * const city = getValues('addresses.0.city') // string
+   * ```
+   *
+   * @overload Get multiple field values
+   * @param names - Array of field paths
+   * @returns Partial object containing only the requested fields
+   *
+   * @example Get subset of values
+   * ```ts
+   * const { email, name } = getValues(['email', 'name'])
+   * // Returns: { email: '...', name: '...' }
+   * ```
+   *
+   * @example Copy values between field groups
+   * ```ts
+   * // Copy shipping address to billing
+   * const shipping = getValues(['shipping.street', 'shipping.city', 'shipping.zip'])
+   * setValue('billing.street', getValues('shipping.street'))
+   * setValue('billing.city', getValues('shipping.city'))
+   * ```
+   *
+   * @see watch - For reactive value subscriptions
+   * @see getFieldState - For field metadata (dirty, touched, error)
    */
   function getValues(): FormValues
   function getValues<TPath extends Path<FormValues>>(name: TPath): PathValue<FormValues, TPath>
@@ -495,6 +690,22 @@ export function useForm<TSchema extends ZodType>(
   function getValues<TPath extends Path<FormValues>>(
     nameOrNames?: TPath | TPath[],
   ): FormValues | PathValue<FormValues, TPath> | Partial<FormValues> {
+    // Dev-mode path validation
+    if (__DEV__ && nameOrNames) {
+      const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames]
+      for (const n of names) {
+        const syntaxError = validatePathSyntax(n)
+        if (syntaxError) {
+          warnInvalidPath('getValues', n, syntaxError)
+        } else {
+          const schemaResult = validatePathAgainstSchema(ctx.options.schema, n)
+          if (!schemaResult.valid) {
+            warnPathNotInSchema('getValues', n, schemaResult.availableFields)
+          }
+        }
+      }
+    }
+
     // Sync values from uncontrolled inputs before returning
     syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
 
@@ -520,6 +731,19 @@ export function useForm<TSchema extends ZodType>(
    * Get the state of an individual field
    */
   function getFieldState<TPath extends Path<FormValues>>(name: TPath): FieldState {
+    // Dev-mode path validation
+    if (__DEV__) {
+      const syntaxError = validatePathSyntax(name)
+      if (syntaxError) {
+        warnInvalidPath('getFieldState', name, syntaxError)
+      } else {
+        const schemaResult = validatePathAgainstSchema(ctx.options.schema, name)
+        if (!schemaResult.valid) {
+          warnPathNotInSchema('getFieldState', name, schemaResult.availableFields)
+        }
+      }
+    }
+
     const error = get(ctx.errors.value, name) as
       | string
       | { type: string; message: string }
@@ -533,9 +757,78 @@ export function useForm<TSchema extends ZodType>(
   }
 
   /**
-   * Manually trigger validation for specific fields or entire form
+   * Manually trigger validation for specific fields or the entire form.
+   * Useful for validating before certain actions or in wizard-style forms.
+   *
+   * @param name - Optional field path or array of paths. Validates all if omitted.
+   * @returns Promise resolving to true if valid, false if errors exist
+   *
+   * @example Validate entire form before a custom action
+   * ```ts
+   * async function saveAsDraft() {
+   *   const isValid = await trigger()
+   *   if (isValid) {
+   *     await api.saveDraft(getValues())
+   *   } else {
+   *     console.log('Please fix errors before saving')
+   *   }
+   * }
+   * ```
+   *
+   * @example Validate specific field on custom event
+   * ```ts
+   * async function onUsernameBlur() {
+   *   const isValid = await trigger('username')
+   *   if (isValid) {
+   *     // Check username availability
+   *     const available = await api.checkUsername(getValues('username'))
+   *     if (!available) {
+   *       setError('username', { message: 'Username already taken' })
+   *     }
+   *   }
+   * }
+   * ```
+   *
+   * @example Validate step fields in multi-step form
+   * ```ts
+   * async function nextStep() {
+   *   // Validate only current step's fields
+   *   const stepFields = ['firstName', 'lastName', 'email']
+   *   const isValid = await trigger(stepFields)
+   *   if (isValid) {
+   *     currentStep.value++
+   *   }
+   * }
+   * ```
+   *
+   * @example Validate all addresses in array
+   * ```ts
+   * const addressCount = getValues('addresses').length
+   * const addressFields = Array.from({ length: addressCount }, (_, i) => [
+   *   `addresses.${i}.street`,
+   *   `addresses.${i}.city`,
+   *   `addresses.${i}.zip`
+   * ]).flat()
+   * const addressesValid = await trigger(addressFields)
+   * ```
    */
   async function trigger<TPath extends Path<FormValues>>(name?: TPath | TPath[]): Promise<boolean> {
+    // Dev-mode path validation
+    if (__DEV__ && name) {
+      const names = Array.isArray(name) ? name : [name]
+      for (const n of names) {
+        const syntaxError = validatePathSyntax(n)
+        if (syntaxError) {
+          warnInvalidPath('trigger', n, syntaxError)
+        } else {
+          const schemaResult = validatePathAgainstSchema(ctx.options.schema, n)
+          if (!schemaResult.valid) {
+            warnPathNotInSchema('trigger', n, schemaResult.availableFields)
+          }
+        }
+      }
+    }
+
     if (name === undefined) {
       // Validate entire form
       return await validate()

@@ -73,6 +73,13 @@ type UserForm = z.infer<typeof userSchema>
 <script setup>
 const { register, fields } = useForm({ schema })
 const addresses = fields('addresses')
+
+// Available methods:
+// addresses.append(value)  - Add to end
+// addresses.remove(index)  - Remove at index
+// addresses.insert(index, value)
+// addresses.swap(i, j)
+// addresses.move(from, to)
 </script>
 
 <template>
@@ -96,39 +103,27 @@ useForm({
 })
 ```
 
-## API Reference
+## Tips
 
-### `useForm(options)`
-
-```typescript
-const {
-  register, // Register input field
-  handleSubmit, // Create submit handler with validation
-  formState, // Reactive form state (errors, isSubmitting, etc.)
-  fields, // Manage dynamic field arrays
-  setValue, // Programmatically set field value
-  getValues, // Get field value(s) - single, multiple, or all
-  reset, // Reset form to default values
-  watch, // Watch field value changes
-  validate, // Manually trigger validation
-} = useForm({
-  schema, // Zod schema for validation
-  defaultValues: {}, // Initial form values
-  mode: 'onSubmit', // When to validate
-})
-```
-
-### `fields(name)`
+### Controlled vs Uncontrolled
 
 ```typescript
-const addresses = fields('addresses')
+// Default (uncontrolled) - for native inputs
+<input v-bind="register('email')" />
 
-addresses.append({ street: '', city: '' })
-addresses.remove(0)
-addresses.insert(1, value)
-addresses.swap(0, 1)
-addresses.move(0, 2)
+// Controlled - for v-model / custom components
+const { value, ...bindings } = register('field', { controlled: true })
+<CustomInput v-model="value" v-bind="bindings" />
 ```
+
+### Common Mistakes
+
+| Wrong                    | Right                    |
+| ------------------------ | ------------------------ |
+| `items[0].name`          | `items.0.name`           |
+| `:key="index"`           | `:key="field.key"`       |
+| `formState.errors`       | `formState.value.errors` |
+| `v-model` + `register()` | Either one, not both     |
 
 ## Contributing
 

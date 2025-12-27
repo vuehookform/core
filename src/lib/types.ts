@@ -117,14 +117,42 @@ export type PathValue<T, P extends string> = T extends unknown
   : never
 
 /**
- * Single field error with type and message
+ * Single field error with type and message.
+ * When criteriaMode is 'all', the `types` property contains all validation errors.
  */
 export interface FieldError {
-  /** Error type identifier (e.g., 'required', 'minLength', 'custom') */
+  /** Error type identifier (e.g., 'required', 'too_small', 'invalid_string', 'custom') */
   type: string
-  /** Error message to display */
+  /** Primary error message to display */
   message: string
-  /** Additional error types when multiple validations fail */
+  /**
+   * Additional error types when multiple validations fail.
+   * Only populated when `criteriaMode: 'all'` is set in useForm options.
+   *
+   * @example Password with multiple requirements
+   * ```ts
+   * // Schema:
+   * const schema = z.object({
+   *   password: z.string()
+   *     .min(8, 'At least 8 characters')
+   *     .regex(/[A-Z]/, 'Needs uppercase letter')
+   *     .regex(/[0-9]/, 'Needs a number')
+   * })
+   *
+   * // With criteriaMode: 'all', error.types might be:
+   * // {
+   * //   too_small: 'At least 8 characters',
+   * //   invalid_string: ['Needs uppercase letter', 'Needs a number']
+   * // }
+   *
+   * // Template usage:
+   * // <ul v-if="isFieldError(error) && error.types">
+   * //   <li v-for="(messages, type) in error.types" :key="type">
+   * //     {{ Array.isArray(messages) ? messages.join(', ') : messages }}
+   * //   </li>
+   * // </ul>
+   * ```
+   */
   types?: Record<string, string | string[]>
 }
 
@@ -420,42 +448,56 @@ export interface FieldArrayOptions<T = unknown> {
  * API for managing dynamic field arrays.
  * All methods that accept values are typed to match the array item type.
  *
+ * Most operations return a boolean indicating success or failure.
+ * Operations fail (return false) when:
+ * - maxLength rule would be exceeded (append, prepend, insert)
+ * - minLength rule would be violated (remove, removeAll, removeMany)
+ * - Index is out of bounds (remove, update, swap, move)
+ *
  * @template TItem - The type of items in the array (inferred from field path)
  *
  * @example
  * interface Address { street: string; city: string }
  * const addresses = fields('addresses') // FieldArray<Address>
  * addresses.append({ street: '123 Main', city: 'NYC' }) // Typed!
+ *
+ * @example Check if operation succeeded
+ * const success = addresses.append({ street: '', city: '' })
+ * if (!success) {
+ *   // Operation was rejected (e.g., maxLength exceeded)
+ *   showNotification('Cannot add more addresses')
+ * }
  */
 export interface FieldArray<TItem = unknown> {
   /** Current field items with metadata */
   value: FieldArrayItem[]
-  /** Append item(s) to end of array */
-  append: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => void
-  /** Prepend item(s) to beginning of array */
-  prepend: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => void
-  /** Remove item at index */
-  remove: (index: number) => void
+  /** Append item(s) to end of array. Returns false if maxLength exceeded. */
+  append: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => boolean
+  /** Prepend item(s) to beginning of array. Returns false if maxLength exceeded. */
+  prepend: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => boolean
+  /** Remove item at index. Returns false if minLength violated or index out of bounds. */
+  remove: (index: number) => boolean
   /**
-   * Remove all items from the array
-   * Respects minLength rule - will not remove if it would violate minimum
+   * Remove all items from the array.
+   * Returns false if minLength > 0.
    */
-  removeAll: () => void
+  removeAll: () => boolean
   /**
-   * Remove multiple items by indices (handles any order, removes from highest to lowest)
+   * Remove multiple items by indices (handles any order, removes from highest to lowest).
+   * Returns false if minLength would be violated.
    * @param indices - Array of indices to remove
    */
-  removeMany: (indices: number[]) => void
-  /** Insert item(s) at index */
-  insert: (index: number, value: TItem | TItem[], options?: FieldArrayFocusOptions) => void
-  /** Swap two items */
-  swap: (indexA: number, indexB: number) => void
-  /** Move item from one index to another */
-  move: (from: number, to: number) => void
-  /** Update item at index (preserves key/identity) */
-  update: (index: number, value: TItem) => void
-  /** Replace all items with new values */
-  replace: (values: TItem[]) => void
+  removeMany: (indices: number[]) => boolean
+  /** Insert item(s) at index. Returns false if maxLength exceeded. */
+  insert: (index: number, value: TItem | TItem[], options?: FieldArrayFocusOptions) => boolean
+  /** Swap two items. Returns false if either index is out of bounds. */
+  swap: (indexA: number, indexB: number) => boolean
+  /** Move item from one index to another. Returns false if from index is out of bounds. */
+  move: (from: number, to: number) => boolean
+  /** Update item at index (preserves key/identity). Returns false if index out of bounds. */
+  update: (index: number, value: TItem) => boolean
+  /** Replace all items with new values. Always succeeds (returns true). */
+  replace: (values: TItem[]) => boolean
 }
 
 /**
@@ -474,30 +516,175 @@ export type CriteriaMode = 'firstError' | 'all'
 export interface UseFormOptions<TSchema extends ZodType> {
   /** Zod schema for validation */
   schema: TSchema
-  /** Default form values (can be a sync object or async function) */
+
+  /**
+   * Default form values. Can be a sync object or async function.
+   * Async function is useful for fetching initial values from an API.
+   *
+   * @example Sync default values
+   * ```ts
+   * useForm({
+   *   schema,
+   *   defaultValues: { email: '', name: '' }
+   * })
+   * ```
+   *
+   * @example Async default values (API fetch)
+   * ```ts
+   * useForm({
+   *   schema,
+   *   defaultValues: async () => {
+   *     const user = await api.getCurrentUser()
+   *     return { email: user.email, name: user.name }
+   *   },
+   *   onDefaultValuesError: (err) => console.error('Failed to load user:', err)
+   * })
+   * // Check formState.isLoading to show loading indicator
+   * ```
+   */
   defaultValues?: Partial<InferSchema<TSchema>> | AsyncDefaultValues<InferSchema<TSchema>>
-  /** When to run validation */
+
+  /**
+   * When to run validation.
+   * - 'onSubmit' (default): Only validate on form submission
+   * - 'onBlur': Validate when field loses focus
+   * - 'onChange': Validate on every input change
+   * - 'onTouched': Validate after field touched, then on every change
+   *
+   * @example Different validation modes
+   * ```ts
+   * // Most performant - only show errors after submit attempt
+   * useForm({ schema, mode: 'onSubmit' })
+   *
+   * // Real-time feedback - validate as user types
+   * useForm({ schema, mode: 'onChange' })
+   *
+   * // Balanced - validate after first interaction
+   * useForm({ schema, mode: 'onTouched' })
+   * ```
+   */
   mode?: ValidationMode
-  /** Revalidate on change after first submit */
+
+  /**
+   * Validation mode after first submission.
+   * Useful for "validate on submit, then real-time revalidation" pattern.
+   *
+   * @example Submit first, then real-time
+   * ```ts
+   * useForm({
+   *   schema,
+   *   mode: 'onSubmit',           // First submit validates all
+   *   reValidateMode: 'onChange'  // After submit, revalidate on change
+   * })
+   * ```
+   */
   reValidateMode?: ValidationMode
+
   /** Remove field data when unmounted (default: false) */
   shouldUnregister?: boolean
+
   /** Callback when async default values fail to load */
   onDefaultValuesError?: (error: unknown) => void
+
   /** Focus first field with error on submit (default: true) */
   shouldFocusError?: boolean
-  /** How to collect validation errors: 'firstError' or 'all' (default: 'firstError') */
+
+  /**
+   * How to collect validation errors.
+   * - 'firstError' (default): Stop at first error per field
+   * - 'all': Collect all errors for each field (populates FieldError.types)
+   *
+   * @example Show all validation errors (password requirements)
+   * ```ts
+   * const schema = z.object({
+   *   password: z.string()
+   *     .min(8, 'At least 8 characters')
+   *     .regex(/[A-Z]/, 'Needs uppercase letter')
+   *     .regex(/[0-9]/, 'Needs a number')
+   * })
+   *
+   * useForm({ schema, criteriaMode: 'all' })
+   *
+   * // In template - display all password requirements:
+   * // <ul v-if="formState.errors.password?.types">
+   * //   <li v-for="(msg, type) in formState.errors.password.types" :key="type">
+   * //     {{ msg }}
+   * //   </li>
+   * // </ul>
+   * ```
+   *
+   * @see isFieldError - Type guard for structured errors
+   * @see FieldError.types - Contains all error types when criteriaMode is 'all'
+   */
   criteriaMode?: CriteriaMode
-  /** Delay before displaying validation errors in milliseconds (default: 0 = no delay) */
+
+  /**
+   * Delay in milliseconds before displaying validation errors.
+   * Prevents error flash during fast typing.
+   *
+   * @example Delay error display by 500ms
+   * ```ts
+   * useForm({
+   *   schema,
+   *   mode: 'onChange',
+   *   delayError: 500  // Wait 500ms before showing error
+   * })
+   * // If user fixes error within 500ms, error never appears
+   * ```
+   */
   delayError?: number
+
   /**
    * External values to sync to form. Changes update formData without marking dirty.
    * Useful for server-fetched data or parent component state.
+   *
+   * @example Sync with parent component state
+   * ```ts
+   * const props = defineProps<{ userData: UserData }>()
+   *
+   * useForm({
+   *   schema,
+   *   values: computed(() => props.userData)  // Reactive sync
+   * })
+   * // When props.userData changes, form updates without becoming dirty
+   * ```
+   *
+   * @example Sync with API polling
+   * ```ts
+   * const { data: serverData } = useQuery('user', fetchUser)
+   *
+   * useForm({
+   *   schema,
+   *   values: serverData  // Ref from useQuery
+   * })
+   * ```
    */
   values?: MaybeRef<Partial<InferSchema<TSchema>>>
+
   /**
    * External/server errors to merge with validation errors.
-   * Useful for server-side validation errors.
+   * These take precedence over client-side validation errors.
+   *
+   * @example Display server validation errors
+   * ```ts
+   * const serverErrors = ref({})
+   *
+   * const { handleSubmit } = useForm({
+   *   schema,
+   *   errors: serverErrors
+   * })
+   *
+   * const onSubmit = async (data) => {
+   *   try {
+   *     await api.submit(data)
+   *   } catch (err) {
+   *     if (err.validationErrors) {
+   *       serverErrors.value = err.validationErrors
+   *       // e.g., { email: 'Email already registered' }
+   *     }
+   *   }
+   * }
+   * ```
    */
   errors?: MaybeRef<Partial<FieldErrors<InferSchema<TSchema>>>>
 }
@@ -604,8 +791,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
    */
   watch: {
     (): ComputedRef<InferSchema<TSchema>>
-    <TPath extends Path<InferSchema<TSchema>>>(name: TPath): ComputedRef<PathValue<InferSchema<TSchema>, TPath>>
-    <TPath extends Path<InferSchema<TSchema>>>(names: TPath[]): ComputedRef<Partial<InferSchema<TSchema>>>
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name: TPath,
+    ): ComputedRef<PathValue<InferSchema<TSchema>, TPath>>
+    <TPath extends Path<InferSchema<TSchema>>>(
+      names: TPath[],
+    ): ComputedRef<Partial<InferSchema<TSchema>>>
   }
 
   /**

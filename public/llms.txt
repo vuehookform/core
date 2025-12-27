@@ -1,0 +1,399 @@
+# Vue Hook Form - LLM Quick Reference
+# TypeScript-first form library for Vue 3 with Zod validation
+# Package: vue-hook-form (or @vuehookform/core)
+# Peer deps: vue ^3.3.0, zod ^3.0.0
+
+================================================================================
+MINIMAL WORKING EXAMPLE
+================================================================================
+
+```typescript
+import { useForm } from 'vue-hook-form'
+import { z } from 'zod'
+
+const schema = z.object({
+  email: z.string().email('Invalid email'),
+  password: z.string().min(8, 'Min 8 characters'),
+})
+
+const { register, handleSubmit, formState } = useForm({
+  schema,
+  defaultValues: { email: '', password: '' },
+})
+
+const onSubmit = (data: z.infer<typeof schema>) => console.log(data)
+```
+
+```vue
+<template>
+  <form @submit.prevent="handleSubmit(onSubmit)">
+    <input v-bind="register('email')" type="email" />
+    <span v-if="formState.errors.email">{{ formState.errors.email }}</span>
+
+    <input v-bind="register('password')" type="password" />
+    <span v-if="formState.errors.password">{{ formState.errors.password }}</span>
+
+    <button type="submit" :disabled="formState.isSubmitting">Submit</button>
+  </form>
+</template>
+```
+
+================================================================================
+API CHEATSHEET
+================================================================================
+
+useForm(options) returns:
+  register(path, opts?)      -> RegisterReturn (spread onto input)
+  unregister(path, opts?)    -> void
+  handleSubmit(onValid, onInvalid?) -> (e: Event) => Promise<void>
+  formState                  -> ComputedRef<FormState>
+  fields(arrayPath, opts?)   -> FieldArray<TItem>
+  setValue(path, value, opts?) -> void
+  getValues()                -> all values
+  getValues(path)            -> single value
+  getValues([paths])         -> partial values
+  watch()                    -> ComputedRef (all values)
+  watch(path)                -> ComputedRef (single value)
+  watch([paths])             -> ComputedRef (partial values)
+  reset(values?, opts?)      -> void
+  resetField(path, opts?)    -> void
+  validate(path?)            -> Promise<boolean>
+  trigger(path?)             -> Promise<boolean>
+  clearErrors(path?)         -> void
+  setError(path, { message }) -> void
+  setErrors({ path: msg })   -> void
+  hasErrors(path?)           -> boolean
+  getErrors()                -> all errors
+  getErrors(path)            -> single error
+  getFieldState(path)        -> FieldState
+  setFocus(path, opts?)      -> void
+
+UseFormOptions:
+  schema: ZodType            # REQUIRED
+  defaultValues?: object | async () => object
+  mode?: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'  # default: 'onSubmit'
+  reValidateMode?: same      # validation mode after first submit
+  shouldUnregister?: boolean # remove data on unmount (default: false)
+  shouldFocusError?: boolean # focus first error (default: true)
+  criteriaMode?: 'firstError' | 'all'  # error collection (default: 'firstError')
+  delayError?: number        # ms delay before showing errors
+  values?: MaybeRef<Partial> # external values sync
+  errors?: MaybeRef<Partial> # external/server errors
+  onDefaultValuesError?: (err) => void
+
+RegisterOptions:
+  controlled?: boolean       # use v-model mode (default: false)
+  disabled?: boolean         # skip validation
+  validate?: (value) => string | undefined | Promise  # custom validator
+  validateDebounce?: number  # debounce async validation (ms)
+  shouldUnregister?: boolean # per-field override
+  deps?: string[]            # re-validate when these fields change
+
+FormState properties:
+  errors, isDirty, isValid, isSubmitting, isLoading, isReady,
+  isValidating, validatingFields, touchedFields, dirtyFields,
+  submitCount, defaultValuesError, isSubmitted, isSubmitSuccessful
+
+FieldState properties:
+  isDirty, isTouched, invalid, error
+
+FieldArray methods:
+  value                      -> FieldArrayItem[] (use in v-for)
+  append(item | item[], opts?)
+  prepend(item | item[], opts?)
+  remove(index)
+  removeAll()
+  removeMany(indices[])
+  insert(index, item | item[], opts?)
+  swap(indexA, indexB)
+  move(from, to)
+  update(index, item)
+  replace(items[])
+
+================================================================================
+PATH SYNTAX (CRITICAL)
+================================================================================
+
+CORRECT:
+  'email'                    # top-level field
+  'user.name'                # nested object
+  'addresses.0.street'       # array item property (DOT notation!)
+  `items.${index}.name`      # dynamic index
+
+WRONG:
+  'addresses[0].street'      # NO BRACKETS - use dot notation!
+  'user..name'               # no double dots
+  '.email' or 'email.'       # no leading/trailing dots
+
+TYPE INFERENCE:
+  Path<T>         -> all valid dot-notation paths
+  PathValue<T, P> -> type at path P
+  ArrayPath<T>    -> paths to array fields only
+  FieldPath<T>    -> paths to non-array fields
+
+================================================================================
+DECISION TREES
+================================================================================
+
+VALIDATION MODE:
+  Real-time feedback as user types? -> mode: 'onChange'
+  Feedback when leaving field?      -> mode: 'onBlur' (RECOMMENDED)
+  Only on submit?                   -> mode: 'onSubmit'
+  After first interaction?          -> mode: 'onTouched'
+  Submit first, then real-time?     -> mode: 'onSubmit', reValidateMode: 'onChange'
+
+CONTROLLED vs UNCONTROLLED:
+  Native HTML input?                -> Uncontrolled (default)
+  Custom Vue component with v-model?-> register(path, { controlled: true })
+  Need reactive value in JS?        -> register(path, { controlled: true })
+  Performance critical (many fields)-> Uncontrolled
+
+FIELD ARRAYS vs REGISTER:
+  Single value (string, number)?    -> register('fieldName')
+  Nested object?                    -> register('user.address.street')
+  Dynamic list of items?            -> fields('items') + v-for
+  Array of primitives (tags)?       -> fields('tags')
+
+WATCH vs GETVALUES:
+  Need reactive updates?            -> watch(path)
+  One-time read?                    -> getValues(path)
+  In computed/watcher?              -> watch(path)
+  In event handler?                 -> getValues(path)
+
+================================================================================
+CODE TEMPLATES
+================================================================================
+
+BASIC FIELD REGISTRATION:
+```vue
+<input v-bind="register('email')" />
+```
+
+CONTROLLED MODE (v-model):
+```typescript
+const { value, ...bindings } = register('country', { controlled: true })
+```
+```vue
+<select v-model="value" v-bind="bindings">
+  <option v-for="c in countries" :key="c.code" :value="c.code">{{ c.name }}</option>
+</select>
+```
+
+CUSTOM VALIDATION:
+```typescript
+register('username', {
+  validate: async (value) => {
+    const exists = await api.checkUsername(value)
+    return exists ? 'Username taken' : undefined
+  },
+  validateDebounce: 300
+})
+```
+
+DEPENDENT FIELD VALIDATION:
+```typescript
+register('confirmPassword', {
+  deps: ['password'],
+  validate: (value) => {
+    const password = getValues('password')
+    return value !== password ? 'Passwords must match' : undefined
+  }
+})
+```
+
+FIELD ARRAY:
+```typescript
+const schema = z.object({
+  items: z.array(z.object({
+    name: z.string().min(1),
+    quantity: z.number().min(1)
+  })).min(1)
+})
+
+const { fields, register } = useForm({
+  schema,
+  defaultValues: { items: [{ name: '', quantity: 1 }] }
+})
+
+const itemFields = fields('items')
+```
+```vue
+<div v-for="field in itemFields.value" :key="field.key">
+  <!-- CRITICAL: Use field.key for :key, NOT index -->
+  <input v-bind="register(`items.${field.index}.name`)" />
+  <input v-bind="register(`items.${field.index}.quantity`)" type="number" />
+  <button @click="field.remove()">Remove</button>
+</div>
+<button @click="itemFields.append({ name: '', quantity: 1 })">Add</button>
+```
+
+ASYNC DEFAULT VALUES:
+```typescript
+const { formState } = useForm({
+  schema,
+  defaultValues: async () => {
+    const user = await fetchUser()
+    return { email: user.email, name: user.name }
+  },
+  onDefaultValuesError: (err) => console.error('Load failed:', err)
+})
+```
+```vue
+<div v-if="formState.isLoading">Loading...</div>
+<form v-else>...</form>
+```
+
+SERVER-SIDE ERRORS:
+```typescript
+const serverErrors = ref({})
+
+const { handleSubmit } = useForm({
+  schema,
+  errors: serverErrors
+})
+
+const onSubmit = async (data) => {
+  try {
+    await api.submit(data)
+  } catch (err) {
+    if (err.fieldErrors) {
+      serverErrors.value = err.fieldErrors
+    }
+  }
+}
+```
+
+MULTI-STEP FORM VALIDATION:
+```typescript
+async function nextStep() {
+  const stepFields = ['firstName', 'lastName', 'email']
+  const isValid = await trigger(stepFields)
+  if (isValid) currentStep.value++
+}
+```
+
+PROGRAMMATIC VALUE SETTING:
+```typescript
+setValue('email', 'new@example.com')                    // marks dirty
+setValue('email', data.email, { shouldDirty: false })   // don't mark dirty
+setValue('email', value, { shouldValidate: true })      // validate after
+setValue('addresses.0.city', 'NYC')                     // nested path
+```
+
+FORM RESET:
+```typescript
+reset()                                    // reset to original defaults
+reset({ email: 'new@example.com' })        // reset with new values
+reset(undefined, { keepErrors: true })     // keep errors
+resetField('email')                        // reset single field
+```
+
+ERROR HANDLING:
+```typescript
+setError('email', { message: 'Email already registered' })
+setErrors({ email: 'Invalid', 'user.name': 'Required' })
+clearErrors()                              // clear all
+clearErrors('email')                       // clear specific
+clearErrors(['email', 'password'])         // clear multiple
+if (hasErrors('email')) { /* ... */ }
+const emailError = getErrors('email')
+```
+
+CONTEXT (Child Components):
+```typescript
+// Parent
+const form = useForm({ schema })
+provideForm(form)
+
+// Child
+const { register, formState } = useFormContext()
+// Or standalone:
+const email = useWatch({ name: 'email' })
+```
+
+================================================================================
+ANTI-PATTERNS (AVOID THESE)
+================================================================================
+
+1. BRACKET NOTATION IN PATHS
+   WRONG: register('items[0].name')
+   RIGHT: register('items.0.name')
+
+2. USING v-model WITH UNCONTROLLED REGISTER
+   WRONG: <input v-model="email" v-bind="register('email')" />
+   RIGHT: <input v-bind="register('email')" />
+   OR:    const { value } = register('email', { controlled: true })
+          <input v-model="value" />
+
+3. MISSING defaultValues FOR ARRAYS
+   WRONG: useForm({ schema })  // with array fields
+   RIGHT: useForm({ schema, defaultValues: { items: [] } })
+
+4. USING INDEX AS v-for KEY FOR FIELD ARRAYS
+   WRONG: <div v-for="(item, idx) in items.value" :key="idx">
+   RIGHT: <div v-for="item in items.value" :key="item.key">
+
+5. CALLING fields() IN TEMPLATE
+   WRONG: <div v-for="item in fields('items').value">
+   RIGHT: const items = fields('items')  // in setup
+          <div v-for="item in items.value">
+
+6. MUTATING formState.errors DIRECTLY
+   WRONG: formState.errors.email = 'Error'
+   RIGHT: setError('email', { message: 'Error' })
+
+7. FORGETTING TO USE .value FOR REACTIVE REFS
+   WRONG: if (formState.errors.email)
+   RIGHT: if (formState.value.errors.email)
+
+8. REGISTERING ARRAY PATH INSTEAD OF ITEM PATH
+   WRONG: register('addresses')  // for array field
+   RIGHT: fields('addresses')    // use fields() for arrays
+          register('addresses.0.street')  // register item properties
+
+================================================================================
+TYPE UTILITIES
+================================================================================
+
+```typescript
+import type { Path, PathValue, ArrayPath, FormValues } from 'vue-hook-form'
+
+// Get all valid paths for a type
+type ValidPaths = Path<{ user: { name: string }; items: { id: number }[] }>
+// = 'user' | 'user.name' | 'items' | 'items.0' | 'items.0.id' | ...
+
+// Get type at a path
+type NameType = PathValue<Form, 'user.name'>  // string
+
+// Get array-only paths
+type Arrays = ArrayPath<Form>  // 'items'
+
+// Get form values type from schema
+type MyForm = FormValues<typeof schema>
+```
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+"Path does not exist in schema"
+  -> Check path matches schema exactly (case-sensitive)
+  -> Use dot notation, not brackets
+
+Array items jumping around on add/remove
+  -> Use field.key for v-for :key, not index
+
+Validation not running
+  -> Check mode setting ('onSubmit' only validates on submit)
+  -> For manual: await trigger('fieldPath')
+
+Errors not showing
+  -> Access via formState.value.errors.fieldName
+  -> Check if using criteriaMode: 'all' (errors are FieldError objects)
+
+Field not updating
+  -> Uncontrolled mode: value syncs on blur, not every keystroke
+  -> Use controlled: true for immediate sync
+
+useFormContext returns undefined
+  -> Ensure provideForm(form) called in parent component

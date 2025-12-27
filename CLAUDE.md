@@ -58,3 +58,74 @@ addresses.swap(indexA, indexB)
 - Pinia (available but not used in core lib)
 - oxlint + eslint for linting
 - Prettier for formatting
+
+## AI Agent Instructions
+
+When implementing forms with this library, follow these critical rules:
+
+### Path Syntax (CRITICAL)
+
+Always use **dot notation** for all paths, including array indices:
+
+```typescript
+// CORRECT
+register('user.name')
+register('items.0.name')
+register(`items.${index}.name`)
+
+// WRONG - will fail
+register('items[0].name')
+register(`items[${index}].name`)
+```
+
+### Field Arrays
+
+1. **Always use `field.key` for v-for keys**, never the index:
+
+   ```vue
+   <div v-for="field in items.value" :key="field.key"></div>
+   ```
+
+2. **Initialize arrays in defaultValues**:
+
+   ```typescript
+   useForm({ schema, defaultValues: { items: [] } })
+   ```
+
+3. **Call `fields()` in setup**, not in template:
+
+   ```typescript
+   const itemFields = fields('items') // in setup
+   ```
+
+4. **Check return values** - operations return `boolean` (false if rejected):
+   ```typescript
+   if (!items.append({ name: '' })) {
+     // maxLength exceeded
+   }
+   ```
+
+### Controlled vs Uncontrolled
+
+- **Default (uncontrolled)**: Just use `v-bind="register('field')"`
+- **Controlled mode**: Required for v-model or custom components:
+  ```typescript
+  const { value, ...bindings } = register('field', { controlled: true })
+  ```
+  ```vue
+  <CustomInput v-model="value" v-bind="bindings" />
+  ```
+
+### Accessing State
+
+Always use `.value` for reactive refs:
+
+```vue
+<span v-if="formState.value.errors.email">
+  {{ formState.value.errors.email }}
+</span>
+```
+
+### Quick Reference
+
+See the **Quick Reference** section in [README.md](README.md) for path syntax, field array rules, and common mistakes.

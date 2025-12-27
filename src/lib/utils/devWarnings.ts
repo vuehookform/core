@@ -9,7 +9,8 @@ import type { ZodType, ZodObject, ZodArray } from 'zod'
  * In production builds, this becomes `false` and all warning code is eliminated
  */
 export const __DEV__: boolean =
-  typeof import.meta !== 'undefined' && (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true
+  typeof import.meta !== 'undefined' &&
+  (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true
 
 // Track warnings already shown to avoid console spam
 const warnedMessages = new Set<string>()
@@ -169,15 +170,39 @@ export function isArrayFieldInSchema(schema: ZodType, path: string): boolean | n
 // ============================================================================
 
 /**
- * Warn about registering an invalid path
+ * Warn about registering an invalid path with fix suggestion
  */
 export function warnInvalidPath(fnName: string, path: string, reason: string): void {
   if (!__DEV__) return
-  warnOnce(`${fnName}("${path}"): ${reason}`, `invalid-path:${fnName}:${path}`)
+
+  let message = `${fnName}("${path}"): ${reason}`
+
+  // Add fix suggestions based on the error type
+  if (reason.includes('bracket notation')) {
+    const fixedPath = path.replace(/\[(\d+)\]/g, '.$1')
+    message += `\n  FIX: Use dot notation for array indices`
+    message += `\n  EXAMPLE: ${fnName}("${fixedPath}")`
+  } else if (reason.includes('empty')) {
+    message += `\n  FIX: Provide a non-empty field path`
+    message += `\n  EXAMPLE: ${fnName}("email") or ${fnName}("user.address.city")`
+  } else if (reason.includes('whitespace')) {
+    const fixedPath = path.replace(/\s/g, '')
+    message += `\n  FIX: Remove spaces from the field path`
+    message += `\n  EXAMPLE: ${fnName}("${fixedPath}")`
+  } else if (reason.includes('empty segments')) {
+    const fixedPath = path
+      .replace(/\.{2,}/g, '.')
+      .replace(/^\./, '')
+      .replace(/\.$/, '')
+    message += `\n  FIX: Remove extra dots from the path`
+    message += `\n  EXAMPLE: ${fnName}("${fixedPath}")`
+  }
+
+  warnOnce(message, `invalid-path:${fnName}:${path}`)
 }
 
 /**
- * Warn about path not in schema
+ * Warn about path not in schema with suggestions
  */
 export function warnPathNotInSchema(
   fnName: string,
@@ -185,10 +210,27 @@ export function warnPathNotInSchema(
   availableFields?: string[],
 ): void {
   if (!__DEV__) return
+
   let message = `${fnName}("${path}"): Path does not exist in your Zod schema.`
+  message += `\n  FIX: Check that the path matches your schema definition exactly (case-sensitive)`
+
   if (availableFields && availableFields.length > 0) {
-    message += ` Available fields at this level: ${availableFields.join(', ')}`
+    // Try to find a similar field name (simple fuzzy match)
+    const pathLower = path.toLowerCase()
+    const suggestions = availableFields.filter(
+      (f) => f.toLowerCase().includes(pathLower) || pathLower.includes(f.toLowerCase()),
+    )
+
+    if (suggestions.length > 0) {
+      message += `\n  DID YOU MEAN: ${suggestions
+        .slice(0, 3)
+        .map((s) => `"${s}"`)
+        .join(', ')}`
+    }
+
+    message += `\n  AVAILABLE: ${availableFields.slice(0, 8).join(', ')}${availableFields.length > 8 ? '...' : ''}`
   }
+
   warnOnce(message, `path-not-in-schema:${fnName}:${path}`)
 }
 
