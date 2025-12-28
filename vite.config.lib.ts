@@ -9,21 +9,21 @@ export default defineConfig({
   plugins: [
     vue(),
     dts({
-      include: ['src/lib/**/*'],
-      exclude: ['src/lib/**/__tests__/**/*'],
+      include: ['lib/**/*'],
+      exclude: ['lib/**/__tests__/**/*'],
       outDir: 'dist',
       tsconfigPath: './tsconfig.lib.json',
     }),
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': fileURLToPath(new URL('./lib', import.meta.url)),
     },
   },
   publicDir: false,
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/lib/index.ts'),
+      entry: resolve(__dirname, 'lib/index.ts'),
       name: 'VueHookForm',
       fileName: 'vuehookform',
       formats: ['es', 'cjs'],

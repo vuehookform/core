@@ -1,0 +1,62 @@
+:root {
+  /* Subtle green brand colors */
+  --vp-c-brand-1: #10b981;
+  --vp-c-brand-2: #059669;
+  --vp-c-brand-3: #047857;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.12);
+
+  /* Customize the home hero gradient */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(
+    120deg,
+    #10b981 30%,
+    #047857
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #10b98140 50%,
+    #05966940 50%
+  );
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #34d399;
+  --vp-c-brand-2: #10b981;
+  --vp-c-brand-3: #059669;
+  --vp-c-brand-soft: rgba(52, 211, 153, 0.12);
+}
+
+/* Prevent hero text from breaking on desktop */
+@media (min-width: 640px) {
+  .VPHero .text {
+    white-space: nowrap;
+  }
+}
+
+/* Landing page table styling */
+.vp-doc table {
+  width: 100%;
+  display: table;
+}
+
+.vp-doc table th:first-child,
+.vp-doc table td:first-child {
+  font-weight: 500;
+}
+
+/* Highlight Vue Hook Form column */
+.vp-doc table th:nth-child(2) {
+  color: var(--vp-c-brand-1);
+}
+
+/* Make tables horizontally scrollable on mobile */
+.vp-doc .table-wrapper {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.vp-doc .table-wrapper table {
+  margin: 0;
+}

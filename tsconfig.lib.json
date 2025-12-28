@@ -22,12 +22,12 @@
     "noEmit": false,
     "emitDeclarationOnly": true,
     "outDir": "dist",
-    "rootDir": "src/lib",
+    "rootDir": "lib",
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./lib/*"]
     }
   },
-  "include": ["src/lib/**/*"],
-  "exclude": ["src/lib/**/__tests__/*"]
+  "include": ["lib/**/*"],
+  "exclude": ["lib/**/__tests__/*"]
 }
