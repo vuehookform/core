@@ -34,3 +34,29 @@
     white-space: nowrap;
   }
 }
+
+/* Landing page table styling */
+.vp-doc table {
+  width: 100%;
+  display: table;
+}
+
+.vp-doc table th:first-child,
+.vp-doc table td:first-child {
+  font-weight: 500;
+}
+
+/* Highlight Vue Hook Form column */
+.vp-doc table th:nth-child(2) {
+  color: var(--vp-c-brand-1);
+}
+
+/* Make tables horizontally scrollable on mobile */
+.vp-doc .table-wrapper {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.vp-doc .table-wrapper table {
+  margin: 0;
+}
