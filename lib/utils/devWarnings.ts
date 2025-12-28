@@ -6,11 +6,13 @@ import type { ZodType, ZodObject, ZodArray } from 'zod'
 
 /**
  * DEV flag for tree-shaking
- * In production builds, this becomes `false` and all warning code is eliminated
+ * Uses process.env.NODE_ENV for universal bundler compatibility (ESM + CJS).
+ * Consumer bundlers replace this at build time, enabling dead code elimination.
  */
-export const __DEV__: boolean =
-  typeof import.meta !== 'undefined' &&
-  (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true
+const proc = (globalThis as Record<string, unknown>).process as
+  | { env?: { NODE_ENV?: string } }
+  | undefined
+export const __DEV__: boolean = proc?.env?.NODE_ENV !== 'production'
 
 // Track warnings already shown to avoid console spam
 const warnedMessages = new Set<string>()

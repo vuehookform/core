@@ -1,9 +1,8 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 permissions:
   id-token: write
@@ -11,7 +10,6 @@ permissions:
 
 jobs:
   publish:
-    if: github.event.base_ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: npm
     steps:
