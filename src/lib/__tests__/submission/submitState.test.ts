@@ -25,9 +25,6 @@ describe('Submit State', () => {
     vi.restoreAllMocks()
   })
 
-  // ============================================
-  // shouldFocusError Tests
-  // ============================================
   describe('shouldFocusError', () => {
     it('should focus first error field on submit fail by default', async () => {
       const { register, handleSubmit } = useForm({
@@ -142,9 +139,6 @@ describe('Submit State', () => {
     })
   })
 
-  // ============================================
-  // isSubmitted Tests
-  // ============================================
   describe('isSubmitted', () => {
     it('should be false initially', () => {
       const { formState } = useForm({
@@ -208,9 +202,6 @@ describe('Submit State', () => {
     })
   })
 
-  // ============================================
-  // isSubmitSuccessful Tests
-  // ============================================
   describe('isSubmitSuccessful', () => {
     it('should be false initially', () => {
       const { formState } = useForm({

@@ -5,7 +5,6 @@ import { schemas } from '../helpers/test-utils'
 
 const schema = schemas.withArray
 
-// Custom schema for edge case tests with simple items
 const itemsSchema = z.object({
   items: z.array(z.object({ name: z.string() })),
 })

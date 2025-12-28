@@ -20,7 +20,6 @@ import {
  * - Support nested field paths
  */
 
-// Schema for password confirmation (deps option tests)
 const passwordConfirmSchema = z
   .object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -51,7 +50,6 @@ describe('register deps option', () => {
     const cleanupConfirm = mountElement(confirmInput)
     confirmField.ref(confirmInput)
 
-    // Set initial values
     setValue('password', 'password123')
     setValue('confirmPassword', 'password123')
 

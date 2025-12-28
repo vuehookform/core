@@ -47,7 +47,6 @@ describe('integration tests', () => {
         defaultValues: { email: '', password: '', confirmPassword: '' },
       })
 
-      // Register fields
       const emailField = register('email')
       const passwordField = register('password')
       const confirmField = register('confirmPassword')
@@ -56,14 +55,12 @@ describe('integration tests', () => {
       passwordField.ref(passwordInput)
       confirmField.ref(confirmInput)
 
-      // Step 1: Fill with invalid data
       emailInput.value = 'invalid-email'
       await emailField.onInput(createInputEvent(emailInput))
 
       passwordInput.value = 'short'
       await passwordField.onInput(createInputEvent(passwordInput))
 
-      // Step 2: Try to submit - should fail
       const submitHandler = handleSubmit(onSubmit)
       await submitHandler(new Event('submit'))
 
@@ -72,7 +69,6 @@ describe('integration tests', () => {
       expect(formState.value.errors.password).toBe('Password too short')
       expect(formState.value.submitCount).toBe(1)
 
-      // Step 3: Fix errors
       emailInput.value = 'valid@email.com'
       await emailField.onInput(createInputEvent(emailInput))
 
@@ -82,7 +78,6 @@ describe('integration tests', () => {
       confirmInput.value = 'validpassword123'
       await confirmField.onInput(createInputEvent(confirmInput))
 
-      // Step 4: Submit again - should succeed
       await submitHandler(new Event('submit'))
 
       expect(onSubmit).toHaveBeenCalledWith({
@@ -104,12 +99,10 @@ describe('integration tests', () => {
       const emailField = register('email')
       emailField.ref(emailInput)
 
-      // Initially clean
       expect(formState.value.isDirty).toBe(false)
       expect(formState.value.touchedFields.email).toBeUndefined()
       expect(formState.value.dirtyFields.email).toBeUndefined()
 
-      // After input - dirty but not touched
       emailInput.value = 'test@test.com'
       await emailField.onInput(createInputEvent(emailInput))
 
@@ -117,12 +110,10 @@ describe('integration tests', () => {
       expect(formState.value.dirtyFields.email).toBe(true)
       expect(formState.value.touchedFields.email).toBeUndefined()
 
-      // After blur - touched
       await emailField.onBlur(createBlurEvent(emailInput))
 
       expect(formState.value.touchedFields.email).toBe(true)
 
-      // After reset - clean again
       reset()
 
       expect(formState.value.isDirty).toBe(false)
@@ -355,7 +346,6 @@ describe('integration tests', () => {
 
       expect(formState.value.errors.email).toBe('This email is already registered')
 
-      // Clear the server error
       clearErrors('email')
 
       expect(formState.value.errors.email).toBeUndefined()

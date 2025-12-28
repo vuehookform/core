@@ -165,7 +165,6 @@ describe('resetField', () => {
       },
     })
 
-    // Verify initial state
     expect(getValues('user.email')).toBe('default@test.com')
 
     setValue('user.email', 'changed@test.com')

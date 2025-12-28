@@ -960,10 +960,6 @@ export interface UseFormReturn<TSchema extends ZodType> {
   ) => void
 }
 
-// ============================================================================
-// Type Guards
-// ============================================================================
-
 /**
  * Type guard to check if an error value is a structured FieldError object.
  * Use this to safely narrow FieldErrorValue when handling errors.

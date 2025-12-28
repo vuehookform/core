@@ -44,10 +44,6 @@ export function clearWarningCache(): void {
   warnedMessages.clear()
 }
 
-// ============================================================================
-// Path Validation
-// ============================================================================
-
 /**
  * Validate a dot-notation path string for common syntax errors
  * @returns Error message or null if valid
@@ -55,22 +51,18 @@ export function clearWarningCache(): void {
 export function validatePathSyntax(path: string): string | null {
   if (!__DEV__) return null
 
-  // Empty path
   if (!path || path.trim() === '') {
     return 'Path cannot be empty'
   }
 
-  // Empty segments (e.g., "user..name" or ".name" or "name.")
   if (path.startsWith('.') || path.endsWith('.') || path.includes('..')) {
     return `Invalid path "${path}": contains empty segments`
   }
 
-  // Bracket notation (common mistake from JS/React)
   if (path.includes('[')) {
     return `Invalid path "${path}": use dot notation (e.g., "items.0") instead of bracket notation (e.g., "items[0]")`
   }
 
-  // Whitespace
   if (/\s/.test(path)) {
     return `Invalid path "${path}": paths cannot contain whitespace`
   }
@@ -165,10 +157,6 @@ export function isArrayFieldInSchema(schema: ZodType, path: string): boolean | n
   }
 }
 
-// ============================================================================
-// Specialized Warning Functions
-// ============================================================================
-
 /**
  * Warn about registering an invalid path with fix suggestion
  */
@@ -177,7 +165,6 @@ export function warnInvalidPath(fnName: string, path: string, reason: string): v
 
   let message = `${fnName}("${path}"): ${reason}`
 
-  // Add fix suggestions based on the error type
   if (reason.includes('bracket notation')) {
     const fixedPath = path.replace(/\[(\d+)\]/g, '.$1')
     message += `\n  FIX: Use dot notation for array indices`
@@ -215,7 +202,6 @@ export function warnPathNotInSchema(
   message += `\n  FIX: Check that the path matches your schema definition exactly (case-sensitive)`
 
   if (availableFields && availableFields.length > 0) {
-    // Try to find a similar field name (simple fuzzy match)
     const pathLower = path.toLowerCase()
     const suggestions = availableFields.filter(
       (f) => f.toLowerCase().includes(pathLower) || pathLower.includes(f.toLowerCase()),
@@ -284,10 +270,6 @@ export function warnArrayIndexOutOfBounds(
       `Operation was silently ignored.`,
   )
 }
-
-// ============================================================================
-// Type Guards for Zod Schema Introspection
-// ============================================================================
 
 // Helper to safely access Zod internal def properties
 function getDefProp(schema: ZodType, prop: string): unknown {
