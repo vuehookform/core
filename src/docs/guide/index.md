@@ -68,13 +68,13 @@ const { value, ...bindings } = register('email', { controlled: true })
 
 ## Comparison
 
-| Feature       | VeeValidate | FormKit   | Vue Hook Form  |
-| ------------- | ----------- | --------- | -------------- |
-| Bundle (gzip) | ~15kb       | ~50kb     | **< 10kb**     |
-| TypeScript    | Good        | Good      | **Perfect**    |
-| API Style     | Field-level | Component | **Form-level** |
-| Nested Arrays | Verbose     | Complex   | **Simple**     |
-| Zod Support   | Adapter     | Limited   | **Native**     |
+| Feature       | **Vue Hook Form** | VeeValidate | FormKit   |
+| ------------- | ----------------- | ----------- | --------- |
+| Bundle (gzip) | **~10kb**         | ~15kb       | ~50kb     |
+| TypeScript    | **Perfect**       | Good        | Good      |
+| API Style     | **Form-level**    | Field-level | Component |
+| Nested Arrays | **Simple**        | Verbose     | Complex   |
+| Zod Support   | **Native**        | Adapter     | Limited   |
 
 ## Ready to Start?
 
