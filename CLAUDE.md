@@ -73,7 +73,7 @@ register('user.name')
 register('items.0.name')
 register(`items.${index}.name`)
 
-// WRONG - this will fail
+// WRONG - will fail
 register('items[0].name')
 register(`items[${index}].name`)
 ```
