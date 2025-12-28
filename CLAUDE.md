@@ -52,6 +52,54 @@ addresses.remove(index)
 addresses.swap(indexA, indexB)
 ```
 
+## Release Workflow
+
+This project uses [Release Please](https://github.com/googleapis/release-please) for automated versioning and releases based on [Conventional Commits](https://www.conventionalcommits.org/).
+
+### How It Works
+
+1. **Commits to `main`** with conventional prefixes trigger Release Please
+2. **Release Please creates/updates a PR** that bumps the version and updates CHANGELOG.md
+3. **Merging the Release Please PR** creates a GitHub Release
+4. **The GitHub Release triggers `publish.yml`** which publishes to npm
+
+### Commit Prefixes and Version Bumps
+
+| Prefix                                    | Version Bump  | Use For                          |
+| ----------------------------------------- | ------------- | -------------------------------- |
+| `fix:`                                    | Patch (0.0.X) | Bug fixes, minor corrections     |
+| `feat:`                                   | Minor (0.X.0) | New features, enhancements       |
+| `feat!:` or `fix!:` or `BREAKING CHANGE:` | Major (X.0.0) | Breaking API changes             |
+| `docs:`                                   | No release    | Documentation only               |
+| `chore:`                                  | No release    | Build, CI, tooling changes       |
+| `refactor:`                               | No release    | Code changes without feature/fix |
+| `test:`                                   | No release    | Adding or fixing tests           |
+
+### Examples
+
+```bash
+# Patch release (0.3.1 → 0.3.2)
+git commit -m "fix: correct validation error message formatting"
+
+# Minor release (0.3.2 → 0.4.0)
+git commit -m "feat: add onTouched validation mode"
+
+# Major release (0.4.0 → 1.0.0)
+git commit -m "feat!: change register() return type"
+# or
+git commit -m "feat: new API
+
+BREAKING CHANGE: register() now returns an object instead of array"
+
+# No release triggered
+git commit -m "docs: update README examples"
+git commit -m "chore: update CI workflow"
+```
+
+### Scopes (Optional)
+
+You can add a scope for more context: `fix(validation):`, `feat(fields):`, etc.
+
 ## Tech Stack
 
 - Vue 3 + Composition API
