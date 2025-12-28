@@ -9,16 +9,16 @@ Vue Hook Form is a TypeScript-first form library for Vue 3, inspired by React Ho
 ## Commands
 
 ```bash
-npm run dev          # Start Vite dev server (http://localhost:5173)
 npm run build        # Type-check + production build
 npm run type-check   # Run vue-tsc type checking
 npm run lint         # Run oxlint then eslint with auto-fix
-npm run format       # Format src/ with Prettier
+npm run format       # Format lib/ and docs/ with Prettier
+npm run docs         # Start VitePress dev server
 ```
 
 ## Architecture
 
-### Library Core (`src/lib/`)
+### Library Core (`lib/`)
 
 - **useForm.ts** - Main composable managing form state, validation, and field registration
 - **types.ts** - TypeScript types including `Path<T>` for type-safe nested field paths

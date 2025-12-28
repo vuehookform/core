@@ -36,5 +36,5 @@ coverage
 __screenshots__/
 
 # VitePress
-src/docs/.vitepress/cache
-src/docs/.vitepress/dist
+docs/.vitepress/cache
+docs/.vitepress/dist
