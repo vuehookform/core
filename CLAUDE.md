@@ -14,6 +14,8 @@ npm run type-check   # Run vue-tsc type checking
 npm run lint         # Run oxlint then eslint with auto-fix
 npm run format       # Format lib/ and docs/ with Prettier
 npm run docs         # Start VitePress dev server
+npm test             # Run vitest in watch mode
+npm run test:run     # Run tests once
 ```
 
 ## Architecture
@@ -73,7 +75,7 @@ register('user.name')
 register('items.0.name')
 register(`items.${index}.name`)
 
-// WRONG - this will fail
+// WRONG - will fail
 register('items[0].name')
 register(`items[${index}].name`)
 ```
