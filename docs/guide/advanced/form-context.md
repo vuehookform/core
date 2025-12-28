@@ -111,39 +111,14 @@ const {
 
 ## Building Reusable Field Components
 
-Create generic field components that work with any form:
+Form context enables creating reusable field components. See [Patterns - Reusable Field Components](/guide/best-practices/patterns#reusable-field-components) for a complete `FormField.vue` implementation.
 
-```vue
-<!-- FormField.vue -->
-<script setup lang="ts">
-import { useFormContext } from '@vuehookform/core'
-
-const props = defineProps<{
-  name: string
-  label?: string
-  type?: string
-  placeholder?: string
-}>()
-
-const { register, formState } = useFormContext()
-</script>
-
-<template>
-  <div class="form-field">
-    <label v-if="label" :for="name">{{ label }}</label>
-    <input :id="name" v-bind="register(name)" :type="type ?? 'text'" :placeholder="placeholder" />
-    <span v-if="formState.value.errors[name]" class="error">
-      {{ formState.value.errors[name] }}
-    </span>
-  </div>
-</template>
-```
-
-Usage:
+Basic usage with context:
 
 ```vue
 <script setup>
 import { useForm, provideForm } from '@vuehookform/core'
+import FormField from './FormField.vue'
 
 const form = useForm({ schema })
 provideForm(form)

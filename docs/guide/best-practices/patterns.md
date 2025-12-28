@@ -109,24 +109,7 @@ const errorMessages = computed(() => {
 
 ## Server Integration
 
-### Handle Server Errors
-
-Map server validation errors to form fields:
-
-```typescript
-const onSubmit = async (data) => {
-  try {
-    await api.submit(data)
-  } catch (error) {
-    if (error.response?.status === 422) {
-      const serverErrors = error.response.data.errors
-      for (const [field, messages] of Object.entries(serverErrors)) {
-        setError(field, messages[0])
-      }
-    }
-  }
-}
-```
+For server error handling patterns, see [Async Patterns - Server Error Integration](/guide/advanced/async-patterns#server-error-integration).
 
 ### Optimistic Updates
 

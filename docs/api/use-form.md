@@ -59,14 +59,7 @@ const form = useForm({
 **Type:** `'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`\
 **Default:** `'onSubmit'`
 
-When to trigger validation.
-
-| Mode        | Description                               |
-| ----------- | ----------------------------------------- |
-| `onSubmit`  | Validate only when form is submitted      |
-| `onBlur`    | Validate when field loses focus           |
-| `onChange`  | Validate on every input change            |
-| `onTouched` | Validate after blur, then on every change |
+When to trigger validation. See [Validation Modes](/guide/essentials/validation#validation-modes) for detailed descriptions.
 
 ```typescript
 const form = useForm({

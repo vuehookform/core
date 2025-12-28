@@ -164,95 +164,9 @@ const watchedContacts = watch('contacts')
 
 ## Multi-Step Conditional Forms
 
-Show different sections based on progress:
+Multi-step forms use conditional rendering combined with step-wise validation. The key technique is using `trigger()` to validate only the current step's fields before proceeding.
 
-```vue
-<script setup>
-import { ref, computed } from 'vue'
-import { useForm } from '@vuehookform/core'
-import { z } from 'zod'
-
-const schema = z.object({
-  // Step 1
-  email: z.email(),
-  password: z.string().min(8),
-  // Step 2
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  // Step 3
-  address: z.string().min(1),
-  city: z.string().min(1),
-})
-
-const { register, handleSubmit, formState, trigger } = useForm({
-  schema,
-  mode: 'onBlur',
-})
-
-const step = ref(1)
-const totalSteps = 3
-
-const stepFields = {
-  1: ['email', 'password'],
-  2: ['firstName', 'lastName'],
-  3: ['address', 'city'],
-}
-
-const canProceed = computed(() => {
-  const fields = stepFields[step.value]
-  return fields.every((field) => !formState.value.errors[field])
-})
-
-const nextStep = async () => {
-  // Validate current step fields
-  const valid = await trigger(stepFields[step.value])
-  if (valid && step.value < totalSteps) {
-    step.value++
-  }
-}
-
-const prevStep = () => {
-  if (step.value > 1) {
-    step.value--
-  }
-}
-</script>
-
-<template>
-  <form @submit="handleSubmit(onSubmit)">
-    <div class="progress">Step {{ step }} of {{ totalSteps }}</div>
-
-    <!-- Step 1: Account -->
-    <div v-show="step === 1">
-      <h3>Account Information</h3>
-      <input v-bind="register('email')" type="email" placeholder="Email" />
-      <input v-bind="register('password')" type="password" placeholder="Password" />
-    </div>
-
-    <!-- Step 2: Personal -->
-    <div v-show="step === 2">
-      <h3>Personal Information</h3>
-      <input v-bind="register('firstName')" placeholder="First Name" />
-      <input v-bind="register('lastName')" placeholder="Last Name" />
-    </div>
-
-    <!-- Step 3: Address -->
-    <div v-show="step === 3">
-      <h3>Address</h3>
-      <input v-bind="register('address')" placeholder="Address" />
-      <input v-bind="register('city')" placeholder="City" />
-    </div>
-
-    <div class="actions">
-      <button type="button" @click="prevStep" :disabled="step === 1">Previous</button>
-
-      <button v-if="step < totalSteps" type="button" @click="nextStep">Next</button>
-
-      <button v-else type="submit" :disabled="formState.value.isSubmitting">Submit</button>
-    </div>
-  </form>
-</template>
-```
+See [Patterns - Multi-Step Forms](/guide/best-practices/patterns#multi-step-forms) for a complete implementation pattern.
 
 ## Dependent Field Values
 

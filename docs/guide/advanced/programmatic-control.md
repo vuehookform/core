@@ -267,19 +267,57 @@ Set a custom error on a field:
 ```typescript
 const { setError } = useForm({ schema })
 
-// Set error message
-setError('email', 'This email is already registered')
+// Simple string message
+setError('email', { message: 'This email is already registered' })
 
-// Use for server validation errors
+// With error type (useful for categorizing errors)
+setError('email', { type: 'server', message: 'Email already exists' })
+
+// Root-level form error
+setError('root', { message: 'Submission failed. Please try again.' })
+
+// Namespaced root errors
+setError('root.serverError', { message: 'Server unavailable' })
+```
+
+### Use Cases
+
+```typescript
+// Server validation errors
 const onSubmit = async (data) => {
-  const result = await submitToServer(data)
-
-  if (result.errors) {
-    for (const [field, message] of Object.entries(result.errors)) {
-      setError(field, message)
+  try {
+    await submitToServer(data)
+  } catch (error) {
+    if (error.field) {
+      setError(error.field, { message: error.message })
+    } else {
+      setError('root', { message: 'Submission failed' })
     }
   }
 }
+```
+
+## setErrors
+
+Set multiple errors at once (useful for server-side validation):
+
+```typescript
+const { setErrors } = useForm({ schema })
+
+// Set multiple errors
+setErrors({
+  email: 'Email already exists',
+  'user.name': 'Name is too short',
+})
+
+// With ErrorOption format
+setErrors({
+  email: { type: 'server', message: 'Email already exists' },
+  password: { type: 'validation', message: 'Password too weak' },
+})
+
+// Replace all existing errors (instead of merging)
+setErrors({ email: 'New error' }, { shouldReplace: true })
 ```
 
 ## clearErrors
@@ -311,6 +349,84 @@ const retrySubmission = () => {
 // Clear error on focus
 const onFieldFocus = (fieldName: string) => {
   clearErrors(fieldName)
+}
+```
+
+## hasErrors
+
+Check if the form or specific fields have errors:
+
+```typescript
+const { hasErrors } = useForm({ schema })
+
+// Check if form has any errors
+if (hasErrors()) {
+  console.log('Form has validation errors')
+}
+
+// Check specific field
+if (hasErrors('email')) {
+  setFocus('email')
+}
+
+// Check root errors
+if (hasErrors('root')) {
+  console.log('Form-level error exists')
+}
+```
+
+### Use Cases
+
+```typescript
+// Conditional submit button
+const canSubmit = computed(() => !hasErrors() && formState.value.isDirty)
+
+// Pre-submission validation
+const beforeSubmit = async () => {
+  await trigger()
+  if (hasErrors()) {
+    showErrorSummary()
+    return false
+  }
+  return true
+}
+```
+
+## getErrors
+
+Get validation errors for the form or specific fields:
+
+```typescript
+const { getErrors } = useForm({ schema })
+
+// Get all errors
+const allErrors = getErrors()
+// Returns: { email: 'Invalid email', password: 'Too short' }
+
+// Get specific field error
+const emailError = getErrors('email')
+// Returns: 'Invalid email' or undefined
+
+// Get root error
+const rootError = getErrors('root')
+```
+
+### Use Cases
+
+```typescript
+// Build error summary
+const errorSummary = computed(() => {
+  const errors = getErrors()
+  return Object.entries(errors).map(([field, message]) => ({
+    field,
+    message,
+  }))
+})
+
+// Log errors for debugging
+const logErrors = () => {
+  const errors = getErrors()
+  console.table(errors)
 }
 ```
 

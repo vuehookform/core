@@ -226,21 +226,7 @@ setErrors(
 
 ### Server Error Integration
 
-```typescript
-async function onSubmit(data) {
-  try {
-    await api.saveUser(data)
-  } catch (error) {
-    if (error.validationErrors) {
-      // Map server errors to form fields
-      setErrors(error.validationErrors)
-    } else {
-      // General submission error
-      setError('root', { message: 'Failed to save. Please try again.' })
-    }
-  }
-}
-```
+For complete server error handling patterns including the `errors` option and `setErrors`, see [Async Patterns - Server Error Integration](/guide/advanced/async-patterns#server-error-integration).
 
 ## Checking for Errors
 

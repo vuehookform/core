@@ -92,12 +92,7 @@ const form = useForm({
 })
 ```
 
-| Mode        | Description                                    |
-| ----------- | ---------------------------------------------- |
-| `onSubmit`  | Only validate on form submission (default)     |
-| `onBlur`    | Validate when field loses focus                |
-| `onChange`  | Validate on every input change                 |
-| `onTouched` | Validate on blur, then on change after touched |
+See [Validation Modes](./validation.md#validation-modes) for detailed descriptions of each mode.
 
 ### Disabled State
 
@@ -232,7 +227,7 @@ const {
   resetField,
 
   // Validation
-  trigger, // or validate (alias)
+  trigger, // Manually trigger validation
 
   // Error management
   setError,

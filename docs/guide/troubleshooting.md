@@ -4,34 +4,14 @@ Common issues and their solutions when working with Vue Hook Form.
 
 ## Common Mistakes
 
-### Path Syntax Errors
+### Field Arrays
 
-**Always use dot notation** for all paths, including array indices:
+Most field array issues stem from violating critical rules. See [Field Arrays - Critical Rules](/guide/dynamic/field-arrays#critical-rules) for:
 
-| Correct                               | Incorrect                              |
-| ------------------------------------- | -------------------------------------- |
-| `register('user.name')`               | `register('user[name]')`               |
-| `register('items.0.name')`            | `register('items[0].name')`            |
-| ``register(`items.${index}.name`)``   | ``register(`items[${index}].name`)``   |
-| `setValue('addresses.0.city', 'NYC')` | `setValue('addresses[0].city', 'NYC')` |
-
-### Field Array Keys
-
-**Always use `field.key` for v-for**, never the index:
-
-```vue
-<!-- CORRECT -->
-<div v-for="field in items.value" :key="field.key">
-  <input v-bind="register(`items.${field.index}.name`)" />
-</div>
-
-<!-- WRONG - causes issues when reordering/removing -->
-<div v-for="(field, index) in items.value" :key="index">
-  <input v-bind="register(`items.${index}.name`)" />
-</div>
-```
-
-Why? When you remove or reorder items, using `index` as the key causes Vue to reuse DOM elements incorrectly, leading to stale data and focus issues.
+- Using dot notation for paths (not bracket notation)
+- Using `field.key` for v-for keys (not index)
+- Initializing arrays in `defaultValues`
+- Calling `fields()` in setup (not in template)
 
 ### Forgetting .value on Refs
 
@@ -65,46 +45,6 @@ const { value: email, ...bindings } = register('email', { controlled: true })
 
 <!-- WRONG - v-model with uncontrolled register -->
 <input v-model="email" v-bind="register('email')" />
-```
-
-### Not Initializing Array Fields
-
-Always provide initial values for array fields:
-
-```typescript
-// CORRECT
-const { fields } = useForm({
-  schema,
-  defaultValues: {
-    items: [], // Initialize the array
-  },
-})
-
-// WRONG - will cause errors
-const { fields } = useForm({
-  schema,
-  // items not initialized
-})
-```
-
-### Calling fields() in Template
-
-Call `fields()` in setup, not in the template:
-
-```vue
-<script setup>
-// CORRECT - call in setup
-const itemFields = fields('items')
-</script>
-
-<template>
-  <div v-for="field in itemFields.value" :key="field.key">...</div>
-</template>
-
-<!-- WRONG - calling in template causes re-creation on every render -->
-<template>
-  <div v-for="field in fields('items').value" :key="field.key">...</div>
-</template>
 ```
 
 ## Frequently Asked Questions
