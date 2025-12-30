@@ -185,9 +185,9 @@ interface FormState<T> {
   isValidating: boolean
 
   /**
-   * Record of fields currently validating
+   * Set of fields currently validating
    */
-  validatingFields: Record<string, boolean>
+  validatingFields: Set<string>
 
   /**
    * Error from loading async default values

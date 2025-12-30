@@ -125,7 +125,7 @@ const usernameBindings = register('username', {
 <template>
   <div>
     <input v-bind="usernameBindings" />
-    <span v-if="formState.value.validatingFields.username"> Checking availability... </span>
+    <span v-if="formState.value.validatingFields.has('username')"> Checking availability... </span>
     <span v-else-if="formState.value.errors.username" class="error">
       {{ formState.value.errors.username }}
     </span>
@@ -152,10 +152,10 @@ const usernameBindings = register('username', {
 
 Track which fields are currently validating:
 
-| Property           | Type                      | Description                                  |
-| ------------------ | ------------------------- | -------------------------------------------- |
-| `isValidating`     | `boolean`                 | `true` if any field is currently validating  |
-| `validatingFields` | `Record<string, boolean>` | Map of field names to their validating state |
+| Property           | Type          | Description                                 |
+| ------------------ | ------------- | ------------------------------------------- |
+| `isValidating`     | `boolean`     | `true` if any field is currently validating |
+| `validatingFields` | `Set<string>` | Set of field names currently validating     |
 
 ```vue
 <script setup>
@@ -166,12 +166,12 @@ const { register, formState } = useForm({ schema })
   <form>
     <div>
       <input v-bind="register('username', { validate: checkUsername, validateDebounce: 300 })" />
-      <Spinner v-if="formState.value.validatingFields.username" />
+      <Spinner v-if="formState.value.validatingFields.has('username')" />
     </div>
 
     <div>
       <input v-bind="register('email', { validate: checkEmail, validateDebounce: 300 })" />
-      <Spinner v-if="formState.value.validatingFields.email" />
+      <Spinner v-if="formState.value.validatingFields.has('email')" />
     </div>
 
     <!-- Disable submit while any validation is pending -->
@@ -378,7 +378,7 @@ async function onSubmit(data) {
     <div class="field">
       <label>Username</label>
       <input v-bind="usernameBindings" />
-      <span v-if="formState.value.validatingFields.username" class="hint">
+      <span v-if="formState.value.validatingFields.has('username')" class="hint">
         Checking availability...
       </span>
       <span v-else-if="formState.value.errors.username" class="error">

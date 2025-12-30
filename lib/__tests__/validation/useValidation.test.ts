@@ -519,8 +519,8 @@ describe('useValidation', () => {
       })
       const { formState, validate } = useForm({ schema })
 
-      // Before validation
-      expect(formState.value.validatingFields).toEqual({})
+      // Before validation - validatingFields is a Set<string>
+      expect(formState.value.validatingFields).toEqual(new Set())
       expect(formState.value.isValidating).toBe(false)
 
       // Start validation
@@ -532,7 +532,7 @@ describe('useValidation', () => {
       // After validation completes
       await validationPromise
 
-      expect(formState.value.validatingFields).toEqual({})
+      expect(formState.value.validatingFields).toEqual(new Set())
       expect(formState.value.isValidating).toBe(false)
     })
 
@@ -542,10 +542,10 @@ describe('useValidation', () => {
       })
       const { formState, reset } = useForm({ schema })
 
-      // Reset should clear validating state
+      // Reset should clear validating state - validatingFields is a Set<string>
       reset()
 
-      expect(formState.value.validatingFields).toEqual({})
+      expect(formState.value.validatingFields).toEqual(new Set())
     })
   })
 })

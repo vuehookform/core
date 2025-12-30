@@ -207,8 +207,8 @@ export interface FormState<T> {
   isReady: boolean
   /** Whether any field is currently being validated */
   isValidating: boolean
-  /** Record of fields currently being validated */
-  validatingFields: Record<string, boolean>
+  /** Set of field paths currently being validated */
+  validatingFields: Set<string>
   /** Record of touched field paths */
   touchedFields: Record<string, boolean>
   /** Record of dirty field paths */

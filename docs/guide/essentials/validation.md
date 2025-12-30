@@ -363,7 +363,7 @@ Track which fields are validating:
 ```vue
 <template>
   <input v-bind="usernameBindings" />
-  <span v-if="formState.value.validatingFields.username"> Checking... </span>
+  <span v-if="formState.value.validatingFields.has('username')"> Checking... </span>
   <span v-else-if="formState.value.errors.username">
     {{ formState.value.errors.username }}
   </span>

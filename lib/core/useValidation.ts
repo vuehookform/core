@@ -16,16 +16,17 @@ function clearFieldErrors<T>(errors: FieldErrors<T>, fieldPath: string): FieldEr
 }
 
 /**
- * Helper to mark a field as validating
+ * Helper to mark a field as validating.
+ * Uses Set<string> for O(1) add/delete operations without object spreading.
  */
 function setValidating<T>(ctx: FormContext<T>, fieldPath: string, isValidating: boolean): void {
+  const newSet = new Set(ctx.validatingFields.value)
   if (isValidating) {
-    ctx.validatingFields.value = { ...ctx.validatingFields.value, [fieldPath]: true }
+    newSet.add(fieldPath)
   } else {
-    const newValidating = { ...ctx.validatingFields.value }
-    delete newValidating[fieldPath]
-    ctx.validatingFields.value = newValidating
+    newSet.delete(fieldPath)
   }
+  ctx.validatingFields.value = newSet
 }
 
 /**

@@ -51,8 +51,8 @@ export interface FormContext<FormValues> {
   defaultValuesError: Ref<unknown>
   isSubmitSuccessful: Ref<boolean>
 
-  // Validation state tracking
-  validatingFields: ShallowRef<Record<string, boolean>>
+  // Validation state tracking (Set for O(1) add/delete/has operations)
+  validatingFields: ShallowRef<Set<string>>
 
   // External errors from server/parent (merged with validation errors)
   externalErrors: ShallowRef<FieldErrors<FormValues>>
@@ -129,8 +129,8 @@ export function createFormContext<TSchema extends ZodType>(
   const defaultValuesError = ref<unknown>(null)
   const isSubmitSuccessful = ref(false)
 
-  // Validation state tracking - which fields are currently validating
-  const validatingFields = shallowRef<Record<string, boolean>>({})
+  // Validation state tracking - which fields are currently validating (Set for O(1) operations)
+  const validatingFields = shallowRef<Set<string>>(new Set())
 
   // External errors from server/parent
   const externalErrors = shallowRef<FieldErrors<FormValues>>({})
