@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/vuehookform/core/compare/v0.3.3...v0.4.0) (2025-12-31)
+
+
+### Features
+
+* optimize form state management and validation performance ([6c950b0](https://github.com/vuehookform/core/commit/6c950b040bf6cf07b01fdb34b18dc8544d88a651))
+* optimize form state management and validation performance ([41ad36d](https://github.com/vuehookform/core/commit/41ad36de4622fa08b432c79392a2604651d8fb11))
+
+
+### Performance Improvements
+
+* optimize form state management and field operations ([4b1464d](https://github.com/vuehookform/core/commit/4b1464dee63f5a73bd74093db57d8ab1b6620198))
+
 ## [0.3.3](https://github.com/vuehookform/core/compare/v0.3.2...v0.3.3) (2025-12-28)
 
 
