@@ -77,6 +77,16 @@ export interface FormContext<FormValues> {
   // Form-wide disabled state
   isDisabled: Ref<boolean>
 
+  // Performance optimization: O(1) counters for dirty/touched field counts
+  dirtyFieldCount: Ref<number>
+  touchedFieldCount: Ref<number>
+
+  // Validation cache: skip re-validation when field value hasn't changed
+  validationCache: Map<string, { hash: string; isValid: boolean }>
+
+  // Schema validation debounce timers per field (for validationDebounce option)
+  schemaValidationTimers: Map<string, ReturnType<typeof setTimeout>>
+
   // Options
   options: UseFormOptions<ZodType>
 }
@@ -155,6 +165,16 @@ export function createFormContext<TSchema extends ZodType>(
 
   // Reset generation counter (incremented on each reset to invalidate in-flight validations)
   const resetGeneration = ref(0)
+
+  // Performance optimization: O(1) counters for dirty/touched field counts
+  const dirtyFieldCount = ref(0)
+  const touchedFieldCount = ref(0)
+
+  // Validation cache: skip re-validation when field value hasn't changed
+  const validationCache = new Map<string, { hash: string; isValid: boolean }>()
+
+  // Schema validation debounce timers per field (for validationDebounce option)
+  const schemaValidationTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   // Form-wide disabled state (supports MaybeRef)
   const isDisabled = ref(false)
@@ -251,6 +271,10 @@ export function createFormContext<TSchema extends ZodType>(
     validationRequestIds,
     resetGeneration,
     isDisabled,
+    dirtyFieldCount,
+    touchedFieldCount,
+    validationCache,
+    schemaValidationTimers,
     options: options as UseFormOptions<ZodType>,
   }
 }

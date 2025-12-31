@@ -175,6 +175,40 @@ const form = useForm({
 })
 ```
 
+### validationDebounce
+
+**Type:** `number`\
+**Default:** `undefined`
+
+Debounce time in milliseconds for schema validation in `onChange` mode. Reduces validation calls during rapid typing, improving performance.
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onChange',
+  validationDebounce: 150, // Debounce validation by 150ms
+})
+```
+
+**Comparison with `delayError`:**
+
+| Feature             | `validationDebounce`     | `delayError`         |
+| ------------------- | ------------------------ | -------------------- |
+| What it delays      | Validation execution     | Error display        |
+| Performance benefit | Reduces validation calls | None                 |
+| UX benefit          | Prevents input lag       | Prevents error flash |
+
+You can use both together for optimal UX:
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onChange',
+  validationDebounce: 150, // Reduce validation overhead
+  delayError: 300, // Smooth error display
+})
+```
+
 ### values
 
 **Type:** `MaybeRef<Partial<T>>`\

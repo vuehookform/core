@@ -333,7 +333,7 @@ export function createFieldArrayManager<FormValues>(
       appendToCache(insertIndex)
 
       // Mark dirty (optimized - skips if already dirty)
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -376,7 +376,7 @@ export function createFieldArrayManager<FormValues>(
       updateCacheAfterInsert(0, values.length)
 
       // Mark dirty (optimized)
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -401,7 +401,7 @@ export function createFieldArrayManager<FormValues>(
 
       // Keep the same key - no items array change needed (preserves stable identity)
       // No cache update needed - indices haven't changed
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -443,7 +443,7 @@ export function createFieldArrayManager<FormValues>(
         updateCacheAfterRemove(keyToRemove, index)
       }
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -494,7 +494,7 @@ export function createFieldArrayManager<FormValues>(
       // Incremental cache update - shift indices at and after insert point
       updateCacheAfterInsert(clampedIndex, values.length)
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -538,7 +538,7 @@ export function createFieldArrayManager<FormValues>(
         swapInCache(indexA, indexB)
       }
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -584,7 +584,7 @@ export function createFieldArrayManager<FormValues>(
         }
       }
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -606,7 +606,7 @@ export function createFieldArrayManager<FormValues>(
       // Full rebuild needed - completely new set of items
       rebuildIndexCache()
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       // Validate if needed
       if (ctx.options.mode === 'onChange') {
@@ -635,7 +635,7 @@ export function createFieldArrayManager<FormValues>(
       fa.items.value = []
       indexCache.clear()
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -691,7 +691,7 @@ export function createFieldArrayManager<FormValues>(
         indexCache.set(item.key, idx)
       })
 
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)

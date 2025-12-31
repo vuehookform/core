@@ -25,6 +25,12 @@ interface UseFormOptions<T extends ZodSchema> {
   mode?: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'
 
   /**
+   * When to re-validate after first submission
+   * @default 'onChange'
+   */
+  reValidateMode?: 'onSubmit' | 'onBlur' | 'onChange'
+
+  /**
    * Disable the entire form
    * @default false
    */
@@ -35,6 +41,24 @@ interface UseFormOptions<T extends ZodSchema> {
    * @default false
    */
   shouldUseNativeValidation?: boolean
+
+  /**
+   * Debounce schema validation (milliseconds)
+   * Reduces validation calls in onChange mode
+   */
+  validationDebounce?: number
+
+  /**
+   * Delay before showing errors (milliseconds)
+   * Prevents error flash during typing
+   */
+  delayError?: number
+
+  /**
+   * How to collect validation errors
+   * @default 'firstError'
+   */
+  criteriaMode?: 'firstError' | 'all'
 }
 ```
 
@@ -185,7 +209,13 @@ interface FormState<T> {
   isValidating: boolean
 
   /**
-   * Set of fields currently validating
+   * Set of fields currently validating (O(1) lookup)
+   * @example
+   * // Check if specific field is validating
+   * formState.value.validatingFields.has('email')
+   *
+   * // Check if any field is validating
+   * formState.value.validatingFields.size > 0
    */
   validatingFields: Set<string>
 

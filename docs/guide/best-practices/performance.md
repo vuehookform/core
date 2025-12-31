@@ -219,6 +219,92 @@ Use Vue DevTools to identify performance issues:
 3. Record while interacting with form
 4. Look for excessive re-renders
 
+## Built-in Optimizations
+
+Vue Hook Form includes several automatic performance optimizations:
+
+### Validation Caching
+
+Validation results are automatically cached based on field values. Repeated validations of unchanged fields return instantly:
+
+```typescript
+// First validation - runs Zod schema
+await trigger('email') // ~5ms
+
+// Second validation (unchanged value) - cache hit
+await trigger('email') // ~0ms
+```
+
+Cache is automatically invalidated when:
+
+- Field value changes via `setValue()` or user input
+- Form is reset with `reset()`
+
+### Validation Debouncing
+
+For `onChange` mode, debounce validation to reduce overhead:
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onChange',
+  validationDebounce: 150, // ms
+})
+```
+
+### Partial Schema Validation
+
+Single-field validation automatically extracts and validates only the relevant sub-schema when possible, avoiding full form validation:
+
+```typescript
+// With a 50-field schema, validating one field:
+await trigger('email')
+// Only validates the email sub-schema (O(1) vs O(n))
+```
+
+::: info
+Partial validation automatically falls back to full validation when your schema has cross-field refinements (`.refine()` or `.superRefine()` at the root level).
+:::
+
+### O(1) State Checks
+
+Form state properties like `isDirty` and `isTouched` use counter-based tracking for O(1) lookups instead of scanning all fields:
+
+```typescript
+// Instant regardless of form size
+const isDirty = formState.value.isDirty
+```
+
+### Batch Error Updates
+
+When validating multiple fields, errors are batched into a single reactive update rather than updating state for each field.
+
+### Field Array Cache Optimization
+
+Field array operations use incremental index cache updates instead of rebuilding the entire cache on every mutation:
+
+| Operation   | Complexity | Description                          |
+| ----------- | ---------- | ------------------------------------ |
+| `append()`  | O(k)       | Only indexes new items               |
+| `prepend()` | O(n)       | Shifts all existing indices          |
+| `insert()`  | O(n)       | Shifts indices after insertion point |
+| `remove()`  | O(n-k)     | Updates only remaining items         |
+| `swap()`    | O(1)       | Updates exactly 2 entries            |
+| `move()`    | O(range)   | Updates only affected range          |
+| `replace()` | O(n)       | Full rebuild (necessary)             |
+
+This means operations like `swap()` remain fast even with thousands of items:
+
+```typescript
+const items = fields('items') // 1000 items
+
+// O(1) - instant regardless of array size
+items.swap(0, 999)
+
+// O(k) - only indexes the new item
+items.append({ name: 'New item' })
+```
+
 ## Benchmarks
 
 Typical performance for a 20-field form:
@@ -233,12 +319,21 @@ Typical performance for a 20-field form:
 
 1. **Use uncontrolled inputs** when possible
 2. **Choose appropriate validation mode** (onBlur recommended)
-3. **Watch specific fields**, not all
-4. **Memoize computed values**
-5. **Debounce expensive operations**
-6. **Split large forms** into sections
-7. **Use virtual scrolling** for large arrays
-8. **Profile and measure** actual performance
+3. **Use `validationDebounce`** for onChange mode with complex schemas
+4. **Watch specific fields**, not all
+5. **Memoize computed values**
+6. **Debounce expensive operations**
+7. **Split large forms** into sections
+8. **Use virtual scrolling** for large arrays
+9. **Profile and measure** actual performance
+
+Built-in optimizations (automatic):
+
+- Validation caching
+- Partial schema validation
+- O(1) state checks (isDirty, isTouched)
+- Batch error updates
+- Field array incremental cache updates
 
 ## Next Steps
 

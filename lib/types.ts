@@ -639,6 +639,23 @@ export interface UseFormOptions<TSchema extends ZodType> {
   delayError?: number
 
   /**
+   * Debounce time in milliseconds for schema validation in onChange mode.
+   * Prevents excessive validation calls during rapid typing.
+   * Unlike delayError which delays showing errors, this delays the validation itself.
+   *
+   * @example Debounce validation by 150ms
+   * ```ts
+   * useForm({
+   *   schema,
+   *   mode: 'onChange',
+   *   validationDebounce: 150  // Wait 150ms of idle time before validating
+   * })
+   * // Reduces validation calls during rapid typing
+   * ```
+   */
+  validationDebounce?: number
+
+  /**
    * External values to sync to form. Changes update formData without marking dirty.
    * Useful for server-fetched data or parent component state.
    *

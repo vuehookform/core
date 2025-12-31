@@ -127,8 +127,8 @@ export function createFieldRegistration<FormValues>(
         // Update form data
         set(ctx.formData, name, value)
 
-        // Mark as dirty (optimized - skips clone if already dirty)
-        markFieldDirty(ctx.dirtyFields, name)
+        // Mark as dirty (optimized - skips clone if already dirty, maintains O(1) counter)
+        markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
         // Cache field options lookup (avoid multiple Map.get calls)
         const fieldOpts = ctx.fieldOptions.get(name)
@@ -140,12 +140,36 @@ export function createFieldRegistration<FormValues>(
           (ctx.touchedFields.value[name] && ctx.options.reValidateMode === 'onChange')
 
         if (shouldValidate) {
-          await validate(name)
+          const validationDebounceMs = ctx.options.validationDebounce || 0
 
-          // Trigger validation for dependent fields in parallel (deps option)
-          if (fieldOpts?.deps && fieldOpts.deps.length > 0) {
-            const uniqueDeps = [...new Set(fieldOpts.deps)]
-            await Promise.all(uniqueDeps.map((depField) => validate(depField)))
+          if (validationDebounceMs > 0) {
+            // Debounce schema validation to reduce calls during rapid typing
+            const existingTimer = ctx.schemaValidationTimers.get(name)
+            if (existingTimer) {
+              clearTimeout(existingTimer)
+            }
+
+            const timer = setTimeout(async () => {
+              ctx.schemaValidationTimers.delete(name)
+              await validate(name)
+
+              // Trigger validation for dependent fields
+              if (fieldOpts?.deps && fieldOpts.deps.length > 0) {
+                const uniqueDeps = [...new Set(fieldOpts.deps)]
+                await Promise.all(uniqueDeps.map((depField) => validate(depField)))
+              }
+            }, validationDebounceMs)
+
+            ctx.schemaValidationTimers.set(name, timer)
+          } else {
+            // No debounce - validate immediately
+            await validate(name)
+
+            // Trigger validation for dependent fields in parallel (deps option)
+            if (fieldOpts?.deps && fieldOpts.deps.length > 0) {
+              const uniqueDeps = [...new Set(fieldOpts.deps)]
+              await Promise.all(uniqueDeps.map((depField) => validate(depField)))
+            }
           }
         }
 
@@ -187,8 +211,8 @@ export function createFieldRegistration<FormValues>(
        * Handle field blur
        */
       const onBlur = async (_e: Event) => {
-        // Mark as touched (optimized - skips clone if already touched)
-        markFieldTouched(ctx.touchedFields, name)
+        // Mark as touched (optimized - skips clone if already touched, maintains O(1) counter)
+        markFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
 
         // Validate based on mode
         const shouldValidate =
@@ -250,6 +274,12 @@ export function createFieldRegistration<FormValues>(
             clearTimeout(timer)
             ctx.debounceTimers.delete(name)
           }
+          // Clear schema validation debounce timers too
+          const schemaTimer = ctx.schemaValidationTimers.get(name)
+          if (schemaTimer) {
+            clearTimeout(schemaTimer)
+            ctx.schemaValidationTimers.delete(name)
+          }
           ctx.validationRequestIds.delete(name)
 
           const shouldUnreg = opts?.shouldUnregister ?? ctx.options.shouldUnregister ?? false
@@ -260,8 +290,8 @@ export function createFieldRegistration<FormValues>(
 
             // Clear errors, touched, and dirty state (optimized with early exit)
             clearFieldErrors(ctx.errors, name)
-            clearFieldTouched(ctx.touchedFields, name)
-            clearFieldDirty(ctx.dirtyFields, name)
+            clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
+            clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
             // Clean up refs, options, and handlers
             ctx.fieldRefs.delete(name)
@@ -288,7 +318,7 @@ export function createFieldRegistration<FormValues>(
           get: () => get(ctx.formData, name),
           set: (val) => {
             set(ctx.formData, name, val)
-            markFieldDirty(ctx.dirtyFields, name)
+            markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
           },
         }),
       }),
@@ -314,10 +344,10 @@ export function createFieldRegistration<FormValues>(
       clearFieldErrors(ctx.errors, name)
     }
     if (!opts.keepTouched) {
-      clearFieldTouched(ctx.touchedFields, name)
+      clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
     }
     if (!opts.keepDirty) {
-      clearFieldDirty(ctx.dirtyFields, name)
+      clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
     }
 
     // Always clean up refs, options, and handlers (internal state)
@@ -330,6 +360,12 @@ export function createFieldRegistration<FormValues>(
     if (timer) {
       clearTimeout(timer)
       ctx.debounceTimers.delete(name)
+    }
+    // Clear schema validation debounce timers too
+    const schemaTimer = ctx.schemaValidationTimers.get(name)
+    if (schemaTimer) {
+      clearTimeout(schemaTimer)
+      ctx.schemaValidationTimers.delete(name)
     }
     ctx.validationRequestIds.delete(name)
   }

@@ -1,6 +1,8 @@
 import type { FormContext } from './formContext'
 import type { FieldErrors, FieldError, FieldErrorValue, CriteriaMode } from '../types'
-import { set } from '../utils/paths'
+import { get, set } from '../utils/paths'
+import { hashValue } from '../utils/hash'
+import { analyzeSchemaPath } from '../utils/schemaExtract'
 
 /**
  * Helper to clear errors for a specific field path and its children
@@ -124,6 +126,32 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   }
 
   /**
+   * Batch schedule multiple errors at once (optimization for full-form validation).
+   * When delayError is 0, this applies all errors in a single reactive update.
+   */
+  function scheduleErrorsBatch(errors: Array<[string, FieldErrorValue]>): void {
+    const delayMs = ctx.options.delayError || 0
+
+    if (delayMs <= 0) {
+      // No delay - set all errors in a single update
+      const newErrors = { ...ctx.errors.value }
+      for (const [fieldPath, error] of errors) {
+        set(newErrors, fieldPath, error)
+        // Apply native validation
+        const errorMessage = typeof error === 'string' ? error : error.message
+        applyNativeValidation(fieldPath, errorMessage)
+      }
+      ctx.errors.value = newErrors as FieldErrors<FormValues>
+      return
+    }
+
+    // With delay - fall back to individual scheduling
+    for (const [fieldPath, error] of errors) {
+      scheduleError(fieldPath, error)
+    }
+  }
+
+  /**
    * Schedule error display with optional delay (delayError feature)
    * If delayError > 0, the error will be shown after the delay.
    * If the field becomes valid before the delay completes, the error won't be shown.
@@ -204,6 +232,125 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   }
 
   /**
+   * Validate a single field using partial schema validation (O(1) optimization)
+   * Only validates the field's sub-schema instead of the entire form.
+   */
+  async function validateFieldPartial(
+    fieldPath: string,
+    subSchema: import('zod').ZodType,
+    valueHash: string | undefined,
+    criteriaMode: CriteriaMode,
+    generationAtStart: number,
+  ): Promise<boolean> {
+    const fieldValue = get(ctx.formData, fieldPath)
+    setValidating(ctx, fieldPath, true)
+
+    try {
+      const result = await subSchema.safeParseAsync(fieldValue)
+
+      // Check if form was reset during validation
+      if (ctx.resetGeneration.value !== generationAtStart) {
+        return true
+      }
+
+      if (result.success) {
+        ctx.errors.value = cancelError(fieldPath)
+        if (valueHash) {
+          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+        }
+        return true
+      }
+
+      // Validation failed - process errors
+      // Prepend fieldPath to error paths since we validated just the sub-schema
+      const fieldErrors = result.error.issues.map((issue) => ({
+        ...issue,
+        path: fieldPath.split('.').concat(issue.path.map(String)),
+      }))
+
+      // Cancel existing errors for this field first
+      ctx.errors.value = cancelError(fieldPath)
+
+      // Schedule errors in batch
+      const grouped = groupErrorsByPath(fieldErrors)
+      const errorBatch: Array<[string, FieldErrorValue]> = []
+      for (const [path, errors] of grouped) {
+        errorBatch.push([path, createFieldError(errors, criteriaMode)])
+      }
+      scheduleErrorsBatch(errorBatch)
+
+      if (valueHash) {
+        ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: false })
+      }
+      return false
+    } finally {
+      setValidating(ctx, fieldPath, false)
+    }
+  }
+
+  /**
+   * Validate a single field using full form validation (fallback for schemas with effects)
+   * Validates entire form, then filters to this field's errors.
+   */
+  async function validateFieldFull(
+    fieldPath: string,
+    valueHash: string | undefined,
+    criteriaMode: CriteriaMode,
+    generationAtStart: number,
+  ): Promise<boolean> {
+    setValidating(ctx, fieldPath, true)
+
+    try {
+      const result = await ctx.options.schema.safeParseAsync(ctx.formData)
+
+      // Check if form was reset during validation
+      if (ctx.resetGeneration.value !== generationAtStart) {
+        return true
+      }
+
+      if (result.success) {
+        ctx.errors.value = cancelError(fieldPath)
+        if (valueHash) {
+          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+        }
+        return true
+      }
+
+      // Filter to only this field's errors
+      const fieldErrors = result.error.issues.filter((issue) => {
+        const path = issue.path.join('.')
+        return path === fieldPath || path.startsWith(`${fieldPath}.`)
+      })
+
+      if (fieldErrors.length === 0) {
+        ctx.errors.value = cancelError(fieldPath)
+        if (valueHash) {
+          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+        }
+        return true
+      }
+
+      // Cancel existing errors for this field first
+      ctx.errors.value = cancelError(fieldPath)
+
+      // Schedule errors in batch
+      const grouped = groupErrorsByPath(fieldErrors)
+      const errorBatch: Array<[string, FieldErrorValue]> = []
+      for (const [path, errors] of grouped) {
+        errorBatch.push([path, createFieldError(errors, criteriaMode)])
+      }
+      scheduleErrorsBatch(errorBatch)
+
+      if (valueHash) {
+        ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: false })
+      }
+      return false
+    } finally {
+      setValidating(ctx, fieldPath, false)
+    }
+  }
+
+  /**
    * Validate a single field or entire form
    */
   async function validate(fieldPath?: string): Promise<boolean> {
@@ -213,8 +360,39 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
     // Get criteriaMode from options (default: 'firstError')
     const criteriaMode = ctx.options.criteriaMode || 'firstError'
 
-    // Mark field(s) as validating
-    const validatingKey = fieldPath || '_form'
+    // For single-field validation, check cache first
+    let valueHash: string | undefined
+    if (fieldPath) {
+      const currentValue = get(ctx.formData, fieldPath)
+      valueHash = hashValue(currentValue)
+      const cached = ctx.validationCache.get(fieldPath)
+
+      if (cached && cached.hash === valueHash) {
+        // Cache hit - return cached result without re-validating
+        return cached.isValid
+      }
+
+      // Analyze if partial validation is possible
+      const analysis = analyzeSchemaPath(ctx.options.schema, fieldPath)
+
+      if (analysis.canPartialValidate && analysis.subSchema) {
+        // O(1) single-field validation - validate only the sub-schema
+        return validateFieldPartial(
+          fieldPath,
+          analysis.subSchema,
+          valueHash,
+          criteriaMode,
+          generationAtStart,
+        )
+      }
+
+      // Fallback: full form validation with filtering
+      // Required when schema has refinements that may depend on other fields
+      return validateFieldFull(fieldPath, valueHash, criteriaMode, generationAtStart)
+    }
+
+    // Full form validation
+    const validatingKey = '_form'
     setValidating(ctx, validatingKey, true)
 
     try {
@@ -227,46 +405,16 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       }
 
       if (result.success) {
-        // Clear errors on success
-        if (fieldPath) {
-          ctx.errors.value = cancelError(fieldPath)
-        } else {
-          // Full form valid - clear all pending errors and timers
-          clearAllPendingErrors()
-          ctx.errors.value = {} as FieldErrors<FormValues>
+        // Full form valid - clear all pending errors and timers
+        clearAllPendingErrors()
+        ctx.errors.value = {} as FieldErrors<FormValues>
 
-          // Clear native validation on all fields
-          clearAllNativeValidation()
-        }
+        // Clear native validation on all fields
+        clearAllNativeValidation()
+
+        // Clear validation cache on full form validation (values may have changed)
+        ctx.validationCache.clear()
         return true
-      }
-
-      // Validation failed - process errors
-      const zodErrors = result.error.issues
-
-      if (fieldPath) {
-        // Single field validation - filter to only this field's errors
-        const fieldErrors = zodErrors.filter((issue) => {
-          const path = issue.path.join('.')
-          return path === fieldPath || path.startsWith(`${fieldPath}.`)
-        })
-
-        if (fieldErrors.length === 0) {
-          // This specific field is valid, clear its errors
-          ctx.errors.value = cancelError(fieldPath)
-          return true
-        }
-
-        // Cancel existing errors for this field first
-        ctx.errors.value = cancelError(fieldPath)
-
-        // Schedule errors (with optional delay)
-        const grouped = groupErrorsByPath(fieldErrors)
-        for (const [path, errors] of grouped) {
-          scheduleError(path, createFieldError(errors, criteriaMode))
-        }
-
-        return false
       }
 
       // Full form validation with multi-error support
@@ -274,10 +422,16 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       clearAllPendingErrors()
       ctx.errors.value = {} as FieldErrors<FormValues>
 
-      const grouped = groupErrorsByPath(zodErrors)
+      // Schedule all errors in batch (optimization: single reactive update when no delay)
+      const grouped = groupErrorsByPath(result.error.issues)
+      const errorBatch: Array<[string, FieldErrorValue]> = []
       for (const [path, errors] of grouped) {
-        scheduleError(path, createFieldError(errors, criteriaMode))
+        errorBatch.push([path, createFieldError(errors, criteriaMode)])
       }
+      scheduleErrorsBatch(errorBatch)
+
+      // Clear validation cache on full form validation failure
+      ctx.validationCache.clear()
 
       return false
     } finally {
