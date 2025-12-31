@@ -207,8 +207,8 @@ export interface FormState<T> {
   isReady: boolean
   /** Whether any field is currently being validated */
   isValidating: boolean
-  /** Record of fields currently being validated */
-  validatingFields: Record<string, boolean>
+  /** Set of field paths currently being validated */
+  validatingFields: Set<string>
   /** Record of touched field paths */
   touchedFields: Record<string, boolean>
   /** Record of dirty field paths */
@@ -637,6 +637,23 @@ export interface UseFormOptions<TSchema extends ZodType> {
    * ```
    */
   delayError?: number
+
+  /**
+   * Debounce time in milliseconds for schema validation in onChange mode.
+   * Prevents excessive validation calls during rapid typing.
+   * Unlike delayError which delays showing errors, this delays the validation itself.
+   *
+   * @example Debounce validation by 150ms
+   * ```ts
+   * useForm({
+   *   schema,
+   *   mode: 'onChange',
+   *   validationDebounce: 150  // Wait 150ms of idle time before validating
+   * })
+   * // Reduces validation calls during rapid typing
+   * ```
+   */
+  validationDebounce?: number
 
   /**
    * External values to sync to form. Changes update formData without marking dirty.

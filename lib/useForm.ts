@@ -1,4 +1,4 @@
-import { computed, type ComputedRef } from 'vue'
+import { computed, reactive, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -18,6 +18,7 @@ import type {
   SetErrorsOptions,
 } from './types'
 import { get, set } from './utils/paths'
+import { deepClone } from './utils/clone'
 import {
   __DEV__,
   validatePathSyntax,
@@ -115,48 +116,137 @@ export function useForm<TSchema extends ZodType>(
   const setFocusWrapper = (name: string) => setFocus(name as Path<FormValues>)
   const { fields } = createFieldArrayManager<FormValues>(ctx, validate, setFocusWrapper)
 
+  // Track last sync time to avoid redundant DOM syncs
+  let lastSyncTime = 0
+  const SYNC_DEBOUNCE_MS = 16 // ~1 frame
+
   /**
-   * Get merged errors (internal validation + external/server errors)
-   * External errors take precedence (server knows best)
+   * Sync uncontrolled inputs with debounce to avoid redundant syncs.
+   * If called multiple times within SYNC_DEBOUNCE_MS, only the first call syncs.
    */
-  function getMergedErrors(): FieldErrors<FormValues> {
-    return {
-      ...ctx.errors.value,
-      ...ctx.externalErrors.value,
-    } as FieldErrors<FormValues>
+  function syncWithDebounce(): void {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    if (now - lastSyncTime < SYNC_DEBOUNCE_MS) {
+      return // Skip - synced recently
+    }
+    syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
+    lastSyncTime = now
   }
 
   /**
-   * Get current form state
+   * Get merged errors (internal validation + external/server errors)
+   * External errors take precedence (server knows best)
+   * Memoized to avoid creating new objects when inputs haven't changed.
    */
-  const formState = computed<FormState<FormValues>>(() => {
-    const mergedErrors = getMergedErrors()
+  let lastErrors = ctx.errors.value
+  let lastExternalErrors = ctx.externalErrors.value
+  let cachedMergedErrors: FieldErrors<FormValues> | null = null
 
-    return {
-      errors: mergedErrors,
-      isDirty: Object.keys(ctx.dirtyFields.value).some((k) => ctx.dirtyFields.value[k]),
-      dirtyFields: ctx.dirtyFields.value,
-      isValid:
-        (ctx.submitCount.value > 0 || Object.keys(ctx.touchedFields.value).length > 0) &&
-        Object.keys(mergedErrors).length === 0,
-      isSubmitting: ctx.isSubmitting.value,
-      isLoading: ctx.isLoading.value,
-      // isReady - form initialization complete
-      isReady: !ctx.isLoading.value,
-      // isValidating - any field is currently being validated
-      isValidating: Object.keys(ctx.validatingFields.value).some(
-        (k) => ctx.validatingFields.value[k],
-      ),
-      // validatingFields - which fields are currently validating
-      validatingFields: ctx.validatingFields.value,
-      touchedFields: ctx.touchedFields.value,
-      submitCount: ctx.submitCount.value,
-      defaultValuesError: ctx.defaultValuesError.value,
-      isSubmitted: ctx.submitCount.value > 0,
-      isSubmitSuccessful: ctx.isSubmitSuccessful.value,
-      disabled: ctx.isDisabled.value,
+  function getMergedErrors(): FieldErrors<FormValues> {
+    // Return cached result if inputs haven't changed (reference equality)
+    if (
+      cachedMergedErrors !== null &&
+      lastErrors === ctx.errors.value &&
+      lastExternalErrors === ctx.externalErrors.value
+    ) {
+      return cachedMergedErrors
     }
+
+    // Update cache
+    lastErrors = ctx.errors.value
+    lastExternalErrors = ctx.externalErrors.value
+    cachedMergedErrors = {
+      ...ctx.errors.value,
+      ...ctx.externalErrors.value,
+    } as FieldErrors<FormValues>
+
+    return cachedMergedErrors
+  }
+
+  // --- Granular computed properties for optimized reactivity ---
+  // Each property is computed individually, then composed into formState
+  // This provides stable object reference and granular dependency tracking
+
+  // O(1) isDirty computation using counter instead of O(n) key scan
+  const isDirtyComputed = computed(() => ctx.dirtyFieldCount.value > 0)
+
+  // Memoized merged errors (internal + external)
+  const errorsComputed = computed<FieldErrors<FormValues>>(() => getMergedErrors())
+
+  // isValid: only true after interaction AND no errors
+  const isValidComputed = computed(() => {
+    const hasInteraction = ctx.submitCount.value > 0 || ctx.touchedFieldCount.value > 0
+    if (!hasInteraction) return false
+    return Object.keys(errorsComputed.value).length === 0
   })
+
+  // isReady: form initialization complete (async defaults loaded)
+  const isReadyComputed = computed(() => !ctx.isLoading.value)
+
+  // isValidating: O(1) check with Set
+  const isValidatingComputed = computed(() => ctx.validatingFields.value.size > 0)
+
+  // isSubmitted: at least one submission attempt
+  const isSubmittedComputed = computed(() => ctx.submitCount.value > 0)
+
+  /**
+   * Get current form state
+   * Uses reactive object with getters for:
+   * - Stable object reference (same instance)
+   * - Lazy evaluation via getters
+   * - Granular dependency tracking
+   * - Full backward compatibility
+   */
+  const formStateInternal = reactive({
+    get errors() {
+      return errorsComputed.value
+    },
+    get isDirty() {
+      return isDirtyComputed.value
+    },
+    get dirtyFields() {
+      return ctx.dirtyFields.value
+    },
+    get isValid() {
+      return isValidComputed.value
+    },
+    get isSubmitting() {
+      return ctx.isSubmitting.value
+    },
+    get isLoading() {
+      return ctx.isLoading.value
+    },
+    get isReady() {
+      return isReadyComputed.value
+    },
+    get isValidating() {
+      return isValidatingComputed.value
+    },
+    get validatingFields() {
+      return ctx.validatingFields.value
+    },
+    get touchedFields() {
+      return ctx.touchedFields.value
+    },
+    get submitCount() {
+      return ctx.submitCount.value
+    },
+    get defaultValuesError() {
+      return ctx.defaultValuesError.value
+    },
+    get isSubmitted() {
+      return isSubmittedComputed.value
+    },
+    get isSubmitSuccessful() {
+      return ctx.isSubmitSuccessful.value
+    },
+    get disabled() {
+      return ctx.isDisabled.value
+    },
+  }) as FormState<FormValues>
+
+  // Wrap in computed for backward compatibility with formState.value access pattern
+  const formState = computed<FormState<FormValues>>(() => formStateInternal)
 
   /**
    * Handle form submission
@@ -179,8 +269,8 @@ export function useForm<TSchema extends ZodType>(
       ctx.isSubmitSuccessful.value = false
 
       try {
-        // Collect values from uncontrolled inputs
-        syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
+        // Collect values from uncontrolled inputs (debounced)
+        syncWithDebounce()
 
         // Validate entire form
         const isValid = await validate()
@@ -270,12 +360,12 @@ export function useForm<TSchema extends ZodType>(
 
     // shouldDirty (default: true)
     if (setValueOptions?.shouldDirty !== false) {
-      markFieldDirty(ctx.dirtyFields, name)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
     }
 
     // shouldTouch (default: false)
     if (setValueOptions?.shouldTouch) {
-      markFieldTouched(ctx.touchedFields, name)
+      markFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
     }
 
     // Only update DOM element for uncontrolled inputs
@@ -305,7 +395,16 @@ export function useForm<TSchema extends ZodType>(
 
     // Clear all pending error timers and validating state
     clearAllPendingErrors()
-    ctx.validatingFields.value = {}
+    ctx.validatingFields.value = new Set()
+
+    // Clear validation cache (values are being reset)
+    ctx.validationCache.clear()
+
+    // Clear any pending schema validation debounce timers
+    for (const timer of ctx.schemaValidationTimers.values()) {
+      clearTimeout(timer)
+    }
+    ctx.schemaValidationTimers.clear()
 
     // Update default values unless keepDefaultValues is true
     if (!opts.keepDefaultValues && values) {
@@ -317,7 +416,7 @@ export function useForm<TSchema extends ZodType>(
 
     // Apply new values or defaults (deep clone to prevent reference sharing)
     const sourceValues = values || ctx.defaultValues
-    const newValues = JSON.parse(JSON.stringify(sourceValues))
+    const newValues = deepClone(sourceValues)
     Object.assign(ctx.formData, newValues)
 
     // Reset state based on options
@@ -326,9 +425,11 @@ export function useForm<TSchema extends ZodType>(
     }
     if (!opts.keepTouched) {
       ctx.touchedFields.value = {}
+      ctx.touchedFieldCount.value = 0
     }
     if (!opts.keepDirty) {
       ctx.dirtyFields.value = {}
+      ctx.dirtyFieldCount.value = 0
     }
     if (!opts.keepSubmitCount) {
       ctx.submitCount.value = 0
@@ -402,8 +503,7 @@ export function useForm<TSchema extends ZodType>(
     }
 
     // Update form data (deep clone to prevent reference sharing)
-    const clonedValue =
-      defaultValue !== undefined ? JSON.parse(JSON.stringify(defaultValue)) : undefined
+    const clonedValue = defaultValue !== undefined ? deepClone(defaultValue) : undefined
     set(ctx.formData, name, clonedValue)
 
     // Conditionally clear errors
@@ -413,12 +513,12 @@ export function useForm<TSchema extends ZodType>(
 
     // Conditionally clear dirty state
     if (!opts.keepDirty) {
-      clearFieldDirty(ctx.dirtyFields, name)
+      clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
     }
 
     // Conditionally clear touched state
     if (!opts.keepTouched) {
-      clearFieldTouched(ctx.touchedFields, name)
+      clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
     }
 
     // Update DOM element for uncontrolled inputs
@@ -710,8 +810,8 @@ export function useForm<TSchema extends ZodType>(
       }
     }
 
-    // Sync values from uncontrolled inputs before returning
-    syncUncontrolledInputs(ctx.fieldRefs, ctx.fieldOptions, ctx.formData)
+    // Sync values from uncontrolled inputs before returning (debounced)
+    syncWithDebounce()
 
     if (nameOrNames === undefined) {
       // Return all values

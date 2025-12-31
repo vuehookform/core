@@ -191,16 +191,16 @@ formState.value.isValidating // boolean
 
 ### validatingFields
 
-Record of fields currently being validated:
+Set of fields currently being validated:
 
 ```typescript
-formState.value.validatingFields // Record<string, boolean>
+formState.value.validatingFields // Set<string>
 ```
 
 ```vue
 <template>
   <input v-bind="register('username')" />
-  <span v-if="formState.value.validatingFields.username"> Checking availability... </span>
+  <span v-if="formState.value.validatingFields.has('username')"> Checking availability... </span>
 </template>
 ```
 

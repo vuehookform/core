@@ -173,6 +173,41 @@ How it works:
 - If the field becomes valid within the delay window, the error is never shown
 - Reduces visual noise during active typing
 
+### Validation Debouncing
+
+For performance-critical forms with `onChange` mode, use `validationDebounce` to reduce validation overhead:
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onChange',
+  validationDebounce: 150, // Debounce schema validation by 150ms
+})
+```
+
+**Key differences from `delayError`:**
+
+| Feature     | `validationDebounce`    | `delayError`           |
+| ----------- | ----------------------- | ---------------------- |
+| Purpose     | Reduce validation calls | Delay error display    |
+| Performance | Prevents input lag      | No performance benefit |
+| When to use | Large/complex schemas   | Smooth UX              |
+
+**Best practice:** Use both for optimal UX on complex forms:
+
+```typescript
+const form = useForm({
+  schema,
+  mode: 'onChange',
+  validationDebounce: 150, // Reduces Zod parse calls
+  delayError: 300, // Smooth error appearance
+})
+```
+
+::: tip Validation Caching
+Vue Hook Form automatically caches validation results. If you blur a field without changing its value, or trigger validation on an unchanged field, the cached result is returned immediately without re-running the schema validation.
+:::
+
 ## Cross-Field Validation
 
 Use Zod's `refine` or `superRefine` for validations that depend on multiple fields:
@@ -363,7 +398,7 @@ Track which fields are validating:
 ```vue
 <template>
   <input v-bind="usernameBindings" />
-  <span v-if="formState.value.validatingFields.username"> Checking... </span>
+  <span v-if="formState.value.validatingFields.has('username')"> Checking... </span>
   <span v-else-if="formState.value.errors.username">
     {{ formState.value.errors.username }}
   </span>

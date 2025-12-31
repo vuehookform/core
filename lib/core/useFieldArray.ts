@@ -19,6 +19,7 @@ import {
   warnArrayOperationRejected,
   warnArrayIndexOutOfBounds,
 } from '../utils/devWarnings'
+import { markFieldDirty } from './fieldState'
 
 /**
  * Create field array management functions
@@ -185,13 +186,63 @@ export function createFieldArrayManager<FormValues>(
     const indexCache = fa.indexCache
 
     /**
-     * Rebuild the index cache from current items array
+     * Rebuild the index cache from current items array.
+     * Used when full rebuild is necessary (e.g., initial load, replace).
      */
     const rebuildIndexCache = () => {
       indexCache.clear()
       fa.items.value.forEach((item, idx) => {
         indexCache.set(item.key, idx)
       })
+    }
+
+    /**
+     * Incrementally add new items to cache (for append).
+     * Only updates the new entries - O(k) where k = number of new items.
+     */
+    const appendToCache = (startIndex: number) => {
+      const items = fa.items.value
+      for (let i = startIndex; i < items.length; i++) {
+        const item = items[i]
+        if (item) indexCache.set(item.key, i)
+      }
+    }
+
+    /**
+     * Update cache after prepend/insert: shift existing indices and add new.
+     * O(n) but avoids clear() + full rebuild overhead.
+     */
+    const updateCacheAfterInsert = (insertIndex: number, _insertCount: number) => {
+      const items = fa.items.value
+      // Update indices for all items at and after insertIndex
+      for (let i = insertIndex; i < items.length; i++) {
+        const item = items[i]
+        if (item) indexCache.set(item.key, i)
+      }
+    }
+
+    /**
+     * Update cache for swap: only update 2 entries - O(1).
+     */
+    const swapInCache = (indexA: number, indexB: number) => {
+      const items = fa.items.value
+      const itemA = items[indexA]
+      const itemB = items[indexB]
+      if (itemA) indexCache.set(itemA.key, indexA)
+      if (itemB) indexCache.set(itemB.key, indexB)
+    }
+
+    /**
+     * Update cache after remove: delete key and shift indices - O(n-k) worst case.
+     */
+    const updateCacheAfterRemove = (removedKey: string, startIndex: number) => {
+      indexCache.delete(removedKey)
+      const items = fa.items.value
+      // Update indices for all items at and after startIndex
+      for (let i = startIndex; i < items.length; i++) {
+        const item = items[i]
+        if (item) indexCache.set(item.key, i)
+      }
     }
 
     /**
@@ -278,10 +329,11 @@ export function createFieldArrayManager<FormValues>(
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
       fa.items.value = [...fa.items.value, ...newItems]
-      rebuildIndexCache()
+      // Incremental cache update - only add new items O(k)
+      appendToCache(insertIndex)
 
-      // Mark dirty (single update for batch)
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      // Mark dirty (optimized - skips if already dirty)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -320,10 +372,11 @@ export function createFieldArrayManager<FormValues>(
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
       fa.items.value = [...newItems, ...fa.items.value]
-      rebuildIndexCache()
+      // Update all indices since we prepended (need to shift all existing)
+      updateCacheAfterInsert(0, values.length)
 
-      // Mark dirty
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      // Mark dirty (optimized)
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -347,7 +400,8 @@ export function createFieldArrayManager<FormValues>(
       set(ctx.formData, name, newValues)
 
       // Keep the same key - no items array change needed (preserves stable identity)
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      // No cache update needed - indices haven't changed
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -384,9 +438,12 @@ export function createFieldArrayManager<FormValues>(
       // Remove item by current index, keep others
       const keyToRemove = fa.items.value[index]?.key
       fa.items.value = fa.items.value.filter((item) => item.key !== keyToRemove)
-      rebuildIndexCache()
+      // Incremental cache update - only shift indices after removed item
+      if (keyToRemove) {
+        updateCacheAfterRemove(keyToRemove, index)
+      }
 
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -434,9 +491,10 @@ export function createFieldArrayManager<FormValues>(
         ...newItems,
         ...fa.items.value.slice(clampedIndex),
       ]
-      rebuildIndexCache()
+      // Incremental cache update - shift indices at and after insert point
+      updateCacheAfterInsert(clampedIndex, values.length)
 
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -476,10 +534,11 @@ export function createFieldArrayManager<FormValues>(
         newItems[indexA] = itemB
         newItems[indexB] = itemA
         fa.items.value = newItems
-        rebuildIndexCache()
+        // O(1) cache update - only update 2 entries
+        swapInCache(indexA, indexB)
       }
 
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -515,10 +574,17 @@ export function createFieldArrayManager<FormValues>(
         const clampedTo = Math.min(to, newItems.length)
         newItems.splice(clampedTo, 0, removedItem)
         fa.items.value = newItems
-        rebuildIndexCache()
+        // Update affected range in cache (from min to max of from/to)
+        const minIdx = Math.min(from, clampedTo)
+        const maxIdx = Math.max(from, clampedTo)
+        const items = fa.items.value
+        for (let i = minIdx; i <= maxIdx; i++) {
+          const item = items[i]
+          if (item) indexCache.set(item.key, i)
+        }
       }
 
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -537,10 +603,10 @@ export function createFieldArrayManager<FormValues>(
 
       // Create new items with fresh keys for each value
       fa.items.value = newValues.map(() => createItem(generateId()))
+      // Full rebuild needed - completely new set of items
       rebuildIndexCache()
 
-      // Mark as dirty
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       // Validate if needed
       if (ctx.options.mode === 'onChange') {
@@ -565,12 +631,11 @@ export function createFieldArrayManager<FormValues>(
       // Clear form data array
       set(ctx.formData, name, [])
 
-      // Clear items tracking
+      // Clear items tracking and cache
       fa.items.value = []
-      rebuildIndexCache()
+      indexCache.clear()
 
-      // Mark dirty
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
@@ -605,15 +670,28 @@ export function createFieldArrayManager<FormValues>(
       // Create set of indices to remove for O(1) lookup
       const indicesToRemove = new Set(sortedIndices)
 
+      // Collect keys to remove from cache
+      const keysToRemove = fa.items.value
+        .filter((_, i) => indicesToRemove.has(i))
+        .map((item) => item.key)
+
       // Filter out removed values
       const newValues = currentValues.filter((_, i) => !indicesToRemove.has(i))
       set(ctx.formData, name, newValues)
 
       // Remove items by indices
       fa.items.value = fa.items.value.filter((_, i) => !indicesToRemove.has(i))
-      rebuildIndexCache()
 
-      ctx.dirtyFields.value = { ...ctx.dirtyFields.value, [name]: true }
+      // Update cache: remove deleted keys and rebuild remaining indices
+      for (const key of keysToRemove) {
+        indexCache.delete(key)
+      }
+      // Rebuild remaining indices (simpler than tracking individual shifts)
+      fa.items.value.forEach((item, idx) => {
+        indexCache.set(item.key, idx)
+      })
+
+      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       if (ctx.options.mode === 'onChange') {
         validate(name)
