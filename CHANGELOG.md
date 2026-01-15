@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/vuehookform/core/compare/v0.4.0...v0.4.1) (2026-01-15)
+
+
+### Bug Fixes
+
+* ensure useController onBlur properly marks field as touched ([56cd38d](https://github.com/vuehookform/core/commit/56cd38d3368f8f85f061b4c82dc3a755de39d157))
+* ensure useController onBlur properly marks field as touched ([4a8b140](https://github.com/vuehookform/core/commit/4a8b140668b1e7e10235ca0324cdd0c193b4ac76))
+
 ## [0.4.0](https://github.com/vuehookform/core/compare/v0.3.3...v0.4.0) (2025-12-31)
 
 
