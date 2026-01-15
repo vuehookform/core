@@ -368,7 +368,10 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       const cached = ctx.validationCache.get(fieldPath)
 
       if (cached && cached.hash === valueHash) {
-        // Cache hit - return cached result without re-validating
+        // Cache hit - clear any stale errors if valid, then return cached result
+        if (cached.isValid) {
+          ctx.errors.value = cancelError(fieldPath)
+        }
         return cached.isValid
       }
 

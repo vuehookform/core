@@ -102,9 +102,16 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     form.setValue(name, newValue)
   }
 
-  // Blur handler - triggers validation based on mode
+  // Blur handler - marks field as touched and triggers validation
   const onBlur = () => {
-    form.trigger(name)
+    // Use setValue with shouldTouch to properly mark the field as touched
+    // This ensures touchedFieldCount is updated, which isValid depends on
+    const currentValue = form.getValues(name)
+    form.setValue(name, currentValue, {
+      shouldTouch: true,
+      shouldValidate: true,
+      shouldDirty: false, // Don't change dirty state on blur
+    })
   }
 
   // Ref callback
