@@ -304,6 +304,22 @@ export function createFieldArrayManager<FormValues>(
       return Array.isArray(value) ? value : [value]
     }
 
+    /**
+     * Validate the array field based on form validation mode.
+     * Centralizes validation logic for all field array operations.
+     */
+    const validateIfNeeded = () => {
+      const isTouched = ctx.touchedFields.value[name] === true
+      const shouldValidate = shouldValidateOnChange(
+        ctx.options.mode ?? 'onSubmit',
+        isTouched,
+        ctx.options.reValidateMode,
+      )
+      if (shouldValidate) {
+        validate(name)
+      }
+    }
+
     const append = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions): boolean => {
       const values = normalizeToArray(value)
       if (values.length === 0) return true
@@ -336,16 +352,7 @@ export function createFieldArrayManager<FormValues>(
       // Mark dirty (optimized - skips if already dirty)
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
 
       // Handle focus
       handleFocus(insertIndex, values.length, focusOptions)
@@ -386,16 +393,7 @@ export function createFieldArrayManager<FormValues>(
       // Mark dirty (optimized)
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
 
       // Handle focus (items added at index 0)
       handleFocus(0, values.length, focusOptions)
@@ -418,16 +416,7 @@ export function createFieldArrayManager<FormValues>(
       // No cache update needed - indices haven't changed
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -467,16 +456,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -525,16 +505,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
 
       // Handle focus
       handleFocus(clampedIndex, values.length, focusOptions)
@@ -576,16 +547,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -629,16 +591,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -658,16 +611,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -693,16 +637,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
@@ -756,16 +691,7 @@ export function createFieldArrayManager<FormValues>(
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
-      // Validate based on mode (consistent with register/useController)
-      const isTouched = ctx.touchedFields.value[name] === true
-      const shouldValidate = shouldValidateOnChange(
-        ctx.options.mode ?? 'onSubmit',
-        isTouched,
-        ctx.options.reValidateMode,
-      )
-      if (shouldValidate) {
-        validate(name)
-      }
+      validateIfNeeded()
       return true
     }
 
