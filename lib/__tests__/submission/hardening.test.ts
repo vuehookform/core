@@ -409,7 +409,7 @@ describe('Field Array Hardening', () => {
       expect(values.users.length).toBe(2)
     })
 
-    it('insert should clamp index to valid range', () => {
+    it('insert should reject out-of-bounds index (consistent with swap/move)', () => {
       const { fields, getValues } = useForm({
         schema: arraySchema,
         defaultValues: {
@@ -419,15 +419,16 @@ describe('Field Array Hardening', () => {
 
       const userFields = fields('users')
 
-      // Insert at out-of-bounds index should append
-      userFields.insert(99, { name: 'Bob', email: 'bob@test.com' })
+      // Insert at out-of-bounds index should be rejected (returns false)
+      const result = userFields.insert(99, { name: 'Bob', email: 'bob@test.com' })
 
+      expect(result).toBe(false)
       const values = getValues()
-      expect(values.users.length).toBe(2)
-      expect(values.users[1].name).toBe('Bob')
+      expect(values.users.length).toBe(1) // Array unchanged
+      expect(values.users[0].name).toBe('Alice')
     })
 
-    it('insert with negative index should prepend', () => {
+    it('insert with negative index should be rejected (consistent with swap/move)', () => {
       const { fields, getValues } = useForm({
         schema: arraySchema,
         defaultValues: {
@@ -436,11 +437,12 @@ describe('Field Array Hardening', () => {
       })
 
       const userFields = fields('users')
-      userFields.insert(-5, { name: 'Bob', email: 'bob@test.com' })
+      const result = userFields.insert(-5, { name: 'Bob', email: 'bob@test.com' })
 
+      expect(result).toBe(false)
       const values = getValues()
-      expect(values.users.length).toBe(2)
-      expect(values.users[0].name).toBe('Bob')
+      expect(values.users.length).toBe(1) // Array unchanged
+      expect(values.users[0].name).toBe('Alice')
     })
   })
 

@@ -482,33 +482,34 @@ export function createFieldArrayManager<FormValues>(
         return false // Reject operation - maxLength exceeded
       }
 
-      // Bounds validation: clamp index to valid range [0, length]
-      const clampedIndex = Math.max(0, Math.min(index, currentValues.length))
+      // Bounds validation: reject invalid indices (consistent with swap/move)
+      if (index < 0 || index > currentValues.length) {
+        if (__DEV__) {
+          warnArrayIndexOutOfBounds('insert', name, index, currentValues.length)
+        }
+        return false
+      }
 
       // Update form data (batch)
-      const newValues = [
-        ...currentValues.slice(0, clampedIndex),
-        ...values,
-        ...currentValues.slice(clampedIndex),
-      ]
+      const newValues = [...currentValues.slice(0, index), ...values, ...currentValues.slice(index)]
       set(ctx.formData, name, newValues)
 
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
       fa.items.value = [
-        ...fa.items.value.slice(0, clampedIndex),
+        ...fa.items.value.slice(0, index),
         ...newItems,
-        ...fa.items.value.slice(clampedIndex),
+        ...fa.items.value.slice(index),
       ]
       // Incremental cache update - shift indices at and after insert point
-      updateCacheAfterInsert(clampedIndex, values.length)
+      updateCacheAfterInsert(index, values.length)
 
       markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
 
       validateIfNeeded()
 
       // Handle focus
-      handleFocus(clampedIndex, values.length, focusOptions)
+      handleFocus(index, values.length, focusOptions)
       return true
     }
 
@@ -554,8 +555,8 @@ export function createFieldArrayManager<FormValues>(
     const move = (from: number, to: number): boolean => {
       const currentValues = (get(ctx.formData, name) || []) as unknown[]
 
-      // Bounds validation: reject invalid indices
-      if (from < 0 || from >= currentValues.length || to < 0) {
+      // Bounds validation: reject invalid indices (consistent with swap)
+      if (from < 0 || from >= currentValues.length || to < 0 || to >= currentValues.length) {
         if (__DEV__) {
           const invalidIndex = from < 0 || from >= currentValues.length ? from : to
           warnArrayIndexOutOfBounds('move', name, invalidIndex, currentValues.length)
