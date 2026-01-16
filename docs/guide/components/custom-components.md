@@ -7,13 +7,14 @@ Build reusable form field components that integrate with Vue Hook Form.
 | Your Component                                    | Recommended Approach                  |
 | ------------------------------------------------- | ------------------------------------- |
 | Native HTML (`<input>`, `<select>`, `<textarea>`) | `register()` (uncontrolled)           |
+| Vue component exposing input via `$el`            | `register()` (uncontrolled)           |
 | Custom component with standard v-model            | `register(..., { controlled: true })` |
-| Third-party UI library (PrimeVue, Vuetify, etc.)  | `useController`                       |
+| Third-party with custom events (Calendar, etc.)   | `useController`                       |
 | Building reusable form components                 | `useController`                       |
 | Deeply nested components                          | Form Context                          |
 
-::: tip Why useController for third-party components?
-`register()` relies on native DOM events (`@input`, `@blur`) and reads `Event.target.value`. Third-party components often use custom events like `@update:modelValue` with direct values instead. `useController` provides explicit `onChange(value)` and `onBlur()` methods that work regardless of the component's event model.
+::: tip Choosing Between Approaches for Third-Party Libraries
+Many simple input components (like PrimeVue's `InputText` or Vuetify's `v-text-field`) now work with uncontrolled `register()` because they expose their input element via `$el`. For complex components with custom events (date pickers, rich selects, autocompletes), `useController` provides explicit `onChange(value)` and `onBlur()` methods that work regardless of the component's event model.
 :::
 
 ::: danger Critical: Error Messages in Custom Components

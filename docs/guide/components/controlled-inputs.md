@@ -6,8 +6,12 @@ Use controlled mode when you need v-model or are integrating with custom compone
 
 - Working with custom input components that require v-model
 - Need to access the reactive value directly
-- Integrating with third-party UI libraries
+- Integrating with third-party UI libraries that have non-standard events
 - Building complex input logic
+
+::: info Uncontrolled Mode Now Supports Some Vue Components
+Many Vue component libraries now work with uncontrolled mode too! If the component exposes its input element via `$el`, you can use `register()` without `{ controlled: true }`. See [Uncontrolled Inputs - Vue Component Support](/guide/components/uncontrolled-inputs#vue-component-library-support) for details.
+:::
 
 ## Basic Usage
 

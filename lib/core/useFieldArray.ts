@@ -835,7 +835,9 @@ export function createFieldArrayManager<FormValues>(
     }
 
     return {
-      value: fa.items.value,
+      get value() {
+        return fa.items.value
+      },
       append,
       prepend,
       remove: removeAt,

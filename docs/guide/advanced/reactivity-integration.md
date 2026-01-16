@@ -262,11 +262,9 @@ const validatePhoneForCountry = (phone: string, country: string) => {
 }
 
 const schema = z.object({
-  phone: z
-    .string()
-    .refine((phone) => validatePhoneForCountry(phone, selectedCountry.value), {
-      message: 'Invalid phone number for selected country',
-    }),
+  phone: z.string().refine((phone) => validatePhoneForCountry(phone, selectedCountry.value), {
+    message: 'Invalid phone number for selected country',
+  }),
   email: z.email(),
 })
 

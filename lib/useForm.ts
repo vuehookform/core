@@ -31,7 +31,12 @@ import { createFormContext } from './core/formContext'
 import { createValidation } from './core/useValidation'
 import { createFieldRegistration } from './core/useFieldRegistration'
 import { createFieldArrayManager } from './core/useFieldArray'
-import { syncUncontrolledInputs, updateDomElement } from './core/domSync'
+import {
+  syncUncontrolledInputs,
+  updateDomElement,
+  getInputElement,
+  getFocusableElement,
+} from './core/domSync'
 import {
   markFieldTouched,
   clearFieldDirty,
@@ -107,20 +112,18 @@ export function useForm<TSchema extends ZodType>(
       return
     }
 
-    const el = fieldRef.value
+    const el = getFocusableElement(fieldRef.value)
+    if (!el) return
 
-    // Check if element is focusable
-    if (typeof el.focus === 'function') {
-      el.focus()
+    el.focus()
 
-      // Select text if requested and element supports selection
-      if (
-        focusOptions?.shouldSelect &&
-        el instanceof HTMLInputElement &&
-        typeof el.select === 'function'
-      ) {
-        el.select()
-      }
+    // Select text if requested and element supports selection
+    if (
+      focusOptions?.shouldSelect &&
+      el instanceof HTMLInputElement &&
+      typeof el.select === 'function'
+    ) {
+      el.select()
     }
   }
 
@@ -482,7 +485,7 @@ export function useForm<TSchema extends ZodType>(
 
     // Update input elements
     for (const [name, fieldRef] of Array.from(ctx.fieldRefs.entries())) {
-      const el = fieldRef.value
+      const el = getInputElement(fieldRef.value)
       if (el) {
         const value = get(newValues as Record<string, unknown>, name)
         if (value !== undefined) {
@@ -568,10 +571,8 @@ export function useForm<TSchema extends ZodType>(
     if (!fieldOpts?.controlled) {
       const fieldRef = ctx.fieldRefs.get(name)
       if (fieldRef?.value) {
-        updateDomElement(
-          fieldRef.value,
-          clonedValue ?? (fieldRef.value.type === 'checkbox' ? false : ''),
-        )
+        const el = getInputElement(fieldRef.value)
+        updateDomElement(fieldRef.value, clonedValue ?? (el?.type === 'checkbox' ? false : ''))
       }
     }
   }

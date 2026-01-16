@@ -23,6 +23,7 @@ import {
   updateFieldDirtyState,
 } from './fieldState'
 import { shouldValidateOnChange, shouldValidateOnBlur } from '../utils/modeChecks'
+import { getInputElement } from './domSync'
 
 // Monotonic counter for validation request IDs (avoids race conditions)
 let validationRequestCounter = 0
@@ -282,13 +283,14 @@ export function createFieldRegistration<FormValues>(
 
         // Set initial value for uncontrolled inputs
         const opts = ctx.fieldOptions.get(name)
-        if (el && !opts?.controlled && el instanceof HTMLInputElement) {
+        const inputEl = getInputElement(el)
+        if (inputEl && !opts?.controlled) {
           const value = get(ctx.formData, name)
           if (value !== undefined) {
-            if (el.type === 'checkbox') {
-              el.checked = value as boolean
+            if (inputEl.type === 'checkbox') {
+              inputEl.checked = value as boolean
             } else {
-              el.value = value as string
+              inputEl.value = value as string
             }
           }
         }

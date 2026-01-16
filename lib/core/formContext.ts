@@ -20,6 +20,7 @@ import type {
 } from '../types'
 import { set } from '../utils/paths'
 import { deepClone } from '../utils/clone'
+import { getInputElement } from './domSync'
 
 /**
  * Internal state for field array management.
@@ -300,11 +301,13 @@ export function createFormContext<TSchema extends ZodType>(
                 const fieldRef = fieldRefs.get(key)
                 const opts = fieldOptions.get(key)
                 if (fieldRef?.value && !opts?.controlled) {
-                  const el = fieldRef.value
-                  if (el.type === 'checkbox') {
-                    el.checked = value as boolean
-                  } else {
-                    el.value = value as string
+                  const el = getInputElement(fieldRef.value)
+                  if (el) {
+                    if (el.type === 'checkbox') {
+                      el.checked = value as boolean
+                    } else {
+                      el.value = value as string
+                    }
                   }
                 }
               }

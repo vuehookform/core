@@ -208,6 +208,36 @@ console.log(email.value)
 const { value: email } = register('email', { controlled: true })
 ```
 
+### Can I use uncontrolled mode with PrimeVue/Vuetify?
+
+**Yes, for many components!** Vue Hook Form automatically detects input elements inside Vue components.
+
+**Works automatically:**
+
+- Components where `$el` is the input (PrimeVue `InputText`, `InputNumber`)
+- Components where `$el` is a wrapper containing an `<input>`, `<select>`, or `<textarea>`
+
+```vue
+<!-- This works with uncontrolled mode -->
+<InputText v-bind="register('username')" />
+```
+
+**Use controlled mode instead for:**
+
+- Components with complex structures (multiple inputs, custom rendering)
+- Components that don't use standard `input` events (some date pickers, autocompletes)
+- When you need reactive value access during typing
+
+**To check if a component is compatible:**
+
+```javascript
+// In browser DevTools console, find your component instance
+const vm = document.querySelector('.p-inputtext').__vueParentComponent?.proxy
+console.log(vm?.$el) // Should be an <input> or contain one
+```
+
+See [Vue Component Library Support](/guide/components/uncontrolled-inputs#vue-component-library-support) for more details.
+
 ### Why aren't my array operations working?
 
 Array methods return `false` if the operation was rejected:
