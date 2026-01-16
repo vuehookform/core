@@ -421,16 +421,27 @@ reset({ email: 'new@example.com' }) // Reset with new values
 ### trigger
 
 ```typescript
-trigger(name?: Path<T> | Path<T>[]): Promise<boolean>
+trigger(name?: Path<T> | Path<T>[], options?: TriggerOptions): Promise<boolean>
 ```
 
 Manually trigger validation.
+
+**Options:**
+
+- `markAsSubmitted` - Increment submitCount to activate reValidateMode behavior (default: false)
 
 ```typescript
 await trigger() // Validate all fields
 await trigger('email') // Validate specific field
 await trigger(['email', 'password']) // Validate multiple fields
+
+// Activate reValidateMode (useful for multi-step form validation)
+await trigger('email', { markAsSubmitted: true })
 ```
+
+::: tip Multi-Step Forms
+Use `markAsSubmitted: true` when validating individual steps to ensure subsequent changes trigger re-validation according to your `reValidateMode` setting.
+:::
 
 ### watch
 
@@ -454,14 +465,40 @@ const credentials = watch(['email', 'password'])
 ### setError
 
 ```typescript
-setError(name: Path<T>, message: string): void
+setError(name: Path<T> | 'root' | `root.${string}`, error: ErrorOption): void
 ```
 
 Set an error on a specific field.
 
+**ErrorOption:**
+
 ```typescript
-setError('email', 'This email is already taken')
+{
+  type?: string      // Error type (e.g., 'server', 'validation')
+  message: string    // Error message to display
+  persistent?: boolean // If true, error survives subsequent validations
+}
 ```
+
+**Examples:**
+
+```typescript
+// Simple error message
+setError('email', { message: 'This email is already taken' })
+
+// With custom type
+setError('email', { type: 'server', message: 'Email already exists' })
+
+// Persistent error (survives validation, cleared only by clearErrors)
+setError('email', { message: 'Server validation failed', persistent: true })
+
+// Root-level error
+setError('root', { message: 'Form submission failed' })
+```
+
+::: tip Persistent Errors
+Use `persistent: true` for server-side validation errors that should remain visible even when the user modifies the field. The error will only be cleared when you explicitly call `clearErrors()`.
+:::
 
 ### clearErrors
 

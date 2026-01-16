@@ -228,6 +228,80 @@ setErrors(
 
 For complete server error handling patterns including the `errors` option and `setErrors`, see [Async Patterns - Server Error Integration](/guide/advanced/async-patterns#server-error-integration).
 
+## Persistent Errors
+
+By default, errors set via `setError` are cleared when validation runs. Use `persistent: true` to create errors that survive validation - useful for server-side validation errors that should remain visible until explicitly cleared.
+
+### Setting Persistent Errors
+
+```typescript
+const { setError, clearErrors } = useForm({ schema })
+
+// Set a persistent server-side error
+setError('email', { message: 'Email already exists', persistent: true })
+
+// Even if the user changes the email and triggers validation,
+// this error stays until explicitly cleared
+```
+
+### When to Use Persistent Errors
+
+Persistent errors are ideal for:
+
+- **Server-side validation**: Errors returned from your API that shouldn't disappear on client-side re-validation
+- **Async uniqueness checks**: "Username is taken" should persist until the user tries a different value
+- **Form-wide submission errors**: Root-level errors that should stay visible
+
+### Example: Server Validation
+
+```typescript
+const onSubmit = async (data) => {
+  try {
+    await api.register(data)
+  } catch (error) {
+    if (error.response?.status === 400) {
+      const serverErrors = error.response.data.errors
+
+      // Set server errors as persistent
+      for (const [field, message] of Object.entries(serverErrors)) {
+        setError(field, { message, persistent: true })
+      }
+    }
+  }
+}
+
+// Later, when user retries after fixing the issue:
+const retrySubmit = () => {
+  // Clear persistent errors before new submission attempt
+  clearErrors()
+  handleSubmit(onSubmit)
+}
+```
+
+### Clearing Persistent Errors
+
+Persistent errors are cleared by:
+
+- Calling `clearErrors()` (clears all)
+- Calling `clearErrors('fieldName')` (clears specific field)
+- Calling `reset()` (resets entire form)
+
+```typescript
+// Clear specific persistent error
+clearErrors('email')
+
+// Clear all errors including persistent ones
+clearErrors()
+```
+
+::: warning
+Persistent errors will NOT be cleared by:
+
+- Schema validation (trigger, handleSubmit)
+- User input changes triggering re-validation
+- setValue with shouldValidate: true
+  :::
+
 ## Checking for Errors
 
 ### hasErrors

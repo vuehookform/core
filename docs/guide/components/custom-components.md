@@ -2,13 +2,19 @@
 
 Build reusable form field components that integrate with Vue Hook Form.
 
-## Approaches
+## Choosing the Right Approach
 
-There are several ways to integrate custom components:
+| Your Component                                    | Recommended Approach                  |
+| ------------------------------------------------- | ------------------------------------- |
+| Native HTML (`<input>`, `<select>`, `<textarea>`) | `register()` (uncontrolled)           |
+| Custom component with standard v-model            | `register(..., { controlled: true })` |
+| Third-party UI library (PrimeVue, Vuetify, etc.)  | `useController`                       |
+| Building reusable form components                 | `useController`                       |
+| Deeply nested components                          | Form Context                          |
 
-1. **Controlled mode with register** - Quick integration
-2. **useController** - Full control over field behavior
-3. **Form Context** - Deeply nested components
+::: tip Why useController for third-party components?
+`register()` relies on native DOM events (`@input`, `@blur`) and reads `Event.target.value`. Third-party components often use custom events like `@update:modelValue` with direct values instead. `useController` provides explicit `onChange(value)` and `onBlur()` methods that work regardless of the component's event model.
+:::
 
 ## Quick Integration with Controlled Mode
 
@@ -367,7 +373,114 @@ interface FormFieldProps<T> {
 const props = defineProps<FormFieldProps<YourFormType>>()
 ```
 
+## Re-render Behavior with Custom Components
+
+Understanding when your custom components re-render helps optimize performance.
+
+### When useController Components Re-render
+
+Components using `useController` re-render when:
+
+| Event                        | Causes Re-render?     | Why                            |
+| ---------------------------- | --------------------- | ------------------------------ |
+| User types in the field      | Yes                   | `field.value` is reactive      |
+| Field validation runs        | Only if error changes | `fieldState.error` updates     |
+| Other fields change          | No                    | Isolated field state           |
+| Form submission starts/ends  | No                    | Unless watching `isSubmitting` |
+| `setValue()` called on field | Yes                   | Value changed externally       |
+
+### Optimizing Re-renders with Validation Modes
+
+Choose the right validation mode to control re-render frequency:
+
+```typescript
+// Minimal re-renders: validate only on submit
+useForm({ schema, mode: 'onSubmit' })
+// Re-renders: only when user types (value change)
+
+// Balanced: validate on blur
+useForm({ schema, mode: 'onBlur' })
+// Re-renders: typing + one validation per field blur
+
+// Maximum feedback, more re-renders: validate on every change
+useForm({ schema, mode: 'onChange' })
+// Re-renders: typing + validation on each keystroke
+
+// Smart progression: submit first, then real-time feedback
+useForm({ schema, mode: 'onSubmit', reValidateMode: 'onChange' })
+// Re-renders: typing only, then typing + validation after first submit
+```
+
+### Example: Custom Component with Render Tracking
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useController } from '@vuehookform/core'
+import type { Control } from '@vuehookform/core'
+
+const props = defineProps<{
+  name: string
+  control: Control<any>
+  label?: string
+}>()
+
+const { field, fieldState } = useController({
+  name: props.name,
+  control: props.control,
+})
+
+// Track renders for debugging
+const renderCount = ref(0)
+renderCount.value++
+console.log(`${props.name} rendered: ${renderCount.value} times`)
+</script>
+
+<template>
+  <div class="custom-input">
+    <label v-if="label">{{ label }}</label>
+    <input
+      :value="field.value"
+      @input="field.onChange(($event.target as HTMLInputElement).value)"
+      @blur="field.onBlur"
+    />
+    <p v-if="fieldState.error" class="error">{{ fieldState.error }}</p>
+    <small class="debug">Renders: {{ renderCount }}</small>
+  </div>
+</template>
+```
+
+### Comparing Approaches: Re-render Impact
+
+| Approach                              | Re-renders on Typing | Re-renders on Blur | Best For                  |
+| ------------------------------------- | -------------------- | ------------------ | ------------------------- |
+| `register()` (uncontrolled)           | No                   | Only if error      | Native inputs, max perf   |
+| `register(..., { controlled: true })` | Yes                  | Only if error      | Simple custom components  |
+| `useController`                       | Yes                  | Only if error      | Third-party libs, complex |
+
+### When to Use Each Approach
+
+**Use uncontrolled `register()` when:**
+
+- Using native HTML elements (`<input>`, `<select>`, `<textarea>`)
+- Maximum performance is critical
+- You don't need real-time value access
+
+**Use controlled `register(..., { controlled: true })` when:**
+
+- Your custom component accepts `v-model`
+- You need the simplest integration
+- The component follows standard Vue v-model conventions
+
+**Use `useController` when:**
+
+- Integrating third-party UI libraries (PrimeVue, Vuetify, Element Plus)
+- You need explicit control over onChange/onBlur handlers
+- Building reusable form field components
+- The component has non-standard event patterns
+
 ## Next Steps
 
 - Learn about [Field Arrays](/guide/dynamic/field-arrays) for dynamic lists
 - Explore [Form Context](/guide/advanced/form-context) for component composition
+- See [Performance](/guide/best-practices/performance) for optimization strategies
