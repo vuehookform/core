@@ -372,6 +372,9 @@ export function createFieldRegistration<FormValues>(
       ctx.schemaValidationTimers.delete(name)
     }
     ctx.validationRequestIds.delete(name)
+
+    // Clear validation cache to prevent stale results on re-register
+    ctx.validationCache.delete(name)
   }
 
   return { register, unregister }

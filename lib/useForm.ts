@@ -650,8 +650,9 @@ export function useForm<TSchema extends ZodType>(
     }
 
     if (name === undefined) {
-      // Clear all errors and persistent error tracking
+      // Clear all errors (internal, external) and persistent error tracking
       ctx.errors.value = {} as FieldErrors<FormValues>
+      ctx.externalErrors.value = {} as FieldErrors<FormValues>
       ctx.persistentErrorFields.clear()
       return
     }
@@ -659,6 +660,8 @@ export function useForm<TSchema extends ZodType>(
     const fieldsToClean = Array.isArray(name) ? name : [name]
     for (const field of fieldsToClean) {
       clearFieldErrors(ctx.errors, field)
+      // Also clear from external errors (server-side errors)
+      clearFieldErrors(ctx.externalErrors, field)
       // Also remove from persistent tracking when explicitly cleared
       ctx.persistentErrorFields.delete(field)
     }
