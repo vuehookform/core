@@ -1,4 +1,4 @@
-import { computed, reactive, onUnmounted, type ComputedRef } from 'vue'
+import { computed, reactive, onUnmounted, getCurrentInstance, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -885,7 +885,47 @@ export function useForm<TSchema extends ZodType>(
   }
 
   /**
-   * Get the state of an individual field
+   * Get the current state of a field (dirty, touched, error).
+   *
+   * ⚠️ **WARNING:** Returns a plain object snapshot, NOT reactive refs.
+   *
+   * This function is designed for imperative use cases (e.g., in callbacks, computed functions).
+   * For reactive error display in templates, use `formState.value.errors[name]` instead.
+   * For custom/reusable components, use `useController` which provides reactive `fieldState`.
+   *
+   * **Common mistake (error messages that persist):**
+   * ```vue
+   * <!-- ❌ WRONG - Snapshot never updates -->
+   * <script setup>
+   * const emailState = getFieldState('email')
+   * </script>
+   * <template>
+   *   <span v-if="emailState.error">{{ emailState.error }}</span>
+   * </template>
+   * ```
+   *
+   * **Correct reactive alternatives:**
+   * ```vue
+   * <!-- ✅ Option 1: Use formState (always reactive) -->
+   * <span v-if="formState.value.errors.email">{{ formState.value.errors.email }}</span>
+   *
+   * <!-- ✅ Option 2: Use computed -->
+   * <script setup>
+   * const emailError = computed(() => formState.value.errors.email)
+   * </script>
+   *
+   * <!-- ✅ Option 3: Use useController (for reusable components) -->
+   * <script setup>
+   * const { fieldState } = useController({ name: 'email', control })
+   * // fieldState is a ComputedRef that updates automatically
+   * </script>
+   * ```
+   *
+   * @param name - Field path in dot notation (e.g., 'email', 'user.address.street')
+   * @returns Field state snapshot with isDirty, isTouched, invalid, and error properties
+   *
+   * @see formState.value.errors - For reactive error access
+   * @see useController - For reactive field state in custom components
    */
   function getFieldState<TPath extends Path<FormValues>>(name: TPath): FieldState {
     // Dev-mode path validation
@@ -898,6 +938,18 @@ export function useForm<TSchema extends ZodType>(
         if (!schemaResult.valid) {
           warnPathNotInSchema('getFieldState', name, schemaResult.availableFields)
         }
+      }
+
+      // Warn about non-reactivity when called in component setup
+      if (getCurrentInstance()) {
+        console.warn(
+          `[vue-hook-form] getFieldState('${name}') returns a snapshot, not reactive refs.\n` +
+            `For reactive error display, use one of these alternatives:\n` +
+            `  • formState.value.errors.${name}\n` +
+            `  • const { fieldState } = useController({ name: '${name}', control })\n` +
+            `  • const ${name}Error = computed(() => formState.value.errors.${name})\n\n` +
+            `See docs: https://github.com/vuehookform/core#common-mistakes`,
+        )
       }
     }
 
