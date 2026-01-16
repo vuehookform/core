@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.2](https://github.com/vuehookform/core/compare/v0.4.1...v0.4.2) (2026-01-16)
+
+
+### Bug Fixes
+
+* field array insert rejects out-of-bounds indices ([2e85f9a](https://github.com/vuehookform/core/commit/2e85f9a632637bb6e980d22a262220e5e97fd7ce))
+* improve error handling and validation cache ([ab8b3d2](https://github.com/vuehookform/core/commit/ab8b3d2d8f8225900f08e63420999f402d96a683))
+* improve robustness of utility functions ([30c3af9](https://github.com/vuehookform/core/commit/30c3af9b37aa2b5f26c8320eb5c2a6fdcde7d7e4))
+* refactor dirty tracking to value-comparison and fix memory leaks ([b0e7486](https://github.com/vuehookform/core/commit/b0e7486e0eb68fcf389f530f7704f108991fc099))
+* refactor useFieldArray validation and export TriggerOptions type ([962c6bc](https://github.com/vuehookform/core/commit/962c6bc275b709eb2dc3b49baeea6d1771606a3b))
+* use valueAsNumber for number/range inputs ([5ad6355](https://github.com/vuehookform/core/commit/5ad6355101deb810d00b1dc0d47c6d00fc71ffcc))
+* useController now respects form validation modes ([8b10a22](https://github.com/vuehookform/core/commit/8b10a22c54c9a38af134c290e12abef276ee62bf))
+* useFieldArray now respects form validation modes ([6114959](https://github.com/vuehookform/core/commit/6114959e2377fef6125445584f0b9d8bc701f17b))
+* validation modes, value-comparison dirty tracking, and memory leak fixes ([fb12c02](https://github.com/vuehookform/core/commit/fb12c02dc5bcace93448635a45607d2f0f478933))
+
 ## [0.4.1](https://github.com/vuehookform/core/compare/v0.4.0...v0.4.1) (2026-01-15)
 
 
