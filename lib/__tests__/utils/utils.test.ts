@@ -307,10 +307,15 @@ describe('path utilities', () => {
       expect(has(obj, 'empty')).toBe(true)
     })
 
-    it('should return false for undefined value', () => {
+    it('should return true when path exists with undefined value', () => {
+      // has() checks if the path EXISTS, not if the value is defined
+      // This correctly distinguishes between:
+      // - { name: undefined } - path 'name' EXISTS (returns true)
+      // - {} - path 'name' does NOT exist (returns false)
       const obj = { name: undefined }
 
-      expect(has(obj, 'name')).toBe(false)
+      expect(has(obj, 'name')).toBe(true) // Path exists!
+      expect(has({}, 'name')).toBe(false) // Path doesn't exist
     })
   })
 

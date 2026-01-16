@@ -47,7 +47,7 @@ describe('FormState Access Performance', () => {
     expect(duration).toBeLessThan(100)
   })
 
-  it('should have O(1) isDirty computation with counter optimization', async () => {
+  it('should have fast isDirty computation with memoization', async () => {
     // Mark many fields as dirty by setting values
     const fieldCount = 50
 
@@ -80,11 +80,11 @@ describe('FormState Access Performance', () => {
     const duration = performance.now() - start
     const avgPerAccess = duration / iterations
 
-    console.log(`isDirty O(1) benchmark (${fieldCount} dirty fields):`)
+    console.log(`isDirty benchmark (${fieldCount} dirty fields):`)
     console.log(`  Total: ${duration.toFixed(2)}ms for ${iterations} isDirty checks`)
     console.log(`  Average: ${avgPerAccess.toFixed(4)}ms per check`)
 
-    // O(1) counter-based check should be very fast
+    // Vue computed memoization makes this fast
     expect(avgPerAccess).toBeLessThan(0.1) // Under 0.1ms per check
   })
 
