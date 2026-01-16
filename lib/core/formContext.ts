@@ -1,4 +1,13 @@
-import { reactive, ref, shallowRef, watch, toValue, type Ref, type ShallowRef } from 'vue'
+import {
+  reactive,
+  ref,
+  shallowRef,
+  watch,
+  toValue,
+  type Ref,
+  type ShallowRef,
+  type WatchStopHandle,
+} from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -10,85 +19,150 @@ import type {
   FieldArrayRules,
 } from '../types'
 import { set } from '../utils/paths'
+import { deepClone } from '../utils/clone'
 
 /**
- * Internal state for field array management
+ * Internal state for field array management.
+ * Tracks items, their indices, and array-level validation rules.
+ *
+ * @internal This interface is used internally by useFieldArray and should not be
+ * directly instantiated by consumers.
  */
 export interface FieldArrayState {
+  /** Reactive list of field array items with stable keys for Vue reconciliation */
   items: Ref<FieldArrayItem[]>
+  /** Raw array values (kept in sync with formData) */
   values: unknown[]
-  // Index cache for O(1) index lookups, shared across fields() calls
+  /** O(1) lookup cache mapping item keys to their current indices */
   indexCache: Map<string, number>
-  // Validation rules for the array itself (minLength, maxLength, custom)
+  /** Optional validation rules for the array itself (minLength, maxLength, custom) */
   rules?: FieldArrayRules
 }
 
 /**
- * Cached event handlers for a field to prevent recreation on every render
+ * Cached event handlers for a field.
+ * These are created once per field registration and reused to prevent
+ * unnecessary re-renders and closure recreation.
+ *
+ * @internal This interface is used internally by useFieldRegistration and should not be
+ * directly instantiated by consumers.
  */
 export interface FieldHandlers {
+  /** Handler for input events, triggers validation based on mode */
   onInput: (e: Event) => Promise<void>
+  /** Handler for blur events, marks field as touched and may trigger validation */
   onBlur: (e: Event) => Promise<void>
+  /** Ref callback to capture the DOM element reference */
   refCallback: (el: unknown) => void
 }
 
 /**
- * Shared form context containing all reactive state
- * This is passed to sub-modules via dependency injection
+ * Shared form context containing all reactive state.
+ * This is the central state container passed to sub-modules via dependency injection.
+ *
+ * The context is organized into several categories:
+ * - **Form Data**: Raw form values and their defaults
+ * - **Form State**: Validation errors, touched/dirty tracking, submission state
+ * - **Field Tracking**: DOM refs, registration options, field arrays
+ * - **Validation**: Caching, debouncing, and async validation coordination
+ * - **Configuration**: Form options and disabled state
+ *
+ * @typeParam FormValues - The inferred type from the Zod schema
+ *
+ * @internal This interface is used internally by useForm and its sub-modules.
+ * Consumers should use the public API returned by useForm() instead.
  */
 export interface FormContext<FormValues> {
-  // Reactive form data
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Form Data
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Reactive form data object containing current field values */
   formData: Record<string, unknown>
+  /** Original default values used for reset() and dirty detection */
   defaultValues: Record<string, unknown>
 
-  // Form state
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Form State
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Current validation errors keyed by field path */
   errors: ShallowRef<FieldErrors<FormValues>>
+  /** Record of field paths that have been touched (blurred) */
   touchedFields: ShallowRef<Record<string, boolean>>
+  /** Record of field paths that differ from default values */
   dirtyFields: ShallowRef<Record<string, boolean>>
+  /** Whether the form is currently being submitted */
   isSubmitting: Ref<boolean>
+  /** Whether async default values are being loaded */
   isLoading: Ref<boolean>
+  /** Number of times the form has been submitted */
   submitCount: Ref<number>
+  /** Error that occurred while loading async default values */
   defaultValuesError: Ref<unknown>
+  /** Whether the last submission completed successfully */
   isSubmitSuccessful: Ref<boolean>
-
-  // Validation state tracking (Set for O(1) add/delete/has operations)
+  /** Set of field paths currently being validated (for isValidating state) */
   validatingFields: ShallowRef<Set<string>>
-
-  // External errors from server/parent (merged with validation errors)
+  /** External errors (e.g., from server) merged with validation errors */
   externalErrors: ShallowRef<FieldErrors<FormValues>>
 
-  // Delayed error display tracking
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Delayed Error Display
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Timers for delayed error display per field */
   errorDelayTimers: Map<string, ReturnType<typeof setTimeout>>
+  /** Pending errors waiting for delay timer to complete */
   pendingErrors: Map<string, FieldErrorValue>
 
-  // Field tracking
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Field Tracking
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** DOM element refs for registered uncontrolled fields */
   fieldRefs: Map<string, Ref<HTMLInputElement | null>>
+  /** Registration options per field path */
   fieldOptions: Map<string, RegisterOptions>
+  /** Field array state for array fields managed by fields() */
   fieldArrays: Map<string, FieldArrayState>
+  /** Cached event handlers to prevent recreation on re-render */
   fieldHandlers: Map<string, FieldHandlers>
 
-  // Debounce tracking for async validation
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Validation
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Debounce timers for custom async validation per field */
   debounceTimers: Map<string, ReturnType<typeof setTimeout>>
+  /** Request IDs for canceling stale async validation results */
   validationRequestIds: Map<string, number>
-
-  // Reset generation counter (used to cancel stale validations after reset)
+  /** Generation counter incremented on reset to cancel in-flight validations */
   resetGeneration: Ref<number>
-
-  // Form-wide disabled state
-  isDisabled: Ref<boolean>
-
-  // Performance optimization: O(1) counters for dirty/touched field counts
-  dirtyFieldCount: Ref<number>
-  touchedFieldCount: Ref<number>
-
-  // Validation cache: skip re-validation when field value hasn't changed
+  /** Cache of validation results keyed by field path and value hash */
   validationCache: Map<string, { hash: string; isValid: boolean }>
-
-  // Schema validation debounce timers per field (for validationDebounce option)
+  /** Debounce timers for schema validation per field */
   schemaValidationTimers: Map<string, ReturnType<typeof setTimeout>>
+  /** Set of field paths with persistent errors (survive validation cycles) */
+  persistentErrorFields: Set<string>
+  /** Hashed default values for value-comparison dirty detection */
+  defaultValueHashes: Map<string, string>
 
-  // Options
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Configuration
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Whether the entire form is disabled */
+  isDisabled: Ref<boolean>
+  /** Original options passed to useForm() */
   options: UseFormOptions<ZodType>
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Cleanup
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Cleanup function to stop all watchers and prevent memory leaks */
+  cleanup: () => void
 }
 
 /**
@@ -112,8 +186,9 @@ export function createFormContext<TSchema extends ZodType>(
     const asyncFn = options.defaultValues as () => Promise<Partial<FormValues>>
     asyncFn()
       .then((values) => {
-        Object.assign(defaultValues, values)
-        Object.assign(formData, values)
+        // Deep clone to prevent reference sharing between defaultValues and formData
+        Object.assign(defaultValues, deepClone(values))
+        Object.assign(formData, deepClone(values))
         isLoading.value = false
       })
       .catch((error) => {
@@ -124,9 +199,10 @@ export function createFormContext<TSchema extends ZodType>(
         options.onDefaultValuesError?.(error)
       })
   } else if (options.defaultValues) {
-    // Sync default values
-    Object.assign(defaultValues, options.defaultValues)
-    Object.assign(formData, defaultValues)
+    // Sync default values - deep clone to prevent reference sharing
+    // This ensures formData mutations don't affect defaultValues (critical for dirty tracking)
+    Object.assign(defaultValues, deepClone(options.defaultValues))
+    Object.assign(formData, deepClone(options.defaultValues))
   }
 
   // Form state - using Record instead of Set for per-field tracking
@@ -166,27 +242,35 @@ export function createFormContext<TSchema extends ZodType>(
   // Reset generation counter (incremented on each reset to invalidate in-flight validations)
   const resetGeneration = ref(0)
 
-  // Performance optimization: O(1) counters for dirty/touched field counts
-  const dirtyFieldCount = ref(0)
-  const touchedFieldCount = ref(0)
-
   // Validation cache: skip re-validation when field value hasn't changed
   const validationCache = new Map<string, { hash: string; isValid: boolean }>()
 
   // Schema validation debounce timers per field (for validationDebounce option)
   const schemaValidationTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
+  // Persistent errors: field names with errors that should not be cleared by validation
+  const persistentErrorFields = new Set<string>()
+
+  // Hashed default values for value-comparison dirty detection (lazy-initialized)
+  const defaultValueHashes = new Map<string, string>()
+
   // Form-wide disabled state (supports MaybeRef)
   const isDisabled = ref(false)
+
+  // Collect watch stop handles for cleanup to prevent memory leaks
+  const watchStopHandles: WatchStopHandle[] = []
+
   if (options.disabled !== undefined) {
     const initialDisabled = toValue(options.disabled)
     isDisabled.value = initialDisabled ?? false
 
-    watch(
-      () => toValue(options.disabled),
-      (newDisabled) => {
-        isDisabled.value = newDisabled ?? false
-      },
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.disabled),
+        (newDisabled) => {
+          isDisabled.value = newDisabled ?? false
+        },
+      ),
     )
   }
 
@@ -203,30 +287,32 @@ export function createFormContext<TSchema extends ZodType>(
     }
 
     // Watch for changes - update formData without marking dirty
-    watch(
-      () => toValue(options.values),
-      (newValues) => {
-        if (newValues) {
-          for (const [key, value] of Object.entries(newValues)) {
-            if (value !== undefined) {
-              set(formData, key, value)
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.values),
+        (newValues) => {
+          if (newValues) {
+            for (const [key, value] of Object.entries(newValues)) {
+              if (value !== undefined) {
+                set(formData, key, value)
 
-              // Also update DOM elements for uncontrolled fields
-              const fieldRef = fieldRefs.get(key)
-              const opts = fieldOptions.get(key)
-              if (fieldRef?.value && !opts?.controlled) {
-                const el = fieldRef.value
-                if (el.type === 'checkbox') {
-                  el.checked = value as boolean
-                } else {
-                  el.value = value as string
+                // Also update DOM elements for uncontrolled fields
+                const fieldRef = fieldRefs.get(key)
+                const opts = fieldOptions.get(key)
+                if (fieldRef?.value && !opts?.controlled) {
+                  const el = fieldRef.value
+                  if (el.type === 'checkbox') {
+                    el.checked = value as boolean
+                  } else {
+                    el.value = value as string
+                  }
                 }
               }
             }
           }
-        }
-      },
-      { deep: true },
+        },
+        { deep: true },
+      ),
     )
   }
 
@@ -239,12 +325,14 @@ export function createFormContext<TSchema extends ZodType>(
     }
 
     // Watch for changes
-    watch(
-      () => toValue(options.errors),
-      (newErrors) => {
-        externalErrors.value = (newErrors || {}) as FieldErrors<FormValues>
-      },
-      { deep: true },
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.errors),
+        (newErrors) => {
+          externalErrors.value = (newErrors || {}) as FieldErrors<FormValues>
+        },
+        { deep: true },
+      ),
     )
   }
 
@@ -271,10 +359,16 @@ export function createFormContext<TSchema extends ZodType>(
     validationRequestIds,
     resetGeneration,
     isDisabled,
-    dirtyFieldCount,
-    touchedFieldCount,
     validationCache,
     schemaValidationTimers,
+    persistentErrorFields,
+    defaultValueHashes,
     options: options as UseFormOptions<ZodType>,
+    cleanup: () => {
+      // Stop all watchers to prevent memory leaks
+      for (const stop of watchStopHandles) {
+        stop()
+      }
+    },
   }
 }

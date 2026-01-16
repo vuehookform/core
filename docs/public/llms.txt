@@ -274,8 +274,8 @@ async function nextStep() {
 
 PROGRAMMATIC VALUE SETTING:
 ```typescript
-setValue('email', 'new@example.com')                    // marks dirty
-setValue('email', data.email, { shouldDirty: false })   // don't mark dirty
+setValue('email', 'new@example.com')                    // evaluates dirty based on comparison to default
+setValue('email', data.email, { shouldDirty: false })   // skip dirty evaluation
 setValue('email', value, { shouldValidate: true })      // validate after
 setValue('addresses.0.city', 'NYC')                     // nested path
 ```

@@ -73,8 +73,21 @@ export function validatePathSyntax(path: string): string | null {
 }
 
 /**
- * Traverse a Zod schema following a dot-notation path
- * Returns the schema at the end of the path, or error info if invalid
+ * Traverse a Zod schema following a dot-notation path.
+ * Used internally for dev-mode path validation warnings.
+ *
+ * @param schema - Root Zod schema to traverse
+ * @param path - Dot-notation path (e.g., 'user.addresses.0.street')
+ * @returns Success: `{ schema: ZodType }` - the schema at path end
+ *          Error: `{ error: string, availableFields?: string[], segmentIndex: number }`
+ *
+ * @example
+ * const result = traverseSchemaPath(formSchema, 'user.email')
+ * if ('error' in result) {
+ *   console.log(result.error, result.availableFields)
+ * } else {
+ *   console.log('Found schema:', result.schema)
+ * }
  */
 function traverseSchemaPath(
   schema: ZodType,
@@ -85,6 +98,7 @@ function traverseSchemaPath(
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]
+    // Skip empty segments (already caught by validatePathSyntax)
     if (!segment) continue
 
     currentSchema = unwrapSchema(currentSchema)

@@ -16,12 +16,13 @@ import {
   warnPathNotInSchema,
 } from '../utils/devWarnings'
 import {
-  markFieldDirty,
   markFieldTouched,
   clearFieldDirty,
   clearFieldTouched,
   clearFieldErrors,
+  updateFieldDirtyState,
 } from './fieldState'
+import { shouldValidateOnChange, shouldValidateOnBlur } from '../utils/modeChecks'
 
 // Monotonic counter for validation request IDs (avoids race conditions)
 let validationRequestCounter = 0
@@ -122,22 +123,39 @@ export function createFieldRegistration<FormValues>(
        */
       const onInput = async (e: Event) => {
         const target = e.target as HTMLInputElement
-        const value = target.type === 'checkbox' ? target.checked : target.value
+        let value: unknown
+        if (target.type === 'checkbox') {
+          value = target.checked
+        } else if (target.type === 'number' || target.type === 'range') {
+          // Use valueAsNumber for proper number coercion (matches domSync.ts behavior)
+          // Returns NaN for empty/invalid inputs which preserves the "no value" semantic
+          value = target.valueAsNumber
+        } else {
+          value = target.value
+        }
 
         // Update form data
         set(ctx.formData, name, value)
 
-        // Mark as dirty (optimized - skips clone if already dirty, maintains O(1) counter)
-        markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+        // Update dirty state using value comparison (field is dirty only if value differs from default)
+        updateFieldDirtyState(
+          ctx.dirtyFields,
+          ctx.defaultValues,
+          ctx.defaultValueHashes,
+          name,
+          value,
+        )
 
         // Cache field options lookup (avoid multiple Map.get calls)
         const fieldOpts = ctx.fieldOptions.get(name)
 
         // Validate based on mode
-        const shouldValidate =
-          ctx.options.mode === 'onChange' ||
-          (ctx.options.mode === 'onTouched' && ctx.touchedFields.value[name]) ||
-          (ctx.touchedFields.value[name] && ctx.options.reValidateMode === 'onChange')
+        const shouldValidate = shouldValidateOnChange(
+          ctx.options.mode ?? 'onSubmit',
+          ctx.touchedFields.value[name] === true,
+          ctx.options.reValidateMode,
+          ctx.submitCount.value > 0,
+        )
 
         if (shouldValidate) {
           const validationDebounceMs = ctx.options.validationDebounce || 0
@@ -174,6 +192,7 @@ export function createFieldRegistration<FormValues>(
         }
 
         // Custom validation with optional debouncing (reuse cached fieldOpts)
+        // Custom validation always runs on input if provided (it's an explicit opt-in)
         if (fieldOpts?.validate && !fieldOpts.disabled) {
           // Generate a new request ID for race condition handling (monotonic counter)
           const requestId = ++validationRequestCounter
@@ -195,14 +214,22 @@ export function createFieldRegistration<FormValues>(
             const timer = setTimeout(async () => {
               ctx.debounceTimers.delete(name)
               await runCustomValidation(name, value, requestId, resetGenAtStart)
-              // Clean up validationRequestIds after validation completes
-              ctx.validationRequestIds.delete(name)
+              // Clean up validationRequestIds ONLY if we're still the latest request.
+              // A newer request might have been queued while we were validating,
+              // and we shouldn't delete its request ID.
+              if (ctx.validationRequestIds.get(name) === requestId) {
+                ctx.validationRequestIds.delete(name)
+              }
             }, debounceMs)
 
             ctx.debounceTimers.set(name, timer)
           } else {
             // No debounce, run immediately
             await runCustomValidation(name, value, requestId, resetGenAtStart)
+            // Clean up only if still the latest request
+            if (ctx.validationRequestIds.get(name) === requestId) {
+              ctx.validationRequestIds.delete(name)
+            }
           }
         }
       }
@@ -211,14 +238,15 @@ export function createFieldRegistration<FormValues>(
        * Handle field blur
        */
       const onBlur = async (_e: Event) => {
-        // Mark as touched (optimized - skips clone if already touched, maintains O(1) counter)
-        markFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
+        // Mark as touched (optimized - skips clone if already touched)
+        markFieldTouched(ctx.touchedFields, name)
 
         // Validate based on mode
-        const shouldValidate =
-          ctx.options.mode === 'onBlur' ||
-          ctx.options.mode === 'onTouched' ||
-          (ctx.submitCount.value > 0 && ctx.options.reValidateMode === 'onBlur')
+        const shouldValidate = shouldValidateOnBlur(
+          ctx.options.mode ?? 'onSubmit',
+          ctx.submitCount.value > 0,
+          ctx.options.reValidateMode,
+        )
 
         if (shouldValidate) {
           await validate(name)
@@ -280,23 +308,31 @@ export function createFieldRegistration<FormValues>(
             clearTimeout(schemaTimer)
             ctx.schemaValidationTimers.delete(name)
           }
+          // Clear error delay timers to prevent stale errors from appearing
+          const errorTimer = ctx.errorDelayTimers.get(name)
+          if (errorTimer) {
+            clearTimeout(errorTimer)
+            ctx.errorDelayTimers.delete(name)
+          }
+          ctx.pendingErrors.delete(name)
           ctx.validationRequestIds.delete(name)
+
+          // Always clean up refs, options, and handlers when DOM element unmounts
+          // to prevent memory accumulation for dynamically added/removed fields
+          ctx.fieldRefs.delete(name)
+          ctx.fieldOptions.delete(name)
+          ctx.fieldHandlers.delete(name)
 
           const shouldUnreg = opts?.shouldUnregister ?? ctx.options.shouldUnregister ?? false
 
           if (shouldUnreg) {
-            // Clear form data for this field
+            // Also clear form data and state for this field
             unset(ctx.formData, name)
 
             // Clear errors, touched, and dirty state (optimized with early exit)
             clearFieldErrors(ctx.errors, name)
-            clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
-            clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
-
-            // Clean up refs, options, and handlers
-            ctx.fieldRefs.delete(name)
-            ctx.fieldOptions.delete(name)
-            ctx.fieldHandlers.delete(name)
+            clearFieldTouched(ctx.touchedFields, name)
+            clearFieldDirty(ctx.dirtyFields, name)
           }
         }
       }
@@ -318,7 +354,13 @@ export function createFieldRegistration<FormValues>(
           get: () => get(ctx.formData, name),
           set: (val) => {
             set(ctx.formData, name, val)
-            markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+            updateFieldDirtyState(
+              ctx.dirtyFields,
+              ctx.defaultValues,
+              ctx.defaultValueHashes,
+              name,
+              val,
+            )
           },
         }),
       }),
@@ -344,10 +386,10 @@ export function createFieldRegistration<FormValues>(
       clearFieldErrors(ctx.errors, name)
     }
     if (!opts.keepTouched) {
-      clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
+      clearFieldTouched(ctx.touchedFields, name)
     }
     if (!opts.keepDirty) {
-      clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      clearFieldDirty(ctx.dirtyFields, name)
     }
 
     // Always clean up refs, options, and handlers (internal state)
@@ -368,6 +410,11 @@ export function createFieldRegistration<FormValues>(
       ctx.schemaValidationTimers.delete(name)
     }
     ctx.validationRequestIds.delete(name)
+
+    // Clear validation cache to prevent stale results on re-register
+    // Clear both partial and full strategy cache entries
+    ctx.validationCache.delete(`${name}:partial`)
+    ctx.validationCache.delete(`${name}:full`)
   }
 
   return { register, unregister }

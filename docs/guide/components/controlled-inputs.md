@@ -124,6 +124,10 @@ const { value: usernameValue, ...usernameBindings } = register('username', { con
 </template>
 ```
 
+::: tip When to use useController instead
+For simple PrimeVue inputs like `InputText`, controlled mode with `register()` works well. For complex components with non-standard events (like `InputNumber`, `Calendar`, or `Dropdown`), consider [useController](/api/use-controller) for more reliable integration.
+:::
+
 ### Element Plus
 
 ```vue

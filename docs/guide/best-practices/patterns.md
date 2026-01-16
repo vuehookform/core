@@ -177,59 +177,349 @@ watchDebounced(
 
 ## Multi-Step Forms
 
-### Step Navigation
+Build wizard-style forms where each step has its own validation schema and data persists across all steps.
+
+### Per-Step Schema Definition
+
+Define separate Zod schemas for each step, then combine them for the full form:
+
+```typescript
+// schemas/checkout.ts
+import { z } from 'zod'
+
+// Step 1: Personal Info
+export const personalInfoSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address'),
+})
+
+// Step 2: Shipping Address
+export const shippingSchema = z.object({
+  street: z.string().min(1, 'Street address is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(2, 'State is required'),
+  zip: z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code'),
+})
+
+// Step 3: Payment
+export const paymentSchema = z.object({
+  cardNumber: z.string().regex(/^\d{16}$/, 'Card number must be 16 digits'),
+  expiry: z.string().regex(/^\d{2}\/\d{2}$/, 'Format: MM/YY'),
+  cvv: z.string().regex(/^\d{3,4}$/, 'Invalid CVV'),
+})
+
+// Combined schema for full form validation on final submit
+export const checkoutSchema = personalInfoSchema.merge(shippingSchema).merge(paymentSchema)
+
+export type CheckoutFormData = z.infer<typeof checkoutSchema>
+```
+
+### Complete Multi-Step Form Component
 
 ```vue
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useForm } from '@vuehookform/core'
+import { checkoutSchema, type CheckoutFormData } from '@/schemas/checkout'
 
-const step = ref(1)
-const totalSteps = 3
+// Step configuration with field mappings
+const steps = [
+  {
+    id: 1,
+    name: 'Personal Info',
+    fields: ['firstName', 'lastName', 'email'] as const,
+  },
+  {
+    id: 2,
+    name: 'Shipping',
+    fields: ['street', 'city', 'state', 'zip'] as const,
+  },
+  {
+    id: 3,
+    name: 'Payment',
+    fields: ['cardNumber', 'expiry', 'cvv'] as const,
+  },
+]
 
-const stepFields = {
-  1: ['email', 'password'],
-  2: ['firstName', 'lastName'],
-  3: ['address', 'city', 'zip'],
-}
+const currentStep = ref(1)
+const totalSteps = steps.length
 
-const canGoNext = async () => {
-  const fields = stepFields[step.value]
-  return await trigger(fields)
+// Use the combined schema - data persists across all steps
+const { register, handleSubmit, formState, trigger } = useForm({
+  schema: checkoutSchema,
+  mode: 'onSubmit',
+  reValidateMode: 'onChange', // Real-time feedback after step validation
+  defaultValues: {
+    firstName: '',
+    lastName: '',
+    email: '',
+    street: '',
+    city: '',
+    state: '',
+    zip: '',
+    cardNumber: '',
+    expiry: '',
+    cvv: '',
+  },
+})
+
+const currentStepConfig = computed(() => steps[currentStep.value - 1])
+
+// Validate only the current step's fields
+const validateCurrentStep = async (): Promise<boolean> => {
+  const stepFields = currentStepConfig.value.fields
+  const isValid = await trigger([...stepFields], {
+    markAsSubmitted: true, // Activates reValidateMode for these fields
+  })
+  return isValid
 }
 
 const nextStep = async () => {
-  if (await canGoNext()) {
-    step.value = Math.min(step.value + 1, totalSteps)
+  const isValid = await validateCurrentStep()
+  if (isValid && currentStep.value < totalSteps) {
+    currentStep.value++
   }
 }
 
 const prevStep = () => {
-  step.value = Math.max(step.value - 1, 1)
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
+
+// Data persists - all fields from all steps are available on submit
+const onSubmit = async (data: CheckoutFormData) => {
+  console.log('Complete form data:', data)
+  // Submit to your API
 }
 </script>
 
 <template>
-  <form @submit="handleSubmit(onSubmit)">
-    <div class="progress">Step {{ step }} of {{ totalSteps }}</div>
+  <div class="multi-step-form">
+    <!-- Progress indicator -->
+    <div class="progress flex gap-2 mb-6">
+      <div
+        v-for="step in steps"
+        :key="step.id"
+        class="step-indicator px-3 py-1 rounded"
+        :class="{
+          'bg-blue-500 text-white': step.id === currentStep,
+          'bg-green-500 text-white': step.id < currentStep,
+          'bg-gray-200': step.id > currentStep,
+        }"
+      >
+        {{ step.name }}
+      </div>
+    </div>
 
-    <div v-show="step === 1">
-      <!-- Step 1 fields -->
-    </div>
-    <div v-show="step === 2">
-      <!-- Step 2 fields -->
-    </div>
-    <div v-show="step === 3">
-      <!-- Step 3 fields -->
-    </div>
+    <form @submit="handleSubmit(onSubmit)">
+      <!-- Step 1: Personal Info -->
+      <div v-show="currentStep === 1" class="step-content">
+        <h2 class="text-xl font-bold mb-4">Personal Information</h2>
 
-    <div class="actions">
-      <button type="button" @click="prevStep" :disabled="step === 1">Back</button>
-      <button v-if="step < totalSteps" type="button" @click="nextStep">Next</button>
-      <button v-else type="submit">Submit</button>
-    </div>
-  </form>
+        <div class="field mb-4">
+          <label class="block mb-1">First Name</label>
+          <input v-bind="register('firstName')" class="w-full p-2 border rounded" />
+          <span v-if="formState.value.errors.firstName" class="text-red-500 text-sm">
+            {{ formState.value.errors.firstName }}
+          </span>
+        </div>
+
+        <div class="field mb-4">
+          <label class="block mb-1">Last Name</label>
+          <input v-bind="register('lastName')" class="w-full p-2 border rounded" />
+          <span v-if="formState.value.errors.lastName" class="text-red-500 text-sm">
+            {{ formState.value.errors.lastName }}
+          </span>
+        </div>
+
+        <div class="field mb-4">
+          <label class="block mb-1">Email</label>
+          <input v-bind="register('email')" type="email" class="w-full p-2 border rounded" />
+          <span v-if="formState.value.errors.email" class="text-red-500 text-sm">
+            {{ formState.value.errors.email }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Step 2: Shipping -->
+      <div v-show="currentStep === 2" class="step-content">
+        <h2 class="text-xl font-bold mb-4">Shipping Address</h2>
+
+        <div class="field mb-4">
+          <label class="block mb-1">Street Address</label>
+          <input v-bind="register('street')" class="w-full p-2 border rounded" />
+          <span v-if="formState.value.errors.street" class="text-red-500 text-sm">
+            {{ formState.value.errors.street }}
+          </span>
+        </div>
+
+        <div class="field mb-4">
+          <label class="block mb-1">City</label>
+          <input v-bind="register('city')" class="w-full p-2 border rounded" />
+          <span v-if="formState.value.errors.city" class="text-red-500 text-sm">
+            {{ formState.value.errors.city }}
+          </span>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="field mb-4 flex-1">
+            <label class="block mb-1">State</label>
+            <input v-bind="register('state')" class="w-full p-2 border rounded" />
+            <span v-if="formState.value.errors.state" class="text-red-500 text-sm">
+              {{ formState.value.errors.state }}
+            </span>
+          </div>
+
+          <div class="field mb-4 flex-1">
+            <label class="block mb-1">ZIP Code</label>
+            <input v-bind="register('zip')" class="w-full p-2 border rounded" />
+            <span v-if="formState.value.errors.zip" class="text-red-500 text-sm">
+              {{ formState.value.errors.zip }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Payment -->
+      <div v-show="currentStep === 3" class="step-content">
+        <h2 class="text-xl font-bold mb-4">Payment Details</h2>
+
+        <div class="field mb-4">
+          <label class="block mb-1">Card Number</label>
+          <input
+            v-bind="register('cardNumber')"
+            placeholder="1234567890123456"
+            class="w-full p-2 border rounded"
+          />
+          <span v-if="formState.value.errors.cardNumber" class="text-red-500 text-sm">
+            {{ formState.value.errors.cardNumber }}
+          </span>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="field mb-4 flex-1">
+            <label class="block mb-1">Expiry</label>
+            <input
+              v-bind="register('expiry')"
+              placeholder="MM/YY"
+              class="w-full p-2 border rounded"
+            />
+            <span v-if="formState.value.errors.expiry" class="text-red-500 text-sm">
+              {{ formState.value.errors.expiry }}
+            </span>
+          </div>
+
+          <div class="field mb-4 flex-1">
+            <label class="block mb-1">CVV</label>
+            <input v-bind="register('cvv')" type="password" class="w-full p-2 border rounded" />
+            <span v-if="formState.value.errors.cvv" class="text-red-500 text-sm">
+              {{ formState.value.errors.cvv }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="actions flex gap-2 mt-6">
+        <button
+          type="button"
+          @click="prevStep"
+          :disabled="currentStep === 1"
+          class="px-4 py-2 border rounded disabled:opacity-50"
+        >
+          Back
+        </button>
+
+        <button
+          v-if="currentStep < totalSteps"
+          type="button"
+          @click="nextStep"
+          class="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Next
+        </button>
+
+        <button
+          v-else
+          type="submit"
+          :disabled="formState.value.isSubmitting"
+          class="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
+        >
+          {{ formState.value.isSubmitting ? 'Processing...' : 'Place Order' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </template>
 ```
+
+### Key Concepts
+
+**Data Persistence:** The form uses a single `useForm` instance with the combined schema. All field values persist in the form's internal state regardless of which step is visible. Using `v-show` (instead of `v-if`) keeps fields in the DOM even when hidden, preserving their registration.
+
+**Per-Step Validation:** The `trigger()` method validates only the current step's fields. The `markAsSubmitted: true` option activates `reValidateMode` so subsequent changes to validated fields show immediate feedback.
+
+**Schema Composition:** Zod's `.merge()` combines individual step schemas into a full form schema, ensuring:
+
+- TypeScript types are accurate for the complete form
+- Full validation works on final submission
+- Each step schema can be reused independently
+
+### Alternative: Separate Forms Per Step
+
+For complex wizards where steps are completely independent (different data models, save each step separately):
+
+```typescript
+import { ref, reactive } from 'vue'
+import { useForm } from '@vuehookform/core'
+import { personalInfoSchema, shippingSchema, paymentSchema } from '@/schemas/checkout'
+
+// Store completed step data outside of forms
+const formData = reactive<Partial<CheckoutFormData>>({})
+const currentStep = ref(1)
+
+// Step 1 form
+const step1Form = useForm({
+  schema: personalInfoSchema,
+  mode: 'onBlur',
+})
+
+const onStep1Complete = step1Form.handleSubmit((data) => {
+  Object.assign(formData, data)
+  currentStep.value = 2
+})
+
+// Step 2 form
+const step2Form = useForm({
+  schema: shippingSchema,
+  mode: 'onBlur',
+})
+
+const onStep2Complete = step2Form.handleSubmit((data) => {
+  Object.assign(formData, data)
+  currentStep.value = 3
+})
+
+// Step 3 form
+const step3Form = useForm({
+  schema: paymentSchema,
+  mode: 'onBlur',
+})
+
+// Final submission uses combined data from all steps
+const onFinalSubmit = step3Form.handleSubmit(async (paymentData) => {
+  const completeData = { ...formData, ...paymentData }
+  await submitOrder(completeData as CheckoutFormData)
+})
+```
+
+This approach is better when:
+
+- Each step saves data to the server independently
+- Steps have completely different schemas that don't merge well
+- You need different validation modes per step
 
 ## Reusable Field Components
 

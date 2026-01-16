@@ -3,19 +3,7 @@ import type { FieldErrors, FieldError, FieldErrorValue, CriteriaMode } from '../
 import { get, set } from '../utils/paths'
 import { hashValue } from '../utils/hash'
 import { analyzeSchemaPath } from '../utils/schemaExtract'
-
-/**
- * Helper to clear errors for a specific field path and its children
- */
-function clearFieldErrors<T>(errors: FieldErrors<T>, fieldPath: string): FieldErrors<T> {
-  const newErrors = { ...errors }
-  for (const key of Object.keys(newErrors)) {
-    if (key === fieldPath || key.startsWith(`${fieldPath}.`)) {
-      delete newErrors[key as keyof typeof newErrors]
-    }
-  }
-  return newErrors as FieldErrors<T>
-}
+import { clearFieldErrors } from './fieldState'
 
 /**
  * Helper to mark a field as validating.
@@ -203,8 +191,9 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
 
   /**
    * Cancel pending error and clear existing error for a field (delayError feature)
+   * Preserves errors for fields marked as persistent via setError(..., { persistent: true })
    */
-  function cancelError(fieldPath: string): FieldErrors<FormValues> {
+  function cancelError(fieldPath: string): void {
     // Cancel any pending delayed error
     const timer = ctx.errorDelayTimers.get(fieldPath)
     if (timer) {
@@ -216,8 +205,13 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
     // Clear native validation
     applyNativeValidation(fieldPath, null)
 
-    // Clear existing error
-    return clearFieldErrors(ctx.errors.value, fieldPath)
+    // Preserve persistent errors (e.g., server-side validation errors)
+    if (ctx.persistentErrorFields.has(fieldPath)) {
+      return
+    }
+
+    // Clear existing error using shared utility (mutates ctx.errors directly)
+    clearFieldErrors(ctx.errors, fieldPath)
   }
 
   /**
@@ -239,6 +233,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
     fieldPath: string,
     subSchema: import('zod').ZodType,
     valueHash: string | undefined,
+    cacheKey: string,
     criteriaMode: CriteriaMode,
     generationAtStart: number,
   ): Promise<boolean> {
@@ -254,22 +249,31 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       }
 
       if (result.success) {
-        ctx.errors.value = cancelError(fieldPath)
+        cancelError(fieldPath)
         if (valueHash) {
-          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+          ctx.validationCache.set(cacheKey, { hash: valueHash, isValid: true })
         }
         return true
       }
 
       // Validation failed - process errors
       // Prepend fieldPath to error paths since we validated just the sub-schema
-      const fieldErrors = result.error.issues.map((issue) => ({
-        ...issue,
-        path: fieldPath.split('.').concat(issue.path.map(String)),
-      }))
+      // But first check if the path already starts with fieldPath to avoid double-prefixing
+      const fieldSegments = fieldPath.split('.')
+      const fieldErrors = result.error.issues.map((issue) => {
+        const issuePath = issue.path.map(String)
+        // Check if issue.path already starts with fieldPath segments (avoid double-prefix)
+        const alreadyPrefixed =
+          issuePath.length >= fieldSegments.length &&
+          fieldSegments.every((seg, i) => issuePath[i] === seg)
+        return {
+          ...issue,
+          path: alreadyPrefixed ? issuePath : fieldSegments.concat(issuePath),
+        }
+      })
 
       // Cancel existing errors for this field first
-      ctx.errors.value = cancelError(fieldPath)
+      cancelError(fieldPath)
 
       // Schedule errors in batch
       const grouped = groupErrorsByPath(fieldErrors)
@@ -280,7 +284,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       scheduleErrorsBatch(errorBatch)
 
       if (valueHash) {
-        ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: false })
+        ctx.validationCache.set(cacheKey, { hash: valueHash, isValid: false })
       }
       return false
     } finally {
@@ -295,6 +299,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
   async function validateFieldFull(
     fieldPath: string,
     valueHash: string | undefined,
+    cacheKey: string,
     criteriaMode: CriteriaMode,
     generationAtStart: number,
   ): Promise<boolean> {
@@ -309,9 +314,9 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       }
 
       if (result.success) {
-        ctx.errors.value = cancelError(fieldPath)
+        cancelError(fieldPath)
         if (valueHash) {
-          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+          ctx.validationCache.set(cacheKey, { hash: valueHash, isValid: true })
         }
         return true
       }
@@ -323,15 +328,15 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       })
 
       if (fieldErrors.length === 0) {
-        ctx.errors.value = cancelError(fieldPath)
+        cancelError(fieldPath)
         if (valueHash) {
-          ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: true })
+          ctx.validationCache.set(cacheKey, { hash: valueHash, isValid: true })
         }
         return true
       }
 
       // Cancel existing errors for this field first
-      ctx.errors.value = cancelError(fieldPath)
+      cancelError(fieldPath)
 
       // Schedule errors in batch
       const grouped = groupErrorsByPath(fieldErrors)
@@ -342,7 +347,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
       scheduleErrorsBatch(errorBatch)
 
       if (valueHash) {
-        ctx.validationCache.set(fieldPath, { hash: valueHash, isValid: false })
+        ctx.validationCache.set(cacheKey, { hash: valueHash, isValid: false })
       }
       return false
     } finally {
@@ -365,25 +370,30 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
     if (fieldPath) {
       const currentValue = get(ctx.formData, fieldPath)
       valueHash = hashValue(currentValue)
-      const cached = ctx.validationCache.get(fieldPath)
 
-      if (cached && cached.hash === valueHash) {
-        // Cache hit - clear any stale errors if valid, then return cached result
-        if (cached.isValid) {
-          ctx.errors.value = cancelError(fieldPath)
-        }
-        return cached.isValid
+      // Analyze if partial validation is possible BEFORE checking cache
+      // This ensures cache entries are only used with matching validation strategies
+      const analysis = analyzeSchemaPath(ctx.options.schema, fieldPath)
+      const usePartial = analysis.canPartialValidate && analysis.subSchema
+
+      // Check cache with strategy-aware key
+      const cacheKey = `${fieldPath}:${usePartial ? 'partial' : 'full'}`
+      const cached = ctx.validationCache.get(cacheKey)
+
+      // Only use cache for valid results - invalid results need re-validation
+      // to ensure the correct error message is displayed
+      if (cached && cached.hash === valueHash && cached.isValid) {
+        cancelError(fieldPath)
+        return true
       }
 
-      // Analyze if partial validation is possible
-      const analysis = analyzeSchemaPath(ctx.options.schema, fieldPath)
-
-      if (analysis.canPartialValidate && analysis.subSchema) {
+      if (usePartial) {
         // O(1) single-field validation - validate only the sub-schema
         return validateFieldPartial(
           fieldPath,
-          analysis.subSchema,
+          analysis.subSchema!,
           valueHash,
+          cacheKey,
           criteriaMode,
           generationAtStart,
         )
@@ -391,7 +401,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
 
       // Fallback: full form validation with filtering
       // Required when schema has refinements that may depend on other fields
-      return validateFieldFull(fieldPath, valueHash, criteriaMode, generationAtStart)
+      return validateFieldFull(fieldPath, valueHash, cacheKey, criteriaMode, generationAtStart)
     }
 
     // Full form validation

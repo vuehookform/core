@@ -1,4 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { waitFor } from '../helpers/test-utils'
+
+// Helper to wait for async validation to complete
+async function flushValidation(): Promise<void> {
+  await nextTick()
+  await waitFor(0)
+  await nextTick()
+}
 import { z } from 'zod'
 import { useForm } from '../../useForm'
 import { useWatch } from '../../useWatch'
@@ -192,6 +201,260 @@ describe('useController', () => {
     it('should export useController from index', async () => {
       const exports = await import('../../index')
       expect(exports.useController).toBeDefined()
+    })
+  })
+
+  describe('validation modes', () => {
+    describe('mode: onChange', () => {
+      it('should validate on onChange when mode is onChange', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onChange',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeDefined()
+      })
+
+      it('should clear error when value becomes valid', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onChange',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        // Make invalid
+        field.onChange('invalid')
+        await flushValidation()
+        expect(fieldState.value.error).toBeDefined()
+
+        // Make valid
+        field.onChange('valid@test.com')
+        await flushValidation()
+        expect(fieldState.value.error).toBeUndefined()
+      })
+
+      it('should not validate on onChange when mode is onSubmit', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onSubmit',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+    })
+
+    describe('mode: onBlur', () => {
+      it('should validate on onBlur when mode is onBlur', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onBlur',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+        expect(fieldState.value.error).toBeUndefined()
+
+        field.onBlur()
+        await flushValidation()
+        expect(fieldState.value.error).toBeDefined()
+      })
+
+      it('should not validate on onBlur when mode is onChange', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onChange',
+          defaultValues: { email: 'valid@test.com', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        // onBlur shouldn't trigger validation in onChange mode (only change does)
+        field.onBlur()
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+
+      it('should not validate on onChange when mode is onBlur', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onBlur',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+    })
+
+    describe('mode: onTouched', () => {
+      it('should validate on blur (first touch)', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onTouched',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+        expect(fieldState.value.error).toBeUndefined() // Not touched yet
+
+        field.onBlur()
+        await flushValidation()
+        expect(fieldState.value.error).toBeDefined() // Now touched and validated
+      })
+
+      it('should validate on change after field is touched', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onTouched',
+          defaultValues: { email: 'valid@test.com', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        // Touch the field first
+        field.onBlur()
+        await flushValidation()
+        expect(fieldState.value.isTouched).toBe(true)
+
+        // Now onChange should validate
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeDefined()
+      })
+
+      it('should not validate on change before field is touched', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onTouched',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+    })
+
+    describe('mode: onSubmit', () => {
+      it('should not validate on onChange', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onSubmit',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+
+      it('should not validate on onBlur', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onSubmit',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        field.onChange('invalid')
+        field.onBlur()
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+    })
+
+    describe('reValidateMode', () => {
+      it('should use reValidateMode: onChange after submit', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onSubmit',
+          reValidateMode: 'onChange',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        // Before submit, onChange should not validate
+        field.onChange('invalid')
+        await flushValidation()
+        expect(fieldState.value.error).toBeUndefined()
+
+        // Submit (which will fail validation)
+        const submitHandler = form.handleSubmit(vi.fn())
+        await submitHandler(new Event('submit'))
+        expect(form.formState.value.errors.email).toBeDefined()
+
+        // Touch the field (reValidateMode: 'onChange' requires isTouched)
+        field.onBlur()
+        await flushValidation()
+
+        // Now onChange should validate due to reValidateMode
+        field.onChange('valid@test.com')
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
+
+      it('should use reValidateMode: onBlur after submit', async () => {
+        const form = useForm({
+          schema,
+          mode: 'onSubmit',
+          reValidateMode: 'onBlur',
+          defaultValues: { email: '', name: 'John' },
+        })
+
+        const { field, fieldState } = useController({ control: form, name: 'email' })
+
+        // Submit first
+        const submitHandler = form.handleSubmit(vi.fn())
+        await submitHandler(new Event('submit'))
+        expect(form.formState.value.errors.email).toBeDefined()
+
+        // Fix the value
+        field.onChange('valid@test.com')
+        await flushValidation()
+
+        // Error might still be there (depends on implementation)
+        // Blur should trigger revalidation
+        field.onBlur()
+        await flushValidation()
+
+        expect(fieldState.value.error).toBeUndefined()
+      })
     })
   })
 })

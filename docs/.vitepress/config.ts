@@ -91,6 +91,7 @@ export default defineConfig({
             { text: 'Form Context', link: '/guide/advanced/form-context' },
             { text: 'Watch', link: '/guide/advanced/watch' },
             { text: 'Programmatic Control', link: '/guide/advanced/programmatic-control' },
+            { text: 'Reactivity Integration', link: '/guide/advanced/reactivity-integration' },
             { text: 'Async Patterns', link: '/guide/advanced/async-patterns' },
             { text: 'TypeScript', link: '/guide/advanced/typescript' },
           ],
@@ -127,7 +128,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2025-present Vue Hook Form',
+      copyright: 'Copyright © 2026-present Vue Hook Form',
     },
 
     search: {

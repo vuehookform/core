@@ -119,19 +119,149 @@ reset({
 
 ### Reset Options
 
-Control what gets reset:
+The `reset()` method accepts an optional second parameter with fine-grained control over what gets reset:
 
 ```typescript
-reset(undefined, {
-  keepErrors: true, // Don't clear errors
-  keepDirty: true, // Don't reset dirty state
-  keepTouched: true, // Don't reset touched state
-  keepSubmitCount: true, // Don't reset submit counter
-  keepDefaultValues: true, // Don't update stored defaults
-  keepIsSubmitting: true, // Don't reset submitting state
-  keepIsSubmitSuccessful: true, // Don't reset success state
-})
+reset(values?, options?: ResetOptions)
+
+interface ResetOptions {
+  keepErrors?: boolean           // Preserve validation errors
+  keepDirty?: boolean            // Preserve dirty field tracking
+  keepTouched?: boolean          // Preserve touched field tracking
+  keepSubmitCount?: boolean      // Preserve submission count
+  keepDefaultValues?: boolean    // Don't update stored defaults
+  keepIsSubmitting?: boolean     // Preserve submitting state
+  keepIsSubmitSuccessful?: boolean // Preserve success state
+}
 ```
+
+### Understanding Reset Options
+
+::: info Validation Configuration Always Preserved
+The validation schema itself is never affected by `reset()`. Only the form's **state** (values, errors, dirty/touched tracking) can be reset. Your Zod schema and validation rules remain intact.
+:::
+
+### Resetting Values While Keeping Errors
+
+**Use case:** User wants to "start over" but you want to keep showing validation errors from a failed submission until they fix them.
+
+```typescript
+const { reset, formState, setError } = useForm({ schema })
+
+const resetButKeepErrors = () => {
+  // Reset all values to defaults, but keep error messages visible
+  reset(undefined, { keepErrors: true })
+
+  // formState.value.errors still contains previous validation errors
+  // User can see what was wrong and fix it with fresh input
+}
+```
+
+**Practical example - Server validation errors:**
+
+```typescript
+const onSubmit = async (data) => {
+  try {
+    await submitToServer(data)
+  } catch (error) {
+    // Server returned validation errors
+    if (error.validationErrors) {
+      // Show server errors as persistent (won't be cleared by client validation)
+      for (const [field, message] of Object.entries(error.validationErrors)) {
+        setError(field, { message, persistent: true })
+      }
+
+      // Reset values to let user start fresh, but keep errors visible
+      reset(undefined, { keepErrors: true })
+    }
+  }
+}
+```
+
+### Resetting While Preserving Interaction State
+
+**Use case:** Load new data from server without losing track of user interaction history.
+
+```typescript
+const loadNewUserData = async (userId: string) => {
+  const userData = await fetchUser(userId)
+
+  // Reset with new values, but preserve interaction tracking
+  reset(userData, {
+    keepDirty: true, // Remember which fields user modified before
+    keepTouched: true, // Remember which fields user interacted with
+    keepSubmitCount: true, // Remember how many times form was submitted
+  })
+}
+```
+
+### Reset After Successful Submission
+
+**Use case:** Clear form completely after successful submission, ready for new entry.
+
+```typescript
+const onSubmit = async (data) => {
+  await submitForm(data)
+
+  // Complete reset - form is fresh for next entry
+  reset()
+
+  // Equivalent to:
+  // reset(undefined, {
+  //   keepErrors: false,
+  //   keepDirty: false,
+  //   keepTouched: false,
+  //   keepSubmitCount: false,
+  //   keepDefaultValues: false,
+  //   keepIsSubmitting: false,
+  //   keepIsSubmitSuccessful: false
+  // })
+}
+```
+
+### Partial Reset with New Default Values
+
+**Use case:** Update some fields while keeping others, and control what becomes the new "default".
+
+```typescript
+const { reset, getValues } = useForm({
+  schema,
+  defaultValues: { name: '', email: '', role: 'user' },
+})
+
+// Later: reset only specific fields
+const resetEmailOnly = () => {
+  const current = getValues()
+  reset({
+    ...current, // Keep current values
+    email: '', // Reset only email
+  })
+}
+
+// Reset values but DON'T update stored defaults
+const temporaryReset = () => {
+  reset(
+    { name: 'Guest', email: '', role: 'guest' },
+    {
+      keepDefaultValues: true, // Original defaults ('', '', 'user') preserved
+    },
+  )
+
+  // Later calling reset() without values will restore original defaults
+}
+```
+
+### Reset Options Summary
+
+| Option                   | Default | When to Use                                     |
+| ------------------------ | ------- | ----------------------------------------------- |
+| `keepErrors`             | `false` | Server errors should persist while user retries |
+| `keepDirty`              | `false` | Track cumulative changes across data loads      |
+| `keepTouched`            | `false` | Maintain interaction history                    |
+| `keepSubmitCount`        | `false` | Track total submissions across resets           |
+| `keepDefaultValues`      | `false` | Temporary data changes, want original defaults  |
+| `keepIsSubmitting`       | `false` | Rarely used - edge cases with async resets      |
+| `keepIsSubmitSuccessful` | `false` | Maintain success state across data refreshes    |
 
 ### Reset After Submission
 
@@ -237,6 +367,21 @@ const isEmailValid = await trigger('email')
 const areCredentialsValid = await trigger(['email', 'password'])
 ```
 
+### TriggerOptions
+
+The `trigger` method accepts an optional second parameter with options:
+
+```typescript
+// markAsSubmitted: Increment submitCount to activate reValidateMode
+await trigger('email', { markAsSubmitted: true })
+```
+
+When `markAsSubmitted: true`:
+
+- Increments `formState.submitCount`
+- Activates `reValidateMode` behavior for subsequent changes
+- Useful for multi-step forms where each step should activate re-validation
+
 ### Use Cases
 
 ```typescript
@@ -258,6 +403,31 @@ const onCustomBlur = async (fieldName: string) => {
 const canSubmit = async () => {
   return await trigger()
 }
+```
+
+### Multi-Step Form Validation
+
+Use `markAsSubmitted` to activate re-validation mode between steps:
+
+```typescript
+const { trigger, formState } = useForm({
+  schema,
+  mode: 'onSubmit',
+  reValidateMode: 'onChange',
+})
+
+// Step 1: Personal Info
+const validateStep1 = async () => {
+  const isValid = await trigger(['firstName', 'lastName', 'email'], {
+    markAsSubmitted: true, // Activates reValidateMode for step 1 fields
+  })
+  if (isValid) {
+    currentStep.value = 2
+  }
+}
+
+// After step 1 validation passes, any changes to step 1 fields
+// will trigger immediate re-validation (reValidateMode: 'onChange')
 ```
 
 ## setError

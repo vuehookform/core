@@ -9,7 +9,7 @@ export type ValidationMode = 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'
 /**
  * Extract the inferred type from a Zod schema
  */
-export type InferSchema<T extends ZodType> = z.infer<T>
+export type InferSchema<TSchema extends ZodType> = z.infer<TSchema>
 
 /**
  * Alias for InferSchema - extracts form value type from schema.
@@ -236,7 +236,7 @@ export interface FieldState {
   /** Whether field has a validation error */
   invalid: boolean
   /** The error (string for backward compatibility, or FieldError for structured errors) */
-  error?: string | FieldError
+  error?: FieldErrorValue
 }
 
 /**
@@ -247,6 +247,11 @@ export interface ErrorOption {
   type?: string
   /** Error message to display */
   message: string
+  /**
+   * If true, the error will not be cleared by subsequent validations.
+   * Useful for server-side validation errors that should persist until explicitly cleared.
+   */
+  persistent?: boolean
 }
 
 /**
@@ -282,6 +287,17 @@ export interface ResetFieldOptions<TValue = unknown> {
   keepTouched?: boolean
   /** New default value (updates stored default) - typed to match field */
   defaultValue?: TValue
+}
+
+/**
+ * Options for trigger()
+ */
+export interface TriggerOptions {
+  /**
+   * If true, increments submitCount to activate reValidateMode behavior.
+   * Useful when you want manual validation to trigger reValidation on subsequent changes.
+   */
+  markAsSubmitted?: boolean
 }
 
 /**
@@ -963,8 +979,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
   /**
    * Manually trigger validation for specific fields or entire form
    * @param name - Optional field path or array of paths
+   * @param options - Optional trigger options (e.g., markAsSubmitted)
    */
-  trigger: <TPath extends Path<InferSchema<TSchema>>>(name?: TPath | TPath[]) => Promise<boolean>
+  trigger: <TPath extends Path<InferSchema<TSchema>>>(
+    name?: TPath | TPath[],
+    options?: TriggerOptions,
+  ) => Promise<boolean>
 
   /**
    * Programmatically focus a field
@@ -975,6 +995,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
     name: TPath,
     options?: SetFocusOptions,
   ) => void
+
+  /**
+   * Form configuration options (mode, reValidateMode).
+   * Useful for composables like useController that need to respect validation modes.
+   */
+  options: Pick<UseFormOptions<TSchema>, 'mode' | 'reValidateMode'>
 }
 
 /**

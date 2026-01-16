@@ -46,6 +46,9 @@ export type {
   // Field array types
   FieldArray,
   FieldArrayItem,
+  FieldArrayOptions,
+  FieldArrayRules,
+  FieldArrayFocusOptions,
   // Utility types for type-safe paths
   InferSchema,
   FormValues,
@@ -61,4 +64,12 @@ export type {
   ResetOptions,
   ResetFieldOptions,
   AsyncDefaultValues,
+  // Method option types
+  TriggerOptions,
+  SetValueOptions,
+  UnregisterOptions,
+  CriteriaMode,
 } from './types'
+
+// Path utilities for advanced form data manipulation
+export { get, set, unset, generateId, clearPathCache } from './utils/paths'

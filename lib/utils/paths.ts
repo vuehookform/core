@@ -7,6 +7,13 @@ const pathCache = new Map<string, string[]>()
 const PATH_CACHE_MAX_SIZE = 256
 
 /**
+ * Maximum allowed array index to prevent memory exhaustion attacks.
+ * Paths like 'items.999999.value' would create sparse arrays with millions of empty slots.
+ * 10,000 is a reasonable upper limit that covers most real-world use cases.
+ */
+const MAX_ARRAY_INDEX = 10000
+
+/**
  * Get cached path segments or parse and cache them.
  * Uses simple LRU eviction (delete oldest when full).
  */
@@ -31,8 +38,12 @@ function getPathSegments(path: string): string[] {
 }
 
 /**
- * Clear the path cache. Useful for testing or when paths change significantly.
- * @internal
+ * Clear the path segment cache.
+ * Call this between SSR requests to prevent memory accumulation,
+ * or in tests to reset state.
+ *
+ * The cache is bounded to 256 entries, so clearing is optional
+ * for client-side only applications.
  */
 export function clearPathCache(): void {
   pathCache.clear()
@@ -70,6 +81,24 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
   // Prototype pollution protection
   const UNSAFE_KEYS = ['__proto__', 'constructor', 'prototype']
   if (keys.some((k) => UNSAFE_KEYS.includes(k))) return
+
+  // Array index bounds protection - prevent memory exhaustion from huge indices
+  // Check all numeric keys to ensure they're within safe bounds
+  for (const key of keys) {
+    if (/^\d+$/.test(key)) {
+      const index = parseInt(key, 10)
+      if (index > MAX_ARRAY_INDEX) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(
+            `[vue-hook-form] set(): Array index ${index} exceeds maximum allowed (${MAX_ARRAY_INDEX}). ` +
+              `Path "${path}" was not set to prevent memory exhaustion.`,
+          )
+        }
+        return
+      }
+    }
+  }
+
   const lastKey = keys.pop()!
   let current: Record<string, unknown> = obj
 
@@ -130,15 +159,54 @@ export function unset(obj: Record<string, unknown>, path: string): void {
 }
 
 /**
- * Check if path exists in object
+ * Check if path exists in object.
+ * Unlike `get(obj, path) !== undefined`, this properly distinguishes between
+ * a missing path and a path that exists with an `undefined` value.
+ *
+ * @example
+ * has({ name: undefined }, 'name') // true - path exists
+ * has({ }, 'name') // false - path doesn't exist
+ * has({ user: { name: 'John' } }, 'user.name') // true
+ * has({ user: { name: 'John' } }, 'user.age') // false
  */
 export function has(obj: Record<string, unknown>, path: string): boolean {
-  return get(obj, path) !== undefined
+  if (!path) return false
+
+  const segments = getPathSegments(path)
+  let current: unknown = obj
+
+  for (let i = 0; i < segments.length; i++) {
+    if (current === null || current === undefined) {
+      return false
+    }
+
+    const segment = segments[i] as string
+
+    // Check if the property exists using 'in' operator
+    if (!(segment in Object(current))) {
+      return false
+    }
+
+    // Move to next level (only if not the last segment)
+    if (i < segments.length - 1) {
+      current = (current as Record<string, unknown>)[segment]
+    }
+  }
+
+  return true
 }
 
 /**
- * Generate a unique ID for field array items
- * Uses timestamp + counter + random string for uniqueness across HMR reloads
+ * Generate a unique ID for field array items.
+ * Uses timestamp + counter + random string for uniqueness across HMR reloads.
+ *
+ * Format: `field_<timestamp>_<counter>_<random>`
+ *
+ * @returns Unique string ID, e.g., `field_1734012345678_0_a1b2c3d4e`
+ *
+ * @example
+ * const id1 = generateId() // 'field_1734012345678_0_a1b2c3d4e'
+ * const id2 = generateId() // 'field_1734012345678_1_f5g6h7i8j'
  */
 let idCounter = 0
 export function generateId(): string {

@@ -197,6 +197,59 @@ items.replace([
 ])
 ```
 
+## Validation Mode Behavior
+
+Field array operations (`append`, `prepend`, `insert`, `update`, `remove`, `swap`, `move`, `replace`) respect the form's validation mode settings:
+
+| Mode        | Validation on Operations            |
+| ----------- | ----------------------------------- |
+| `onSubmit`  | No validation                       |
+| `onChange`  | Validates after each operation      |
+| `onBlur`    | No validation (no blur event)       |
+| `onTouched` | Validates if array field is touched |
+
+### Example with Different Modes
+
+```typescript
+// Mode: onSubmit - operations don't trigger validation
+const { fields } = useForm({
+  schema,
+  mode: 'onSubmit',
+})
+const items = fields('items')
+items.append({ name: '' }) // No validation
+
+// Mode: onChange - operations trigger validation
+const { fields } = useForm({
+  schema,
+  mode: 'onChange',
+})
+const items = fields('items')
+items.append({ name: '' }) // Validates the array
+```
+
+### reValidateMode After Submission
+
+After form submission (`submitCount > 0`), the `reValidateMode` takes effect:
+
+```typescript
+const { fields, handleSubmit } = useForm({
+  schema,
+  mode: 'onSubmit',
+  reValidateMode: 'onChange',
+})
+
+const items = fields('items')
+
+// Before submit: items.append() does NOT validate
+await handleSubmit(onSubmit)()
+// After submit: items.append() DOES validate (reValidateMode: 'onChange')
+```
+
+::: tip Consistency
+This behavior is consistent with `register()` and `useController()`, ensuring uniform validation across your entire form regardless of how fields are managed.
+:::
+
 ## Field Object Properties
 
 Each item in `items.value` has:
@@ -312,14 +365,14 @@ const items = fields('items', {
 
 ## Focus Options
 
-Control focus behavior when adding items:
+Control focus behavior when adding items. **Focus is opt-in by default** (`shouldFocus: false`):
 
 ```typescript
-// Focus the new item after appending (default: true)
+// Enable focus on the new item after appending
 items.append({ name: '' }, { shouldFocus: true })
 
-// Don't focus after appending
-items.append({ name: '' }, { shouldFocus: false })
+// Default behavior: no automatic focus
+items.append({ name: '' }) // shouldFocus defaults to false
 
 // When adding multiple items, focus a specific one
 items.append([{ name: '' }, { name: '' }], { focusIndex: 1 })
@@ -387,7 +440,7 @@ const schema = z.object({
     .array(
       z.object({
         product: z.string().min(1, 'Select a product'),
-        quantity: z.coerce.number().min(1, 'Min 1').max(99, 'Max 99'),
+        quantity: z.number().min(1, 'Min 1').max(99, 'Max 99'),
         notes: z.string().optional(),
       }),
     )

@@ -27,6 +27,10 @@ Use `useController` when:
 
 For simple cases, use `register` with `controlled: true` instead.
 
+::: info Why useController?
+Native HTML elements emit standard events (`@input`, `@blur`) with predictable structure (`Event.target.value`). Third-party components often use different event patterns like `@update:modelValue` with direct values. `useController` provides explicit `onChange(value)` and `onBlur()` methods that work regardless of how the component emits changes.
+:::
+
 ## Options
 
 ### name
@@ -100,6 +104,36 @@ Reactive field state:
   isDirty: boolean // Value differs from default
 }
 ```
+
+## Validation Mode Behavior
+
+`useController` respects the form's validation mode settings:
+
+| Mode        | `onChange` behavior       | `onBlur` behavior         |
+| ----------- | ------------------------- | ------------------------- |
+| `onSubmit`  | No validation             | No validation             |
+| `onChange`  | Validates                 | No validation             |
+| `onBlur`    | No validation             | Validates                 |
+| `onTouched` | Validates (after touched) | Validates (marks touched) |
+
+After form submission (`submitCount > 0`), the `reValidateMode` takes effect:
+
+```typescript
+const { control } = useForm({
+  schema,
+  mode: 'onSubmit',
+  reValidateMode: 'onChange', // After submit, validate on every change
+})
+
+const { field } = useController({ name: 'email', control })
+
+// Before submit: field.onChange() does NOT validate
+// After submit: field.onChange() DOES validate
+```
+
+::: tip
+This behavior is consistent with `register()` and field array operations, ensuring uniform validation across your entire form.
+:::
 
 ## Example: Custom Input Component
 
