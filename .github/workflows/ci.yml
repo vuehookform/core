@@ -21,3 +21,39 @@ jobs:
       - run: npm run lint
       - run: npm run test:run
       - run: npm run build
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build Library
+        run: npm run build:lib
+
+      - name: Build E2E App
+        run: npm run -w e2e build
+
+      - name: Run E2E Tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: e2e
+          start: npm run preview
+          wait-on: 'http://localhost:4173'
+          browser: chrome
+
+      - name: Upload Cypress Screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: e2e/cypress/screenshots
+          retention-days: 7

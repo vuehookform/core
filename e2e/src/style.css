@@ -1,0 +1,201 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background: #f8f9fa;
+  border-right: 1px solid #e9ecef;
+  padding: 1rem;
+  flex-shrink: 0;
+}
+
+.sidebar h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #495057;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  margin-bottom: 0.25rem;
+}
+
+.sidebar a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  color: #495057;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.sidebar a:hover {
+  background: #e9ecef;
+}
+
+.sidebar a.router-link-active {
+  background: #007bff;
+  color: white;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 800px;
+}
+
+.content h1 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #212529;
+}
+
+.form-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #495057;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.field input.p-invalid,
+.field .p-invalid {
+  border-color: #dc3545;
+}
+
+.submitted-data,
+.form-state-debug,
+.array-state {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.submitted-data h3,
+.form-state-debug h3,
+.array-state h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: #495057;
+}
+
+.submitted-data pre {
+  margin: 0;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+}
+
+.form-state-debug ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.addresses-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
+
+.addresses-section h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+}
+
+.address-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.address-item h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #495057;
+}
+
+.array-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.mode-selector {
+  margin-bottom: 1.5rem;
+}
+
+.mode-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.mode-description {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: #e7f3ff;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.field-state {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+button[type='submit'],
+.p-button {
+  margin-top: 0.5rem;
+}
