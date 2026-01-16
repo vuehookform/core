@@ -87,6 +87,10 @@ export interface FormContext<FormValues> {
   // Schema validation debounce timers per field (for validationDebounce option)
   schemaValidationTimers: Map<string, ReturnType<typeof setTimeout>>
 
+  // Persistent errors: field names with errors that should not be cleared by validation
+  // Use setError(..., { persistent: true }) to add, clearErrors() to remove
+  persistentErrorFields: Set<string>
+
   // Options
   options: UseFormOptions<ZodType>
 }
@@ -175,6 +179,9 @@ export function createFormContext<TSchema extends ZodType>(
 
   // Schema validation debounce timers per field (for validationDebounce option)
   const schemaValidationTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  // Persistent errors: field names with errors that should not be cleared by validation
+  const persistentErrorFields = new Set<string>()
 
   // Form-wide disabled state (supports MaybeRef)
   const isDisabled = ref(false)
@@ -275,6 +282,7 @@ export function createFormContext<TSchema extends ZodType>(
     touchedFieldCount,
     validationCache,
     schemaValidationTimers,
+    persistentErrorFields,
     options: options as UseFormOptions<ZodType>,
   }
 }

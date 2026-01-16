@@ -12,6 +12,7 @@ import type {
   SetValueOptions,
   ResetOptions,
   ResetFieldOptions,
+  TriggerOptions,
   InferSchema,
   Path,
   PathValue,
@@ -378,7 +379,8 @@ export function useForm<TSchema extends ZodType>(
       }
     }
 
-    // shouldValidate (default: false)
+    // shouldValidate (default: false) - explicit opt-in to immediate validation
+    // This is an explicit override that validates regardless of mode
     if (setValueOptions?.shouldValidate) {
       validate(name)
     }
@@ -648,14 +650,17 @@ export function useForm<TSchema extends ZodType>(
     }
 
     if (name === undefined) {
-      // Clear all errors
+      // Clear all errors and persistent error tracking
       ctx.errors.value = {} as FieldErrors<FormValues>
+      ctx.persistentErrorFields.clear()
       return
     }
 
     const fieldsToClean = Array.isArray(name) ? name : [name]
     for (const field of fieldsToClean) {
       clearFieldErrors(ctx.errors, field)
+      // Also remove from persistent tracking when explicitly cleared
+      ctx.persistentErrorFields.delete(field)
     }
   }
 
@@ -674,6 +679,11 @@ export function useForm<TSchema extends ZodType>(
 
     set(newErrors, name, errorValue)
     ctx.errors.value = newErrors as FieldErrors<FormValues>
+
+    // Track persistent errors so they survive validation
+    if (error.persistent) {
+      ctx.persistentErrorFields.add(name)
+    }
   }
 
   /**
@@ -916,7 +926,10 @@ export function useForm<TSchema extends ZodType>(
    * const addressesValid = await trigger(addressFields)
    * ```
    */
-  async function trigger<TPath extends Path<FormValues>>(name?: TPath | TPath[]): Promise<boolean> {
+  async function trigger<TPath extends Path<FormValues>>(
+    name?: TPath | TPath[],
+    options?: TriggerOptions,
+  ): Promise<boolean> {
     // Dev-mode path validation
     if (__DEV__ && name) {
       const names = Array.isArray(name) ? name : [name]
@@ -931,6 +944,11 @@ export function useForm<TSchema extends ZodType>(
           }
         }
       }
+    }
+
+    // Increment submitCount to activate reValidateMode behavior
+    if (options?.markAsSubmitted) {
+      ctx.submitCount.value++
     }
 
     if (name === undefined) {

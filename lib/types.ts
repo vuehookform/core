@@ -247,6 +247,11 @@ export interface ErrorOption {
   type?: string
   /** Error message to display */
   message: string
+  /**
+   * If true, the error will not be cleared by subsequent validations.
+   * Useful for server-side validation errors that should persist until explicitly cleared.
+   */
+  persistent?: boolean
 }
 
 /**
@@ -282,6 +287,17 @@ export interface ResetFieldOptions<TValue = unknown> {
   keepTouched?: boolean
   /** New default value (updates stored default) - typed to match field */
   defaultValue?: TValue
+}
+
+/**
+ * Options for trigger()
+ */
+export interface TriggerOptions {
+  /**
+   * If true, increments submitCount to activate reValidateMode behavior.
+   * Useful when you want manual validation to trigger reValidation on subsequent changes.
+   */
+  markAsSubmitted?: boolean
 }
 
 /**

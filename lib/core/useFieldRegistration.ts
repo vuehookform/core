@@ -176,6 +176,7 @@ export function createFieldRegistration<FormValues>(
         }
 
         // Custom validation with optional debouncing (reuse cached fieldOpts)
+        // Custom validation always runs on input if provided (it's an explicit opt-in)
         if (fieldOpts?.validate && !fieldOpts.disabled) {
           // Generate a new request ID for race condition handling (monotonic counter)
           const requestId = ++validationRequestCounter

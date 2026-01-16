@@ -203,6 +203,7 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
 
   /**
    * Cancel pending error and clear existing error for a field (delayError feature)
+   * Preserves errors for fields marked as persistent via setError(..., { persistent: true })
    */
   function cancelError(fieldPath: string): FieldErrors<FormValues> {
     // Cancel any pending delayed error
@@ -215,6 +216,11 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
 
     // Clear native validation
     applyNativeValidation(fieldPath, null)
+
+    // Preserve persistent errors (e.g., server-side validation errors)
+    if (ctx.persistentErrorFields.has(fieldPath)) {
+      return ctx.errors.value
+    }
 
     // Clear existing error
     return clearFieldErrors(ctx.errors.value, fieldPath)
