@@ -1,56 +1,47 @@
-import type { Ref, ShallowRef } from 'vue'
+import type { ShallowRef } from 'vue'
+import { hashValue } from '../utils/hash'
+import { get } from '../utils/paths'
 
 /**
  * Mark a field as dirty (value has changed from default).
  * Optimized to skip clone if already dirty.
- * Maintains O(1) dirty field count for performance.
  *
  * @param dirtyFields - The reactive dirty fields record
- * @param dirtyFieldCount - Counter for O(1) isDirty checks
  * @param fieldName - Name of the field to mark as dirty
  */
 export function markFieldDirty(
   dirtyFields: ShallowRef<Record<string, boolean>>,
-  dirtyFieldCount: Ref<number>,
   fieldName: string,
 ): void {
   // Skip if already dirty (avoid unnecessary object clone)
   if (dirtyFields.value[fieldName]) return
   dirtyFields.value = { ...dirtyFields.value, [fieldName]: true }
-  dirtyFieldCount.value++
 }
 
 /**
  * Mark a field as touched (user has interacted with it).
  * Optimized to skip clone if already touched.
- * Maintains O(1) touched field count for performance.
  *
  * @param touchedFields - The reactive touched fields record
- * @param touchedFieldCount - Counter for O(1) touched checks
  * @param fieldName - Name of the field to mark as touched
  */
 export function markFieldTouched(
   touchedFields: ShallowRef<Record<string, boolean>>,
-  touchedFieldCount: Ref<number>,
   fieldName: string,
 ): void {
   // Skip if already touched (avoid unnecessary object clone)
   if (touchedFields.value[fieldName]) return
   touchedFields.value = { ...touchedFields.value, [fieldName]: true }
-  touchedFieldCount.value++
 }
 
 /**
  * Clear dirty state for a field.
- * Maintains O(1) dirty field count for performance.
  *
  * @param dirtyFields - The reactive dirty fields record
- * @param dirtyFieldCount - Counter for O(1) isDirty checks
  * @param fieldName - Name of the field to clear
  */
 export function clearFieldDirty(
   dirtyFields: ShallowRef<Record<string, boolean>>,
-  dirtyFieldCount: Ref<number>,
   fieldName: string,
 ): void {
   // Skip if not dirty (avoid unnecessary object clone)
@@ -58,20 +49,16 @@ export function clearFieldDirty(
   const newDirty = { ...dirtyFields.value }
   delete newDirty[fieldName]
   dirtyFields.value = newDirty
-  dirtyFieldCount.value--
 }
 
 /**
  * Clear touched state for a field.
- * Maintains O(1) touched field count for performance.
  *
  * @param touchedFields - The reactive touched fields record
- * @param touchedFieldCount - Counter for O(1) touched checks
  * @param fieldName - Name of the field to clear
  */
 export function clearFieldTouched(
   touchedFields: ShallowRef<Record<string, boolean>>,
-  touchedFieldCount: Ref<number>,
   fieldName: string,
 ): void {
   // Skip if not touched (avoid unnecessary object clone)
@@ -79,7 +66,6 @@ export function clearFieldTouched(
   const newTouched = { ...touchedFields.value }
   delete newTouched[fieldName]
   touchedFields.value = newTouched
-  touchedFieldCount.value--
 }
 
 /**
@@ -119,4 +105,48 @@ export function clearFieldErrors<T>(
     delete newErrors[key]
   }
   errors.value = newErrors
+}
+
+/**
+ * Update field dirty state based on value comparison with default.
+ * Field is dirty only if current value differs from default value.
+ *
+ * Uses lazy hash computation - default hashes are computed on first access
+ * and cached for subsequent comparisons.
+ *
+ * @param dirtyFields - The reactive dirty fields record
+ * @param defaultValues - The original default values
+ * @param defaultValueHashes - Cache of hashed default values
+ * @param fieldName - Name of the field to check
+ * @param currentValue - The current value to compare against default
+ */
+export function updateFieldDirtyState(
+  dirtyFields: ShallowRef<Record<string, boolean>>,
+  defaultValues: Record<string, unknown>,
+  defaultValueHashes: Map<string, string>,
+  fieldName: string,
+  currentValue: unknown,
+): void {
+  // Get or compute default hash (lazy initialization)
+  let defaultHash = defaultValueHashes.get(fieldName)
+  if (defaultHash === undefined) {
+    const defaultValue = get(defaultValues, fieldName)
+    defaultHash = hashValue(defaultValue)
+    defaultValueHashes.set(fieldName, defaultHash)
+  }
+
+  const currentHash = hashValue(currentValue)
+  const isDirty = currentHash !== defaultHash
+  const wasDirty = dirtyFields.value[fieldName] === true
+
+  if (isDirty && !wasDirty) {
+    // Became dirty - value differs from default
+    dirtyFields.value = { ...dirtyFields.value, [fieldName]: true }
+  } else if (!isDirty && wasDirty) {
+    // Reverted to clean - value matches default
+    const newDirty = { ...dirtyFields.value }
+    delete newDirty[fieldName]
+    dirtyFields.value = newDirty
+  }
+  // If isDirty === wasDirty, no change needed
 }

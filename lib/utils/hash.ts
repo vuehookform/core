@@ -26,7 +26,15 @@ export function hashValue(value: unknown): string {
 
   // Primitives: direct string conversion
   if (type === 'string') return `s:${value}`
-  if (type === 'number') return `n:${value}`
+  if (type === 'number') {
+    const num = value as number
+    // Handle special number cases for stable hashing
+    if (Number.isNaN(num)) return 'n:NaN'
+    // Normalize -0 to 0 for consistent dirty state tracking
+    if (num === 0) return 'n:0'
+    if (!Number.isFinite(num)) return `n:${num > 0 ? 'Infinity' : '-Infinity'}`
+    return `n:${num}`
+  }
   if (type === 'boolean') return `b:${value}`
 
   // Objects and arrays: JSON stringify

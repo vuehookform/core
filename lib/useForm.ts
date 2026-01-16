@@ -1,4 +1,4 @@
-import { computed, reactive, type ComputedRef } from 'vue'
+import { computed, reactive, onUnmounted, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -33,12 +33,13 @@ import { createFieldRegistration } from './core/useFieldRegistration'
 import { createFieldArrayManager } from './core/useFieldArray'
 import { syncUncontrolledInputs, updateDomElement } from './core/domSync'
 import {
-  markFieldDirty,
   markFieldTouched,
   clearFieldDirty,
   clearFieldTouched,
   clearFieldErrors,
+  updateFieldDirtyState,
 } from './core/fieldState'
+import { hashValue } from './utils/hash'
 
 /**
  * Main form management composable
@@ -64,6 +65,17 @@ export function useForm<TSchema extends ZodType>(
 
   // Create shared context with all reactive state
   const ctx = createFormContext(options)
+
+  // Synchronous submission lock to prevent double-submit race conditions.
+  // Unlike ctx.isSubmitting (reactive), this is checked and set atomically
+  // before any async operations, preventing the race window between checking
+  // and setting the reactive value.
+  let isSubmissionLocked = false
+
+  // Cleanup watchers on unmount to prevent memory leaks
+  onUnmounted(() => {
+    ctx.cleanup()
+  })
 
   // Create validation functions
   const { validate, clearAllPendingErrors } = createValidation<FormValues>(ctx)
@@ -168,15 +180,16 @@ export function useForm<TSchema extends ZodType>(
   // Each property is computed individually, then composed into formState
   // This provides stable object reference and granular dependency tracking
 
-  // O(1) isDirty computation using counter instead of O(n) key scan
-  const isDirtyComputed = computed(() => ctx.dirtyFieldCount.value > 0)
+  // isDirty: true if any field differs from default
+  const isDirtyComputed = computed(() => Object.keys(ctx.dirtyFields.value).length > 0)
 
   // Memoized merged errors (internal + external)
   const errorsComputed = computed<FieldErrors<FormValues>>(() => getMergedErrors())
 
   // isValid: only true after interaction AND no errors
   const isValidComputed = computed(() => {
-    const hasInteraction = ctx.submitCount.value > 0 || ctx.touchedFieldCount.value > 0
+    const hasInteraction =
+      ctx.submitCount.value > 0 || Object.keys(ctx.touchedFields.value).length > 0
     if (!hasInteraction) return false
     return Object.keys(errorsComputed.value).length === 0
   })
@@ -262,9 +275,13 @@ export function useForm<TSchema extends ZodType>(
       // Prevent submission if form is disabled
       if (ctx.isDisabled.value) return
 
-      // Prevent double-submit: ignore if already submitting
-      if (ctx.isSubmitting.value) return
+      // Prevent double-submit using synchronous lock (checked BEFORE any async work).
+      // This prevents the race condition where rapid clicks could both pass the
+      // ctx.isSubmitting.value check before either sets it to true.
+      if (isSubmissionLocked) return
+      isSubmissionLocked = true
 
+      // Also set reactive state for UI binding
       ctx.isSubmitting.value = true
       ctx.submitCount.value++
       ctx.isSubmitSuccessful.value = false
@@ -294,6 +311,7 @@ export function useForm<TSchema extends ZodType>(
         }
       } finally {
         ctx.isSubmitting.value = false
+        isSubmissionLocked = false
       }
     }
   }
@@ -359,14 +377,19 @@ export function useForm<TSchema extends ZodType>(
 
     set(ctx.formData, name, value)
 
-    // shouldDirty (default: true)
-    if (setValueOptions?.shouldDirty !== false) {
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+    // shouldDirty (default: true) - uses value comparison to determine dirty state
+    // shouldDirty: false - explicitly clear dirty state (used when populating server data)
+    if (setValueOptions?.shouldDirty === false) {
+      // Clear dirty state for this field - server data shouldn't be considered user-changed
+      clearFieldDirty(ctx.dirtyFields, name)
+    } else {
+      // Default behavior: compare value to default to determine dirty state
+      updateFieldDirtyState(ctx.dirtyFields, ctx.defaultValues, ctx.defaultValueHashes, name, value)
     }
 
     // shouldTouch (default: false)
     if (setValueOptions?.shouldTouch) {
-      markFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
+      markFieldTouched(ctx.touchedFields, name)
     }
 
     // Only update DOM element for uncontrolled inputs
@@ -392,6 +415,10 @@ export function useForm<TSchema extends ZodType>(
   function reset(values?: Partial<FormValues>, resetOptions?: ResetOptions): void {
     const opts = resetOptions || {}
 
+    // Clear validation cache FIRST to prevent race conditions where a new validation
+    // starts after generation increment but before cache clear, finding stale entries
+    ctx.validationCache.clear()
+
     // Increment reset generation to invalidate any in-flight validations
     ctx.resetGeneration.value++
 
@@ -399,18 +426,25 @@ export function useForm<TSchema extends ZodType>(
     clearAllPendingErrors()
     ctx.validatingFields.value = new Set()
 
-    // Clear validation cache (values are being reset)
-    ctx.validationCache.clear()
-
     // Clear any pending schema validation debounce timers
     for (const timer of ctx.schemaValidationTimers.values()) {
       clearTimeout(timer)
     }
     ctx.schemaValidationTimers.clear()
 
+    // Clear any pending custom validation debounce timers to prevent memory leaks
+    // (timers hold references to form context via closures)
+    for (const timer of ctx.debounceTimers.values()) {
+      clearTimeout(timer)
+    }
+    ctx.debounceTimers.clear()
+    ctx.validationRequestIds.clear()
+
     // Update default values unless keepDefaultValues is true
     if (!opts.keepDefaultValues && values) {
       Object.assign(ctx.defaultValues, values)
+      // Clear cached hashes since defaults changed - will be lazily recomputed
+      ctx.defaultValueHashes.clear()
     }
 
     // Clear form data
@@ -424,14 +458,14 @@ export function useForm<TSchema extends ZodType>(
     // Reset state based on options
     if (!opts.keepErrors) {
       ctx.errors.value = {} as FieldErrors<FormValues>
+      // Also clear persistent error tracking so they don't survive validation cycles
+      ctx.persistentErrorFields.clear()
     }
     if (!opts.keepTouched) {
       ctx.touchedFields.value = {}
-      ctx.touchedFieldCount.value = 0
     }
     if (!opts.keepDirty) {
       ctx.dirtyFields.value = {}
-      ctx.dirtyFieldCount.value = 0
     }
     if (!opts.keepSubmitCount) {
       ctx.submitCount.value = 0
@@ -487,6 +521,10 @@ export function useForm<TSchema extends ZodType>(
     // Increment reset generation to invalidate pending validations
     ctx.resetGeneration.value++
 
+    // Clear validation cache for this field (both partial and full strategy variants)
+    ctx.validationCache.delete(`${name}:partial`)
+    ctx.validationCache.delete(`${name}:full`)
+
     // Clear error delay timer for this field
     const errorTimer = ctx.errorDelayTimers.get(name)
     if (errorTimer) {
@@ -502,6 +540,8 @@ export function useForm<TSchema extends ZodType>(
     } else {
       // Update stored default if new one provided
       set(ctx.defaultValues, name, defaultValue)
+      // Update cached hash for this field
+      ctx.defaultValueHashes.set(name, hashValue(defaultValue))
     }
 
     // Update form data (deep clone to prevent reference sharing)
@@ -515,12 +555,12 @@ export function useForm<TSchema extends ZodType>(
 
     // Conditionally clear dirty state
     if (!opts.keepDirty) {
-      clearFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      clearFieldDirty(ctx.dirtyFields, name)
     }
 
     // Conditionally clear touched state
     if (!opts.keepTouched) {
-      clearFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
+      clearFieldTouched(ctx.touchedFields, name)
     }
 
     // Update DOM element for uncontrolled inputs

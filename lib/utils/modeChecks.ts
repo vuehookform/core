@@ -24,23 +24,30 @@ function validateMode(mode: ValidationMode, paramName: string): void {
  * @param mode - The form's validation mode
  * @param isTouched - Whether the field has been touched
  * @param reValidateMode - The form's reValidateMode (used after first submit)
+ * @param hasSubmitted - Whether the form has been submitted at least once (optional, for reValidateMode)
  * @returns true if validation should be triggered
  */
 export function shouldValidateOnChange(
   mode: ValidationMode,
   isTouched: boolean,
   reValidateMode?: ValidationMode,
+  hasSubmitted?: boolean,
 ): boolean {
   if (__DEV__) {
     validateMode(mode, 'validation mode')
     if (reValidateMode) validateMode(reValidateMode, 'reValidateMode')
   }
 
-  return (
-    mode === 'onChange' ||
-    (mode === 'onTouched' && isTouched) ||
-    (isTouched && reValidateMode === 'onChange')
-  )
+  // Primary mode triggers (always apply)
+  if (mode === 'onChange') return true
+  if (mode === 'onTouched' && isTouched) return true
+
+  // reValidateMode triggers (only apply after first submission)
+  // hasSubmitted === true means form was submitted; false/undefined means not submitted
+  // This ensures reValidateMode doesn't trigger after form reset (hasSubmitted = false)
+  if (hasSubmitted === true && reValidateMode === 'onChange') return true
+
+  return false
 }
 
 /**
@@ -62,5 +69,9 @@ export function shouldValidateOnBlur(
     if (reValidateMode) validateMode(reValidateMode, 'reValidateMode')
   }
 
-  return mode === 'onBlur' || mode === 'onTouched' || (hasSubmitted && reValidateMode === 'onBlur')
+  return (
+    mode === 'onBlur' ||
+    mode === 'onTouched' ||
+    (hasSubmitted && (reValidateMode === 'onBlur' || reValidateMode === 'onTouched'))
+  )
 }

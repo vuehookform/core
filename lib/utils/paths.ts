@@ -7,6 +7,13 @@ const pathCache = new Map<string, string[]>()
 const PATH_CACHE_MAX_SIZE = 256
 
 /**
+ * Maximum allowed array index to prevent memory exhaustion attacks.
+ * Paths like 'items.999999.value' would create sparse arrays with millions of empty slots.
+ * 10,000 is a reasonable upper limit that covers most real-world use cases.
+ */
+const MAX_ARRAY_INDEX = 10000
+
+/**
  * Get cached path segments or parse and cache them.
  * Uses simple LRU eviction (delete oldest when full).
  */
@@ -74,6 +81,24 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
   // Prototype pollution protection
   const UNSAFE_KEYS = ['__proto__', 'constructor', 'prototype']
   if (keys.some((k) => UNSAFE_KEYS.includes(k))) return
+
+  // Array index bounds protection - prevent memory exhaustion from huge indices
+  // Check all numeric keys to ensure they're within safe bounds
+  for (const key of keys) {
+    if (/^\d+$/.test(key)) {
+      const index = parseInt(key, 10)
+      if (index > MAX_ARRAY_INDEX) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(
+            `[vue-hook-form] set(): Array index ${index} exceeds maximum allowed (${MAX_ARRAY_INDEX}). ` +
+              `Path "${path}" was not set to prevent memory exhaustion.`,
+          )
+        }
+        return
+      }
+    }
+  }
+
   const lastKey = keys.pop()!
   let current: Record<string, unknown> = obj
 
@@ -134,10 +159,41 @@ export function unset(obj: Record<string, unknown>, path: string): void {
 }
 
 /**
- * Check if path exists in object
+ * Check if path exists in object.
+ * Unlike `get(obj, path) !== undefined`, this properly distinguishes between
+ * a missing path and a path that exists with an `undefined` value.
+ *
+ * @example
+ * has({ name: undefined }, 'name') // true - path exists
+ * has({ }, 'name') // false - path doesn't exist
+ * has({ user: { name: 'John' } }, 'user.name') // true
+ * has({ user: { name: 'John' } }, 'user.age') // false
  */
 export function has(obj: Record<string, unknown>, path: string): boolean {
-  return get(obj, path) !== undefined
+  if (!path) return false
+
+  const segments = getPathSegments(path)
+  let current: unknown = obj
+
+  for (let i = 0; i < segments.length; i++) {
+    if (current === null || current === undefined) {
+      return false
+    }
+
+    const segment = segments[i] as string
+
+    // Check if the property exists using 'in' operator
+    if (!(segment in Object(current))) {
+      return false
+    }
+
+    // Move to next level (only if not the last segment)
+    if (i < segments.length - 1) {
+      current = (current as Record<string, unknown>)[segment]
+    }
+  }
+
+  return true
 }
 
 /**

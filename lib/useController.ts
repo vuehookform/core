@@ -104,10 +104,11 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
   // Change handler - respects form validation mode
   const onChange = (newValue: TValue) => {
     const isTouched = form.formState.value.touchedFields[name] === true
+    const hasSubmitted = form.formState.value.submitCount > 0
     const mode = form.options.mode ?? 'onSubmit'
     const reValidateMode = form.options.reValidateMode
 
-    const shouldValidate = shouldValidateOnChange(mode, isTouched, reValidateMode)
+    const shouldValidate = shouldValidateOnChange(mode, isTouched, reValidateMode, hasSubmitted)
 
     form.setValue(name, newValue, { shouldValidate })
   }

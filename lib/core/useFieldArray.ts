@@ -19,7 +19,7 @@ import {
   warnArrayOperationRejected,
   warnArrayIndexOutOfBounds,
 } from '../utils/devWarnings'
-import { markFieldDirty } from './fieldState'
+import { updateFieldDirtyState } from './fieldState'
 import { shouldValidateOnChange } from '../utils/modeChecks'
 
 /**
@@ -305,26 +305,70 @@ export function createFieldArrayManager<FormValues>(
     }
 
     /**
+     * Clear validation cache for this array field and all its children.
+     * Must be called before mutations to prevent stale cache entries.
+     */
+    const clearValidationCache = () => {
+      // Cache keys have format: `${fieldPath}:partial` or `${fieldPath}:full`
+      // We need to clear entries for this array and all child paths
+      for (const key of ctx.validationCache.keys()) {
+        // Extract field path by removing the strategy suffix
+        const colonIndex = key.lastIndexOf(':')
+        const fieldPath = colonIndex > 0 ? key.slice(0, colonIndex) : key
+        // Clear if it's the array field itself or a child path
+        if (fieldPath === name || fieldPath.startsWith(`${name}.`)) {
+          ctx.validationCache.delete(key)
+        }
+      }
+    }
+
+    /**
      * Validate the array field based on form validation mode.
      * Centralizes validation logic for all field array operations.
      */
     const validateIfNeeded = () => {
       const isTouched = ctx.touchedFields.value[name] === true
+      const hasSubmitted = ctx.submitCount.value > 0
       const shouldValidate = shouldValidateOnChange(
         ctx.options.mode ?? 'onSubmit',
         isTouched,
         ctx.options.reValidateMode,
+        hasSubmitted,
       )
       if (shouldValidate) {
         validate(name)
       }
     }
 
+    /**
+     * Verify sync between items array and formData.
+     * Rebuilds items array if out of sync (e.g., external mutation via setValue).
+     * Returns the current values array for convenience.
+     */
+    const ensureSync = (): unknown[] => {
+      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      if (fa.items.value.length !== currentValues.length) {
+        if (__DEV__) {
+          console.warn(
+            `[vue-hook-form] Field array out of sync with formData. ` +
+              `Rebuilding items array (items: ${fa.items.value.length}, formData: ${currentValues.length})`,
+          )
+        }
+        fa.items.value = currentValues.map(() => createItem(generateId()))
+        rebuildIndexCache()
+      }
+      return currentValues
+    }
+
     const append = (value: unknown | unknown[], focusOptions?: FieldArrayFocusOptions): boolean => {
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
       const values = normalizeToArray(value)
       if (values.length === 0) return true
 
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
       const insertIndex = currentValues.length // Items will be added starting at this index
 
       // Check maxLength rule before adding
@@ -350,7 +394,13 @@ export function createFieldArrayManager<FormValues>(
       appendToCache(insertIndex)
 
       // Mark dirty (optimized - skips if already dirty)
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
 
@@ -363,10 +413,14 @@ export function createFieldArrayManager<FormValues>(
       value: unknown | unknown[],
       focusOptions?: FieldArrayFocusOptions,
     ): boolean => {
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
       const values = normalizeToArray(value)
       if (values.length === 0) return true
 
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Check maxLength rule before adding
       const rules = fa.rules
@@ -391,7 +445,13 @@ export function createFieldArrayManager<FormValues>(
       updateCacheAfterInsert(0, values.length)
 
       // Mark dirty (optimized)
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
 
@@ -401,7 +461,11 @@ export function createFieldArrayManager<FormValues>(
     }
 
     const update = (index: number, value: unknown): boolean => {
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
       if (index < 0 || index >= currentValues.length) {
         if (__DEV__) {
           warnArrayIndexOutOfBounds('update', name, index, currentValues.length)
@@ -414,14 +478,24 @@ export function createFieldArrayManager<FormValues>(
 
       // Keep the same key - no items array change needed (preserves stable identity)
       // No cache update needed - indices haven't changed
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
     }
 
     const removeAt = (index: number): boolean => {
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Bounds check
       if (index < 0 || index >= currentValues.length) {
@@ -454,7 +528,13 @@ export function createFieldArrayManager<FormValues>(
         updateCacheAfterRemove(keyToRemove, index)
       }
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
@@ -465,10 +545,14 @@ export function createFieldArrayManager<FormValues>(
       value: unknown | unknown[],
       focusOptions?: FieldArrayFocusOptions,
     ): boolean => {
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
       const values = normalizeToArray(value)
       if (values.length === 0) return true
 
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Check maxLength rule before adding
       const rules = fa.rules
@@ -504,7 +588,13 @@ export function createFieldArrayManager<FormValues>(
       // Incremental cache update - shift indices at and after insert point
       updateCacheAfterInsert(index, values.length)
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
 
@@ -514,7 +604,11 @@ export function createFieldArrayManager<FormValues>(
     }
 
     const swap = (indexA: number, indexB: number): boolean => {
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Bounds validation: reject invalid indices
       if (
@@ -546,14 +640,24 @@ export function createFieldArrayManager<FormValues>(
         swapInCache(indexA, indexB)
       }
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
     }
 
     const move = (from: number, to: number): boolean => {
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Bounds validation: reject invalid indices (consistent with swap)
       if (from < 0 || from >= currentValues.length || to < 0 || to >= currentValues.length) {
@@ -567,9 +671,10 @@ export function createFieldArrayManager<FormValues>(
       const newValues = [...currentValues]
       const [removed] = newValues.splice(from, 1)
       if (removed !== undefined) {
-        // Clamp 'to' index to valid range after removal
-        const clampedTo = Math.min(to, newValues.length)
-        newValues.splice(clampedTo, 0, removed)
+        // No clamping needed: validation ensures to < currentValues.length,
+        // and after removal newValues.length = currentValues.length - 1,
+        // so to <= newValues.length is always valid for splice
+        newValues.splice(to, 0, removed)
         set(ctx.formData, name, newValues)
       }
 
@@ -577,12 +682,11 @@ export function createFieldArrayManager<FormValues>(
       const newItems = [...fa.items.value]
       const [removedItem] = newItems.splice(from, 1)
       if (removedItem) {
-        const clampedTo = Math.min(to, newItems.length)
-        newItems.splice(clampedTo, 0, removedItem)
+        newItems.splice(to, 0, removedItem)
         fa.items.value = newItems
         // Update affected range in cache (from min to max of from/to)
-        const minIdx = Math.min(from, clampedTo)
-        const maxIdx = Math.max(from, clampedTo)
+        const minIdx = Math.min(from, to)
+        const maxIdx = Math.max(from, to)
         const items = fa.items.value
         for (let i = minIdx; i <= maxIdx; i++) {
           const item = items[i]
@@ -590,13 +694,22 @@ export function createFieldArrayManager<FormValues>(
         }
       }
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
     }
 
     const replace = (newValues: unknown[]): boolean => {
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
       // Validate input is array
       if (!Array.isArray(newValues)) {
         return false
@@ -610,13 +723,22 @@ export function createFieldArrayManager<FormValues>(
       // Full rebuild needed - completely new set of items
       rebuildIndexCache()
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
     }
 
     const removeAll = (): boolean => {
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
       // Check minLength rule - if minLength > 0, reject
       const rules = fa.rules
       if (rules?.minLength && rules.minLength.value > 0) {
@@ -636,14 +758,24 @@ export function createFieldArrayManager<FormValues>(
       fa.items.value = []
       indexCache.clear()
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true
     }
 
     const removeMany = (indices: number[]): boolean => {
-      const currentValues = (get(ctx.formData, name) || []) as unknown[]
+      // Clear stale validation cache before mutation
+      clearValidationCache()
+
+      // Ensure items array is in sync with formData before mutation
+      const currentValues = ensureSync()
 
       // Validate indices and filter to valid ones
       const validIndices = indices.filter((i) => i >= 0 && i < currentValues.length)
@@ -690,7 +822,13 @@ export function createFieldArrayManager<FormValues>(
         indexCache.set(item.key, idx)
       })
 
-      markFieldDirty(ctx.dirtyFields, ctx.dirtyFieldCount, name)
+      updateFieldDirtyState(
+        ctx.dirtyFields,
+        ctx.defaultValues,
+        ctx.defaultValueHashes,
+        name,
+        get(ctx.formData, name),
+      )
 
       validateIfNeeded()
       return true

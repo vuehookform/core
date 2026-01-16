@@ -1,4 +1,13 @@
-import { reactive, ref, shallowRef, watch, toValue, type Ref, type ShallowRef } from 'vue'
+import {
+  reactive,
+  ref,
+  shallowRef,
+  watch,
+  toValue,
+  type Ref,
+  type ShallowRef,
+  type WatchStopHandle,
+} from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -10,6 +19,7 @@ import type {
   FieldArrayRules,
 } from '../types'
 import { set } from '../utils/paths'
+import { deepClone } from '../utils/clone'
 
 /**
  * Internal state for field array management.
@@ -129,16 +139,14 @@ export interface FormContext<FormValues> {
   validationRequestIds: Map<string, number>
   /** Generation counter incremented on reset to cancel in-flight validations */
   resetGeneration: Ref<number>
-  /** O(1) counter for number of dirty fields (avoids Object.keys counting) */
-  dirtyFieldCount: Ref<number>
-  /** O(1) counter for number of touched fields (avoids Object.keys counting) */
-  touchedFieldCount: Ref<number>
   /** Cache of validation results keyed by field path and value hash */
   validationCache: Map<string, { hash: string; isValid: boolean }>
   /** Debounce timers for schema validation per field */
   schemaValidationTimers: Map<string, ReturnType<typeof setTimeout>>
   /** Set of field paths with persistent errors (survive validation cycles) */
   persistentErrorFields: Set<string>
+  /** Hashed default values for value-comparison dirty detection */
+  defaultValueHashes: Map<string, string>
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Configuration
@@ -148,6 +156,13 @@ export interface FormContext<FormValues> {
   isDisabled: Ref<boolean>
   /** Original options passed to useForm() */
   options: UseFormOptions<ZodType>
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Cleanup
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Cleanup function to stop all watchers and prevent memory leaks */
+  cleanup: () => void
 }
 
 /**
@@ -171,8 +186,9 @@ export function createFormContext<TSchema extends ZodType>(
     const asyncFn = options.defaultValues as () => Promise<Partial<FormValues>>
     asyncFn()
       .then((values) => {
-        Object.assign(defaultValues, values)
-        Object.assign(formData, values)
+        // Deep clone to prevent reference sharing between defaultValues and formData
+        Object.assign(defaultValues, deepClone(values))
+        Object.assign(formData, deepClone(values))
         isLoading.value = false
       })
       .catch((error) => {
@@ -183,9 +199,10 @@ export function createFormContext<TSchema extends ZodType>(
         options.onDefaultValuesError?.(error)
       })
   } else if (options.defaultValues) {
-    // Sync default values
-    Object.assign(defaultValues, options.defaultValues)
-    Object.assign(formData, defaultValues)
+    // Sync default values - deep clone to prevent reference sharing
+    // This ensures formData mutations don't affect defaultValues (critical for dirty tracking)
+    Object.assign(defaultValues, deepClone(options.defaultValues))
+    Object.assign(formData, deepClone(options.defaultValues))
   }
 
   // Form state - using Record instead of Set for per-field tracking
@@ -225,10 +242,6 @@ export function createFormContext<TSchema extends ZodType>(
   // Reset generation counter (incremented on each reset to invalidate in-flight validations)
   const resetGeneration = ref(0)
 
-  // Performance optimization: O(1) counters for dirty/touched field counts
-  const dirtyFieldCount = ref(0)
-  const touchedFieldCount = ref(0)
-
   // Validation cache: skip re-validation when field value hasn't changed
   const validationCache = new Map<string, { hash: string; isValid: boolean }>()
 
@@ -238,17 +251,26 @@ export function createFormContext<TSchema extends ZodType>(
   // Persistent errors: field names with errors that should not be cleared by validation
   const persistentErrorFields = new Set<string>()
 
+  // Hashed default values for value-comparison dirty detection (lazy-initialized)
+  const defaultValueHashes = new Map<string, string>()
+
   // Form-wide disabled state (supports MaybeRef)
   const isDisabled = ref(false)
+
+  // Collect watch stop handles for cleanup to prevent memory leaks
+  const watchStopHandles: WatchStopHandle[] = []
+
   if (options.disabled !== undefined) {
     const initialDisabled = toValue(options.disabled)
     isDisabled.value = initialDisabled ?? false
 
-    watch(
-      () => toValue(options.disabled),
-      (newDisabled) => {
-        isDisabled.value = newDisabled ?? false
-      },
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.disabled),
+        (newDisabled) => {
+          isDisabled.value = newDisabled ?? false
+        },
+      ),
     )
   }
 
@@ -265,30 +287,32 @@ export function createFormContext<TSchema extends ZodType>(
     }
 
     // Watch for changes - update formData without marking dirty
-    watch(
-      () => toValue(options.values),
-      (newValues) => {
-        if (newValues) {
-          for (const [key, value] of Object.entries(newValues)) {
-            if (value !== undefined) {
-              set(formData, key, value)
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.values),
+        (newValues) => {
+          if (newValues) {
+            for (const [key, value] of Object.entries(newValues)) {
+              if (value !== undefined) {
+                set(formData, key, value)
 
-              // Also update DOM elements for uncontrolled fields
-              const fieldRef = fieldRefs.get(key)
-              const opts = fieldOptions.get(key)
-              if (fieldRef?.value && !opts?.controlled) {
-                const el = fieldRef.value
-                if (el.type === 'checkbox') {
-                  el.checked = value as boolean
-                } else {
-                  el.value = value as string
+                // Also update DOM elements for uncontrolled fields
+                const fieldRef = fieldRefs.get(key)
+                const opts = fieldOptions.get(key)
+                if (fieldRef?.value && !opts?.controlled) {
+                  const el = fieldRef.value
+                  if (el.type === 'checkbox') {
+                    el.checked = value as boolean
+                  } else {
+                    el.value = value as string
+                  }
                 }
               }
             }
           }
-        }
-      },
-      { deep: true },
+        },
+        { deep: true },
+      ),
     )
   }
 
@@ -301,12 +325,14 @@ export function createFormContext<TSchema extends ZodType>(
     }
 
     // Watch for changes
-    watch(
-      () => toValue(options.errors),
-      (newErrors) => {
-        externalErrors.value = (newErrors || {}) as FieldErrors<FormValues>
-      },
-      { deep: true },
+    watchStopHandles.push(
+      watch(
+        () => toValue(options.errors),
+        (newErrors) => {
+          externalErrors.value = (newErrors || {}) as FieldErrors<FormValues>
+        },
+        { deep: true },
+      ),
     )
   }
 
@@ -333,11 +359,16 @@ export function createFormContext<TSchema extends ZodType>(
     validationRequestIds,
     resetGeneration,
     isDisabled,
-    dirtyFieldCount,
-    touchedFieldCount,
     validationCache,
     schemaValidationTimers,
     persistentErrorFields,
+    defaultValueHashes,
     options: options as UseFormOptions<ZodType>,
+    cleanup: () => {
+      // Stop all watchers to prevent memory leaks
+      for (const stop of watchStopHandles) {
+        stop()
+      }
+    },
   }
 }

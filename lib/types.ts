@@ -979,8 +979,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
   /**
    * Manually trigger validation for specific fields or entire form
    * @param name - Optional field path or array of paths
+   * @param options - Optional trigger options (e.g., markAsSubmitted)
    */
-  trigger: <TPath extends Path<InferSchema<TSchema>>>(name?: TPath | TPath[]) => Promise<boolean>
+  trigger: <TPath extends Path<InferSchema<TSchema>>>(
+    name?: TPath | TPath[],
+    options?: TriggerOptions,
+  ) => Promise<boolean>
 
   /**
    * Programmatically focus a field
