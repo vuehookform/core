@@ -2,6 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { ZodType } from 'zod'
 import type { UseFormReturn, Path, PathValue, InferSchema, FieldState } from './types'
 import { useFormContext } from './context'
+import { shouldValidateOnChange, shouldValidateOnBlur } from './utils/modeChecks'
 
 /**
  * Options for useController composable
@@ -97,19 +98,31 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     },
   })
 
-  // Change handler
+  // Change handler - respects form validation mode
   const onChange = (newValue: TValue) => {
-    form.setValue(name, newValue)
+    const isTouched = form.formState.value.touchedFields[name] === true
+    const mode = form.options.mode ?? 'onSubmit'
+    const reValidateMode = form.options.reValidateMode
+
+    const shouldValidate = shouldValidateOnChange(mode, isTouched, reValidateMode)
+
+    form.setValue(name, newValue, { shouldValidate })
   }
 
-  // Blur handler - marks field as touched and triggers validation
+  // Blur handler - respects form validation mode
   const onBlur = () => {
+    const hasSubmitted = form.formState.value.submitCount > 0
+    const mode = form.options.mode ?? 'onSubmit'
+    const reValidateMode = form.options.reValidateMode
+
+    const shouldValidate = shouldValidateOnBlur(mode, hasSubmitted, reValidateMode)
+
     // Use setValue with shouldTouch to properly mark the field as touched
     // This ensures touchedFieldCount is updated, which isValid depends on
     const currentValue = form.getValues(name)
     form.setValue(name, currentValue, {
       shouldTouch: true,
-      shouldValidate: true,
+      shouldValidate,
       shouldDirty: false, // Don't change dirty state on blur
     })
   }

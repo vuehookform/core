@@ -975,6 +975,12 @@ export interface UseFormReturn<TSchema extends ZodType> {
     name: TPath,
     options?: SetFocusOptions,
   ) => void
+
+  /**
+   * Form configuration options (mode, reValidateMode).
+   * Useful for composables like useController that need to respect validation modes.
+   */
+  options: Pick<UseFormOptions<TSchema>, 'mode' | 'reValidateMode'>
 }
 
 /**

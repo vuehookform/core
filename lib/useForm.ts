@@ -976,5 +976,9 @@ export function useForm<TSchema extends ZodType>(
     getFieldState,
     trigger,
     setFocus,
+    options: {
+      mode: ctx.options.mode ?? 'onSubmit',
+      reValidateMode: ctx.options.reValidateMode,
+    },
   } as UseFormReturn<TSchema>
 }

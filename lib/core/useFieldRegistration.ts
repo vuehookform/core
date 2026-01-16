@@ -22,6 +22,7 @@ import {
   clearFieldTouched,
   clearFieldErrors,
 } from './fieldState'
+import { shouldValidateOnChange, shouldValidateOnBlur } from '../utils/modeChecks'
 
 // Monotonic counter for validation request IDs (avoids race conditions)
 let validationRequestCounter = 0
@@ -134,10 +135,11 @@ export function createFieldRegistration<FormValues>(
         const fieldOpts = ctx.fieldOptions.get(name)
 
         // Validate based on mode
-        const shouldValidate =
-          ctx.options.mode === 'onChange' ||
-          (ctx.options.mode === 'onTouched' && ctx.touchedFields.value[name]) ||
-          (ctx.touchedFields.value[name] && ctx.options.reValidateMode === 'onChange')
+        const shouldValidate = shouldValidateOnChange(
+          ctx.options.mode ?? 'onSubmit',
+          ctx.touchedFields.value[name] === true,
+          ctx.options.reValidateMode,
+        )
 
         if (shouldValidate) {
           const validationDebounceMs = ctx.options.validationDebounce || 0
@@ -215,10 +217,11 @@ export function createFieldRegistration<FormValues>(
         markFieldTouched(ctx.touchedFields, ctx.touchedFieldCount, name)
 
         // Validate based on mode
-        const shouldValidate =
-          ctx.options.mode === 'onBlur' ||
-          ctx.options.mode === 'onTouched' ||
-          (ctx.submitCount.value > 0 && ctx.options.reValidateMode === 'onBlur')
+        const shouldValidate = shouldValidateOnBlur(
+          ctx.options.mode ?? 'onSubmit',
+          ctx.submitCount.value > 0,
+          ctx.options.reValidateMode,
+        )
 
         if (shouldValidate) {
           await validate(name)
