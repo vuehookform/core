@@ -31,6 +31,13 @@
               v-bind="register(`addresses.${field.index}.street`)"
               :data-testid="`street-${field.index}`"
             />
+            <Message
+              v-if="getErrors(`addresses.${field.index}.street`)"
+              severity="error"
+              :data-testid="`street-error-${field.index}`"
+            >
+              {{ getErrors(`addresses.${field.index}.street`) }}
+            </Message>
           </div>
 
           <div class="field">
@@ -39,6 +46,13 @@
               v-bind="register(`addresses.${field.index}.city`)"
               :data-testid="`city-${field.index}`"
             />
+            <Message
+              v-if="getErrors(`addresses.${field.index}.city`)"
+              severity="error"
+              :data-testid="`city-error-${field.index}`"
+            >
+              {{ getErrors(`addresses.${field.index}.city`) }}
+            </Message>
           </div>
 
           <div class="field">
@@ -47,6 +61,13 @@
               v-bind="register(`addresses.${field.index}.zipCode`)"
               :data-testid="`zipcode-${field.index}`"
             />
+            <Message
+              v-if="getErrors(`addresses.${field.index}.zipCode`)"
+              severity="error"
+              :data-testid="`zipcode-error-${field.index}`"
+            >
+              {{ getErrors(`addresses.${field.index}.zipCode`) }}
+            </Message>
           </div>
 
           <Button
@@ -114,7 +135,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const { register, fields, handleSubmit, formState } = useForm({
+const { register, fields, handleSubmit, formState, getErrors } = useForm({
   schema,
   defaultValues: {
     name: '',
