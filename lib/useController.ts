@@ -87,7 +87,10 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     form.setValue(name, defaultValue)
   }
 
-  // Create reactive value
+  // Create reactive value for v-model binding.
+  // The setter marks the field dirty by default (shouldDirty: true),
+  // which is the expected behavior for controlled inputs.
+  // For programmatic value loading without marking dirty, use form.setValue with { shouldDirty: false }.
   const value = computed({
     get: () => {
       const currentValue = form.getValues(name)

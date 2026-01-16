@@ -9,7 +9,7 @@ export type ValidationMode = 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'
 /**
  * Extract the inferred type from a Zod schema
  */
-export type InferSchema<T extends ZodType> = z.infer<T>
+export type InferSchema<TSchema extends ZodType> = z.infer<TSchema>
 
 /**
  * Alias for InferSchema - extracts form value type from schema.
@@ -236,7 +236,7 @@ export interface FieldState {
   /** Whether field has a validation error */
   invalid: boolean
   /** The error (string for backward compatibility, or FieldError for structured errors) */
-  error?: string | FieldError
+  error?: FieldErrorValue
 }
 
 /**

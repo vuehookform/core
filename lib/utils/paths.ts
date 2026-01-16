@@ -31,8 +31,12 @@ function getPathSegments(path: string): string[] {
 }
 
 /**
- * Clear the path cache. Useful for testing or when paths change significantly.
- * @internal
+ * Clear the path segment cache.
+ * Call this between SSR requests to prevent memory accumulation,
+ * or in tests to reset state.
+ *
+ * The cache is bounded to 256 entries, so clearing is optional
+ * for client-side only applications.
  */
 export function clearPathCache(): void {
   pathCache.clear()
@@ -137,8 +141,16 @@ export function has(obj: Record<string, unknown>, path: string): boolean {
 }
 
 /**
- * Generate a unique ID for field array items
- * Uses timestamp + counter + random string for uniqueness across HMR reloads
+ * Generate a unique ID for field array items.
+ * Uses timestamp + counter + random string for uniqueness across HMR reloads.
+ *
+ * Format: `field_<timestamp>_<counter>_<random>`
+ *
+ * @returns Unique string ID, e.g., `field_1734012345678_0_a1b2c3d4e`
+ *
+ * @example
+ * const id1 = generateId() // 'field_1734012345678_0_a1b2c3d4e'
+ * const id2 = generateId() // 'field_1734012345678_1_f5g6h7i8j'
  */
 let idCounter = 0
 export function generateId(): string {

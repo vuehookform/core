@@ -70,3 +70,6 @@ export type {
   UnregisterOptions,
   CriteriaMode,
 } from './types'
+
+// Path utilities for advanced form data manipulation
+export { get, set, unset, generateId, clearPathCache } from './utils/paths'
