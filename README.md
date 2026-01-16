@@ -121,12 +121,52 @@ const { value, ...bindings } = register('field', { controlled: true })
 
 ### Common Mistakes
 
-| Wrong                    | Right                    |
-| ------------------------ | ------------------------ |
-| `items[0].name`          | `items.0.name`           |
-| `:key="index"`           | `:key="field.key"`       |
-| `formState.errors`       | `formState.value.errors` |
-| `v-model` + `register()` | Either one, not both     |
+| Wrong                                | Right                                     | Why                                          |
+| ------------------------------------ | ----------------------------------------- | -------------------------------------------- |
+| `items[0].name`                      | `items.0.name`                            | Always use dot notation for paths            |
+| `:key="index"`                       | `:key="field.key"`                        | Index can change during reordering           |
+| `formState.errors`                   | `formState.value.errors`                  | formState is a Ref, must access `.value`     |
+| `v-model` + `register()`             | Either one, not both                      | Causes double binding conflict               |
+| `const state = getFieldState('x')`   | `formState.value.errors.x`                | getFieldState returns snapshot, not reactive |
+| `<CustomInput v-bind="register()"/>` | Use `controlled: true` or `useController` | Custom components need controlled mode       |
+
+#### ⚠️ Critical: `getFieldState()` is NOT Reactive
+
+**Problem:** Calling `getFieldState()` once returns a snapshot that never updates.
+
+```vue
+<!-- ❌ WRONG - Error will persist even after fixing the input -->
+<script setup>
+const emailState = getFieldState('email')
+</script>
+<template>
+  <span v-if="emailState.error">{{ emailState.error }}</span>
+</template>
+```
+
+**Solutions:**
+
+```vue
+<!-- ✅ Option 1: Use formState (always reactive) -->
+<span v-if="formState.value.errors.email">{{ formState.value.errors.email }}</span>
+
+<!-- ✅ Option 2: Use computed for specific field -->
+<script setup>
+const emailError = computed(() => formState.value.errors.email)
+</script>
+<template>
+  <span v-if="emailError">{{ emailError }}</span>
+</template>
+
+<!-- ✅ Option 3: Use useController for reusable components -->
+<script setup>
+const { fieldState } = useController({ name: 'email', control })
+// fieldState is a ComputedRef that updates automatically
+</script>
+<template>
+  <span v-if="fieldState.error">{{ fieldState.error }}</span>
+</template>
+```
 
 ## Contributing
 

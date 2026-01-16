@@ -166,6 +166,115 @@ register(`items[${index}].name`)
   <CustomInput v-model="value" v-bind="bindings" />
   ```
 
+### Error Display in Custom Components (CRITICAL)
+
+**Problem:** `getFieldState()` is **NOT reactive** - it returns plain object snapshots. This is a common pitfall that causes error messages to persist incorrectly.
+
+**Common Mistake (WRONG):**
+
+```vue
+<script setup>
+const { getFieldState } = useForm({ schema })
+const emailState = getFieldState('email') // ❌ Snapshot - never updates!
+</script>
+<template>
+  <span v-if="emailState.error">{{ emailState.error }}</span>
+  <!-- Will persist! -->
+</template>
+```
+
+**Solution: Use one of these reactive patterns:**
+
+#### Pattern 1: Pass `formState.value.errors` as Props (Simple Wrappers)
+
+```vue
+<!-- Parent -->
+<script setup>
+const { register, formState } = useForm({ schema })
+const { value, ...bindings } = register('email', { controlled: true })
+</script>
+<template>
+  <CustomInput
+    v-model="value"
+    v-bind="bindings"
+    :error="formState.value.errors.email"  <!-- ✅ Reactive -->
+  />
+</template>
+```
+
+#### Pattern 2: Use `useController` (RECOMMENDED for Reusable Components)
+
+```vue
+<!-- FormInput.vue - Fully encapsulated -->
+<script setup lang="ts">
+import { useController, type Control } from '@vuehookform/core'
+
+const props = defineProps<{
+  name: string
+  control: Control<any>
+  label?: string
+}>()
+
+const { field, fieldState } = useController({
+  name: props.name,
+  control: props.control,
+})
+// fieldState is a ComputedRef - fully reactive! ✅
+</script>
+
+<template>
+  <div>
+    <label>{{ label }}</label>
+    <input
+      :value="field.value"
+      @input="field.onChange(($event.target as HTMLInputElement).value)"
+      @blur="field.onBlur"
+    />
+    <span v-if="fieldState.error">{{ fieldState.error }}</span>
+    <!-- ✅ Updates automatically -->
+  </div>
+</template>
+
+<!-- Usage -->
+<FormInput name="email" :control="control" label="Email" />
+```
+
+#### Pattern 3: Form Context (Deeply Nested Components)
+
+```vue
+<!-- Parent -->
+<script setup>
+import { useForm, provideForm } from '@vuehookform/core'
+const form = useForm({ schema })
+provideForm(form)
+</script>
+
+<!-- Child (any depth) -->
+<script setup>
+import { useFormContext } from '@vuehookform/core'
+const { register, formState } = useFormContext()
+</script>
+<template>
+  <input v-bind="register('email')" />
+  <span v-if="formState.value.errors.email">
+    <!-- ✅ Reactive -->
+    {{ formState.value.errors.email }}
+  </span>
+</template>
+```
+
+**Why `getFieldState()` is not reactive:**
+
+- **Performance:** Avoids creating unnecessary reactive refs for rarely-accessed state
+- **Flexibility:** Allows imperative usage in callbacks and computed functions
+- **Consistency:** Matches React Hook Form's design for cross-framework knowledge transfer
+
+**When to use each pattern:**
+
+- **Pattern 1:** Simple custom input wrappers (parent passes error)
+- **Pattern 2:** Reusable field components, third-party UI libraries (component owns error display)
+- **Pattern 3:** Deeply nested forms, avoiding prop drilling
+
 ### Accessing State
 
 Always use `.value` for reactive refs:

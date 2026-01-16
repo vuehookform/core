@@ -118,6 +118,121 @@ describe('useForm - values', () => {
     })
   })
 
+  describe('getFieldState reactivity (non-reactive behavior)', () => {
+    it('should demonstrate that getFieldState returns snapshots, not reactive refs', async () => {
+      const { getFieldState, setValue } = useForm({
+        schema,
+        mode: 'onChange',
+      })
+
+      // Get initial state (snapshot #1)
+      const initialState = getFieldState('email')
+      expect(initialState.invalid).toBe(false)
+      expect(initialState.error).toBeUndefined()
+
+      // Set invalid value and validate
+      setValue('email', 'invalid-email', { shouldValidate: true })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // The SAME object still shows old values (not reactive)
+      expect(initialState.invalid).toBe(false)
+      expect(initialState.error).toBeUndefined()
+
+      // But calling getFieldState AGAIN returns new snapshot with updated values
+      const updatedState = getFieldState('email')
+      expect(updatedState.invalid).toBe(true)
+      expect(updatedState.error).toBeDefined()
+    })
+
+    it('should show that error persists in snapshot even after fixing the input', async () => {
+      const { getFieldState, setValue } = useForm({
+        schema,
+        mode: 'onChange',
+      })
+
+      // Set invalid value and validate
+      setValue('email', 'invalid', { shouldValidate: true })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Get error state (snapshot with error)
+      const stateWithError = getFieldState('email')
+      expect(stateWithError.invalid).toBe(true)
+      expect(stateWithError.error).toBeDefined()
+
+      // Fix the value
+      setValue('email', 'valid@example.com', { shouldValidate: true })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // The snapshot still shows the OLD error (not reactive!)
+      expect(stateWithError.invalid).toBe(true) // Still true!
+      expect(stateWithError.error).toBeDefined() // Still has error!
+
+      // But calling getFieldState again returns correct state
+      const fixedState = getFieldState('email')
+      expect(fixedState.invalid).toBe(false)
+      expect(fixedState.error).toBeUndefined()
+    })
+
+    it('should demonstrate correct reactive pattern using formState.value.errors', async () => {
+      const { formState, setValue } = useForm({
+        schema,
+        mode: 'onChange',
+      })
+
+      // Initially no errors
+      expect(formState.value.errors.email).toBeUndefined()
+
+      // Set invalid value
+      setValue('email', 'invalid', { shouldValidate: true })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // formState.value.errors is reactive - shows error
+      expect(formState.value.errors.email).toBeDefined()
+
+      // Fix the value
+      setValue('email', 'valid@example.com', { shouldValidate: true })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Error is automatically cleared (reactive!)
+      expect(formState.value.errors.email).toBeUndefined()
+    })
+
+    it('should show formState reactively updates dirty state', () => {
+      const { formState, setValue } = useForm({
+        schema,
+        defaultValues: { email: '', password: '', name: '' },
+      })
+
+      // Store reference to formState.value (accessing computed)
+      expect(formState.value.dirtyFields.email).toBeUndefined()
+      expect(formState.value.isDirty).toBe(false)
+
+      // Make changes
+      setValue('email', 'test@example.com')
+
+      // formState.value updates reactively
+      expect(formState.value.dirtyFields.email).toBe(true)
+      expect(formState.value.isDirty).toBe(true)
+    })
+
+    it('should show formState reactively updates touched state', async () => {
+      const { register, formState } = useForm({ schema })
+
+      const mockInput = document.createElement('input')
+      const emailField = register('email')
+      emailField.ref(mockInput)
+
+      // Initially not touched
+      expect(formState.value.touchedFields.email).toBeUndefined()
+
+      // Trigger blur event
+      await emailField.onBlur(new Event('blur'))
+
+      // formState.value updates reactively
+      expect(formState.value.touchedFields.email).toBe(true)
+    })
+  })
+
   describe('setFocus', () => {
     let mockInput: HTMLInputElement
     let focusSpy: ReturnType<typeof vi.spyOn>

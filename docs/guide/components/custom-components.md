@@ -16,6 +16,58 @@ Build reusable form field components that integrate with Vue Hook Form.
 `register()` relies on native DOM events (`@input`, `@blur`) and reads `Event.target.value`. Third-party components often use custom events like `@update:modelValue` with direct values instead. `useController` provides explicit `onChange(value)` and `onBlur()` methods that work regardless of the component's event model.
 :::
 
+::: danger Critical: Error Messages in Custom Components
+**Problem:** Using `getFieldState()` in custom components causes error messages to **persist incorrectly** after fixing validation issues.
+
+**Why?** `getFieldState()` returns a plain object snapshot, NOT reactive refs. If you call it once in setup, that snapshot never updates.
+
+```vue
+<!-- ❌ WRONG - Error persists even after valid input -->
+<script setup>
+const { getFieldState } = useFormContext()
+const fieldState = getFieldState(props.name) // Snapshot!
+</script>
+<template>
+  <span v-if="fieldState.error">{{ fieldState.error }}</span>
+  <!-- This error will NOT clear when user fixes the input -->
+</template>
+```
+
+**Solutions:**
+
+1. **Use `useController` (RECOMMENDED)** - Provides reactive `fieldState`:
+
+   ```vue
+   <script setup>
+   const { field, fieldState } = useController({ name: props.name, control })
+   // fieldState is a ComputedRef - updates automatically ✅
+   </script>
+   <template>
+     <span v-if="fieldState.error">{{ fieldState.error }}</span>
+   </template>
+   ```
+
+2. **Use `formState.value.errors`** - Pass as prop from parent:
+
+   ```vue
+   <CustomInput :error="formState.value.errors.email" />
+   ```
+
+3. **Use Form Context with `formState`**:
+   ```vue
+   <script setup>
+   const { formState } = useFormContext()
+   </script>
+   <template>
+     <span v-if="formState.value.errors[props.name]">
+       {{ formState.value.errors[props.name] }}
+     </span>
+   </template>
+   ```
+
+The examples below demonstrate the correct reactive patterns.
+:::
+
 ## Quick Integration with Controlled Mode
 
 For simple custom components, use controlled mode:
