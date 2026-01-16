@@ -55,7 +55,8 @@ const allValues = watch()
 
 // Better: watch specific fields you need
 const email = watch('email')
-const [firstName, lastName] = watch(['firstName', 'lastName'])
+const name = watch(['firstName', 'lastName'])
+// Access: name.value.firstName, name.value.lastName
 ```
 
 ## Memoize Computed Values
@@ -244,8 +245,8 @@ const schema = z.object({
     z.object({
       id: z.string(),
       name: z.string().min(1, 'Name is required'),
-      quantity: z.coerce.number().min(0, 'Must be positive'),
-      price: z.coerce.number().min(0, 'Must be positive'),
+      quantity: z.number().min(0, 'Must be positive'),
+      price: z.number().min(0, 'Must be positive'),
     }),
   ),
 })

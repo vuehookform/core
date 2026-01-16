@@ -365,14 +365,14 @@ const items = fields('items', {
 
 ## Focus Options
 
-Control focus behavior when adding items:
+Control focus behavior when adding items. **Focus is opt-in by default** (`shouldFocus: false`):
 
 ```typescript
-// Focus the new item after appending (default: true)
+// Enable focus on the new item after appending
 items.append({ name: '' }, { shouldFocus: true })
 
-// Don't focus after appending
-items.append({ name: '' }, { shouldFocus: false })
+// Default behavior: no automatic focus
+items.append({ name: '' }) // shouldFocus defaults to false
 
 // When adding multiple items, focus a specific one
 items.append([{ name: '' }, { name: '' }], { focusIndex: 1 })
@@ -440,7 +440,7 @@ const schema = z.object({
     .array(
       z.object({
         product: z.string().min(1, 'Select a product'),
-        quantity: z.coerce.number().min(1, 'Min 1').max(99, 'Max 99'),
+        quantity: z.number().min(1, 'Min 1').max(99, 'Max 99'),
         notes: z.string().optional(),
       }),
     )

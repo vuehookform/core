@@ -33,7 +33,13 @@ formState.value.errors
 
 ### isDirty
 
-`true` if any field value differs from the default values:
+`true` if any field's current value differs from its default value.
+
+The dirty state uses **value comparison**, not event tracking:
+
+- Setting a value equal to the default does NOT mark the field dirty
+- Reverting a field to its default value automatically clears its dirty state
+- Arrays and objects are compared by their serialized value (deep equality)
 
 ```typescript
 formState.value.isDirty // boolean
@@ -44,6 +50,10 @@ formState.value.isDirty // boolean
   <button type="submit" :disabled="!formState.value.isDirty">Save Changes</button>
 </template>
 ```
+
+::: tip
+Use `isDirty` to enable save buttons only when actual changes exist. Users can freely edit and revert without the form appearing "changed".
+:::
 
 ### isValid
 
@@ -123,7 +133,9 @@ formState.value.touchedFields.email // boolean
 
 ### dirtyFields
 
-Record of fields that have been modified from their default values:
+Record of fields whose current values differ from their default values.
+
+Fields are added when their value differs from the default, and **removed** when reverted to match the default:
 
 ```typescript
 formState.value.dirtyFields // Record<string, boolean>
@@ -254,7 +266,7 @@ const emailState = computed(() => getFieldState('email'))
 
 ```vue
 <script setup>
-import { onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount } from 'vue'
 
 const { formState } = useForm({ schema })
 

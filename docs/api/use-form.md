@@ -370,25 +370,13 @@ Set a field value programmatically.
 **Options:**
 
 - `shouldValidate` - Trigger validation after setting (default: false)
-- `shouldDirty` - Mark field as dirty (default: true)
+- `shouldDirty` - Evaluate dirty state after setting (default: true). When true, the field's dirty state is updated based on whether the new value differs from the default. When false, dirty state is not modified.
 
 **Example:**
 
 ```typescript
 setValue('email', 'new@example.com')
 setValue('age', 25, { shouldValidate: true })
-```
-
-### getValue
-
-```typescript
-getValue(name: Path<T>): any
-```
-
-Get the current value of a field.
-
-```typescript
-const email = getValue('email')
 ```
 
 ### getValues

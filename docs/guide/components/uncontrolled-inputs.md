@@ -122,7 +122,7 @@ import { z } from 'zod'
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
   email: z.email('Invalid email'),
-  age: z.coerce.number().min(18, 'Must be 18+'),
+  age: z.number().min(18, 'Must be 18+'),
   country: z.string().min(1, 'Select a country'),
   bio: z.string().max(500, 'Too long'),
   newsletter: z.boolean(),

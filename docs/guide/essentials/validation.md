@@ -122,7 +122,7 @@ Best for: Real-time feedback, password strength indicators.
 
 ### onTouched
 
-Validation runs on blur first, then on every change:
+After a field loses focus (is touched), validate on every subsequent change:
 
 ```typescript
 const form = useForm({
@@ -130,6 +130,8 @@ const form = useForm({
   mode: 'onTouched',
 })
 ```
+
+Note: Validation does **not** run on the initial blur event itself—only on changes after the field has been touched.
 
 Best for: Balance between UX and immediate feedback.
 
@@ -409,11 +411,11 @@ See [Async Patterns](/guide/advanced/async-patterns) for more examples.
 
 ## Type Coercion
 
-Handle HTML form inputs that return strings:
+For text inputs or when using `<input type="text">` for numeric values, use Zod's coercion:
 
 ```typescript
 const schema = z.object({
-  // Coerce string to number
+  // Coerce string to number (useful for text inputs)
   age: z.coerce.number().min(18),
 
   // Coerce string to date
@@ -423,6 +425,10 @@ const schema = z.object({
   active: z.coerce.boolean(),
 })
 ```
+
+::: tip Number Inputs
+`<input type="number">` automatically stores values as numbers, so `z.number()` works directly. Using `z.coerce.number()` is still safe and works for both cases.
+:::
 
 ## Next Steps
 
