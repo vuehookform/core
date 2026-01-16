@@ -1,4 +1,21 @@
 import type { ValidationMode } from '../types'
+import { __DEV__, warnOnce } from './devWarnings'
+
+/** Valid validation mode values */
+const VALID_MODES: readonly ValidationMode[] = ['onSubmit', 'onBlur', 'onChange', 'onTouched']
+
+/**
+ * Validate that a mode is one of the allowed ValidationMode values.
+ * Warns once per invalid mode in development.
+ */
+function validateMode(mode: ValidationMode, paramName: string): void {
+  if (__DEV__ && !VALID_MODES.includes(mode)) {
+    warnOnce(
+      `Invalid ${paramName}: "${mode}". Expected one of: ${VALID_MODES.join(', ')}`,
+      `invalid-mode-${mode}`,
+    )
+  }
+}
 
 /**
  * Determines if validation should occur on change event.
@@ -14,6 +31,11 @@ export function shouldValidateOnChange(
   isTouched: boolean,
   reValidateMode?: ValidationMode,
 ): boolean {
+  if (__DEV__) {
+    validateMode(mode, 'validation mode')
+    if (reValidateMode) validateMode(reValidateMode, 'reValidateMode')
+  }
+
   return (
     mode === 'onChange' ||
     (mode === 'onTouched' && isTouched) ||
@@ -35,5 +57,10 @@ export function shouldValidateOnBlur(
   hasSubmitted: boolean,
   reValidateMode?: ValidationMode,
 ): boolean {
+  if (__DEV__) {
+    validateMode(mode, 'validation mode')
+    if (reValidateMode) validateMode(reValidateMode, 'reValidateMode')
+  }
+
   return mode === 'onBlur' || mode === 'onTouched' || (hasSubmitted && reValidateMode === 'onBlur')
 }

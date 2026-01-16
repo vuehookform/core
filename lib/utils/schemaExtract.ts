@@ -97,7 +97,8 @@ export function extractSubSchema(
   let hasEffects = false
 
   for (const segment of segments) {
-    if (!segment) continue
+    // Reject empty segments (e.g., "user..profile" is invalid)
+    if (!segment) return null
 
     // Check for checks at this level (before unwrapping)
     if (hasChecks(currentSchema)) {
