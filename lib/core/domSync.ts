@@ -8,6 +8,11 @@ import { set } from '../utils/paths'
  * This reads the current DOM state from uncontrolled inputs and updates
  * the formData object. Used before form submission and when getting values.
  *
+ * Handles type coercion for:
+ * - checkbox: returns boolean (el.checked)
+ * - number/range: returns number (el.valueAsNumber)
+ * - all other types: returns string (el.value)
+ *
  * @param fieldRefs - Map of field names to their DOM element refs
  * @param fieldOptions - Map of field names to their registration options
  * @param formData - The reactive form data object to update
@@ -22,7 +27,16 @@ export function syncUncontrolledInputs(
     if (el) {
       const opts = fieldOptions.get(name)
       if (!opts?.controlled) {
-        const value = el.type === 'checkbox' ? el.checked : el.value
+        let value: unknown
+        if (el.type === 'checkbox') {
+          value = el.checked
+        } else if (el.type === 'number' || el.type === 'range') {
+          // Use valueAsNumber for proper number coercion
+          // Returns NaN for empty/invalid inputs which preserves the "no value" semantic
+          value = el.valueAsNumber
+        } else {
+          value = el.value
+        }
         set(formData, name, value)
       }
     }

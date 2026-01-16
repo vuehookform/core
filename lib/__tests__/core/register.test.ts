@@ -649,7 +649,7 @@ describe('register', () => {
     })
 
     describe('number inputs', () => {
-      it('should handle number input value as string', async () => {
+      it('should handle number input value as number', async () => {
         const { register, getValues } = useForm({ schema: extendedSchema })
 
         const ageField = register('age')
@@ -658,11 +658,11 @@ describe('register', () => {
         mockNumberInput.value = '25'
         await ageField.onInput(createInputEvent(mockNumberInput))
 
-        // Value is stored as string, Zod coerces it
-        expect(getValues('age')).toBe('25')
+        // Value is stored as number via valueAsNumber for proper type handling
+        expect(getValues('age')).toBe(25)
       })
 
-      it('should handle empty number input', async () => {
+      it('should handle empty number input as NaN', async () => {
         const { register, getValues } = useForm({ schema: extendedSchema })
 
         const ageField = register('age')
@@ -671,7 +671,8 @@ describe('register', () => {
         mockNumberInput.value = ''
         await ageField.onInput(createInputEvent(mockNumberInput))
 
-        expect(getValues('age')).toBe('')
+        // Empty number input returns NaN (browser valueAsNumber behavior)
+        expect(getValues('age')).toBeNaN()
       })
 
       it('should handle decimal numbers', async () => {
@@ -683,7 +684,8 @@ describe('register', () => {
         mockNumberInput.value = '25.5'
         await ageField.onInput(createInputEvent(mockNumberInput))
 
-        expect(getValues('age')).toBe('25.5')
+        // Decimal values preserved as numbers
+        expect(getValues('age')).toBe(25.5)
       })
 
       it('should set initial number value', () => {
