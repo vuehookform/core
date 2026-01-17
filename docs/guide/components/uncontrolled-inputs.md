@@ -2,8 +2,8 @@
 
 Uncontrolled inputs are the default mode in Vue Hook Form, offering maximum performance by bypassing Vue's reactivity system during typing.
 
-::: warning Native HTML Elements Only
-Uncontrolled mode only works with native HTML elements (`<input>`, `<select>`, `<textarea>`). For third-party UI components (PrimeVue, Vuetify, Element Plus, etc.), see [Controlled Inputs](/guide/components/controlled-inputs) or [useController](/api/use-controller).
+::: tip Vue Component Library Support
+Uncontrolled mode works best with native HTML elements, but also supports Vue components that expose their input element. If your component's `$el` is the input itself (like PrimeVue's `InputText`) or contains an input element, uncontrolled mode will work automatically. For components with complex structures or non-standard events, see [Controlled Inputs](/guide/components/controlled-inputs).
 :::
 
 ## How It Works
@@ -386,9 +386,61 @@ Switch to controlled mode when you need:
 - v-model binding
 - Custom components that don't accept refs
 - Real-time value access (like live preview)
-- Third-party UI libraries
+- Complex third-party components with custom events
 
 See [Controlled Inputs](/guide/components/controlled-inputs) for details.
+
+## Vue Component Library Support
+
+Vue Hook Form can detect input elements inside Vue components, enabling uncontrolled mode for many third-party libraries.
+
+### Compatible Patterns
+
+| Pattern                           | Example              | Uncontrolled Works? |
+| --------------------------------- | -------------------- | ------------------- |
+| Component `$el` is the input      | PrimeVue `InputText` | ✅ Yes              |
+| Component `$el` contains input    | Wrapper components   | ✅ Yes              |
+| Component with custom events only | Complex date pickers | ❌ Use controlled   |
+
+### Example: PrimeVue InputText (Uncontrolled)
+
+```vue
+<script setup>
+import { useForm } from '@vuehookform/core'
+import InputText from 'primevue/inputtext'
+
+const { register, handleSubmit, formState } = useForm({ schema })
+</script>
+
+<template>
+  <form @submit="handleSubmit(onSubmit)">
+    <!-- Works because InputText.$el is the actual <input> element -->
+    <InputText v-bind="register('username')" />
+    <small v-if="formState.value.errors.username" class="p-error">
+      {{ formState.value.errors.username }}
+    </small>
+  </form>
+</template>
+```
+
+### How It Works
+
+Vue Hook Form automatically detects the underlying input element:
+
+1. **Direct input**: If the component's `$el` is an `<input>`, `<select>`, or `<textarea>`, it uses that directly
+2. **Wrapped input**: If `$el` is a container element, it queries for the first input inside
+3. **Fallback**: If no input is found, the field won't sync with the DOM (use controlled mode instead)
+
+This means many simple Vue component library inputs work out of the box with uncontrolled mode.
+
+### When to Use Controlled Mode Instead
+
+Use controlled mode for Vue components when:
+
+- The component doesn't expose its input via `$el`
+- The component uses custom update events (not standard `input` events)
+- You need access to the reactive value during typing
+- The component renders multiple inputs or has complex internal structure
 
 ## Next Steps
 

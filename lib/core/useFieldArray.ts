@@ -198,31 +198,6 @@ export function createFieldArrayManager<FormValues>(
     }
 
     /**
-     * Incrementally add new items to cache (for append).
-     * Only updates the new entries - O(k) where k = number of new items.
-     */
-    const appendToCache = (startIndex: number) => {
-      const items = fa.items.value
-      for (let i = startIndex; i < items.length; i++) {
-        const item = items[i]
-        if (item) indexCache.set(item.key, i)
-      }
-    }
-
-    /**
-     * Update cache after prepend/insert: shift existing indices and add new.
-     * O(n) but avoids clear() + full rebuild overhead.
-     */
-    const updateCacheAfterInsert = (insertIndex: number, _insertCount: number) => {
-      const items = fa.items.value
-      // Update indices for all items at and after insertIndex
-      for (let i = insertIndex; i < items.length; i++) {
-        const item = items[i]
-        if (item) indexCache.set(item.key, i)
-      }
-    }
-
-    /**
      * Update cache for swap: only update 2 entries - O(1).
      */
     const swapInCache = (indexA: number, indexB: number) => {
@@ -389,9 +364,13 @@ export function createFieldArrayManager<FormValues>(
 
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
-      fa.items.value = [...fa.items.value, ...newItems]
-      // Incremental cache update - only add new items O(k)
-      appendToCache(insertIndex)
+      const newItemsArray = [...fa.items.value, ...newItems]
+      // Update cache BEFORE triggering Vue reactivity to prevent -1 index during render
+      for (let i = insertIndex; i < newItemsArray.length; i++) {
+        const item = newItemsArray[i]
+        if (item) indexCache.set(item.key, i)
+      }
+      fa.items.value = newItemsArray
 
       // Mark dirty (optimized - skips if already dirty)
       updateFieldDirtyState(
@@ -440,9 +419,13 @@ export function createFieldArrayManager<FormValues>(
 
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
-      fa.items.value = [...newItems, ...fa.items.value]
-      // Update all indices since we prepended (need to shift all existing)
-      updateCacheAfterInsert(0, values.length)
+      const newItemsArray = [...newItems, ...fa.items.value]
+      // Update cache BEFORE triggering Vue reactivity to prevent -1 index during render
+      for (let i = 0; i < newItemsArray.length; i++) {
+        const item = newItemsArray[i]
+        if (item) indexCache.set(item.key, i)
+      }
+      fa.items.value = newItemsArray
 
       // Mark dirty (optimized)
       updateFieldDirtyState(
@@ -580,13 +563,17 @@ export function createFieldArrayManager<FormValues>(
 
       // Create items with unique keys (batch)
       const newItems = values.map(() => createItem(generateId()))
-      fa.items.value = [
+      const newItemsArray = [
         ...fa.items.value.slice(0, index),
         ...newItems,
         ...fa.items.value.slice(index),
       ]
-      // Incremental cache update - shift indices at and after insert point
-      updateCacheAfterInsert(index, values.length)
+      // Update cache BEFORE triggering Vue reactivity to prevent -1 index during render
+      for (let i = index; i < newItemsArray.length; i++) {
+        const item = newItemsArray[i]
+        if (item) indexCache.set(item.key, i)
+      }
+      fa.items.value = newItemsArray
 
       updateFieldDirtyState(
         ctx.dirtyFields,
@@ -835,7 +822,9 @@ export function createFieldArrayManager<FormValues>(
     }
 
     return {
-      value: fa.items.value,
+      get value() {
+        return fa.items.value
+      },
       append,
       prepend,
       remove: removeAt,

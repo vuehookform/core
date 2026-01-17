@@ -287,39 +287,31 @@ export function warnArrayIndexOutOfBounds(
   )
 }
 
-// Helper to safely access Zod internal def properties
-function getDefProp(schema: ZodType, prop: string): unknown {
-  return (schema.def as unknown as Record<string, unknown>)[prop]
-}
+// Zod 4 schema type helpers
+// Zod 4 exposes `schema.type` directly (e.g., "object", "array", "optional")
 
-function getTypeName(schema: ZodType): string | undefined {
-  return getDefProp(schema, 'typeName') as string | undefined
+function getSchemaType(schema: ZodType): string | undefined {
+  // Zod 4: type is a direct property on the schema
+  return (schema as unknown as { type?: string }).type
 }
 
 function isZodObject(schema: ZodType): schema is ZodObject<Record<string, ZodType>> {
-  return getTypeName(schema) === 'ZodObject'
+  return getSchemaType(schema) === 'object'
 }
 
 function isZodArray(schema: ZodType): schema is ZodArray<ZodType> {
-  return getTypeName(schema) === 'ZodArray'
+  return getSchemaType(schema) === 'array'
 }
 
 function unwrapSchema(schema: ZodType): ZodType {
-  const typeName = getTypeName(schema)
-  const innerType = getDefProp(schema, 'innerType') as ZodType | undefined
-  const schemaType = getDefProp(schema, 'schema') as ZodType | undefined
+  const schemaType = getSchemaType(schema)
 
-  // Unwrap ZodOptional, ZodNullable, ZodDefault
-  if (
-    (typeName === 'ZodOptional' || typeName === 'ZodNullable' || typeName === 'ZodDefault') &&
-    innerType
-  ) {
-    return unwrapSchema(innerType)
-  }
-
-  // Unwrap ZodEffects (refinements, transforms)
-  if (typeName === 'ZodEffects' && schemaType) {
-    return unwrapSchema(schemaType)
+  // Zod 4: optional, nullable, default all have .unwrap() method
+  if (schemaType === 'optional' || schemaType === 'nullable' || schemaType === 'default') {
+    const schemaWithUnwrap = schema as unknown as { unwrap?: () => ZodType }
+    if (typeof schemaWithUnwrap.unwrap === 'function') {
+      return unwrapSchema(schemaWithUnwrap.unwrap())
+    }
   }
 
   return schema

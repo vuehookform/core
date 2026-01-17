@@ -413,7 +413,7 @@ export interface RegisterReturn<TValue = unknown> {
   /** Input handler (fires on every keystroke) */
   onInput: (e: Event) => void
   /** Blur handler */
-  onBlur: (e: Event) => void
+  onBlur: () => void
   /** Current value (for controlled mode) - only present when controlled: true */
   value?: Ref<TValue>
   /** Disabled state from form-level disabled option */
@@ -474,6 +474,10 @@ export interface FieldArrayOptions<T = unknown> {
  * - minLength rule would be violated (remove, removeAll, removeMany)
  * - Index is out of bounds (remove, update, swap, move)
  *
+ * **Reactivity:** The `value` property is fully reactive - it automatically
+ * updates when array methods (append, remove, swap, etc.) are called.
+ * Your template will re-render when items change.
+ *
  * @template TItem - The type of items in the array (inferred from field path)
  *
  * @example
@@ -489,7 +493,7 @@ export interface FieldArrayOptions<T = unknown> {
  * }
  */
 export interface FieldArray<TItem = unknown> {
-  /** Current field items with metadata */
+  /** Current field items with metadata. Reactive - updates when array methods are called. */
   value: FieldArrayItem[]
   /** Append item(s) to end of array. Returns false if maxLength exceeded. */
   append: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => boolean

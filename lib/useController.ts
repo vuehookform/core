@@ -3,6 +3,7 @@ import type { ZodType } from 'zod'
 import type { UseFormReturn, Path, PathValue, InferSchema, FieldState } from './types'
 import { useFormContext } from './context'
 import { shouldValidateOnChange, shouldValidateOnBlur } from './utils/modeChecks'
+import { setCalledFromController } from './useForm'
 
 /**
  * Options for useController composable
@@ -136,9 +137,12 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     elementRef.value = el
   }
 
-  // Field state computed
+  // Field state computed - wrapped with flag to suppress false positive warning
   const fieldState = computed<FieldState>(() => {
-    return form.getFieldState(name)
+    setCalledFromController(true)
+    const state = form.getFieldState(name)
+    setCalledFromController(false)
+    return state
   })
 
   return {

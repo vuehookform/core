@@ -1,4 +1,4 @@
-import { computed, reactive, onUnmounted, getCurrentInstance, type ComputedRef } from 'vue'
+import { computed, reactive, onScopeDispose, getCurrentInstance, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   UseFormOptions,
@@ -31,7 +31,12 @@ import { createFormContext } from './core/formContext'
 import { createValidation } from './core/useValidation'
 import { createFieldRegistration } from './core/useFieldRegistration'
 import { createFieldArrayManager } from './core/useFieldArray'
-import { syncUncontrolledInputs, updateDomElement } from './core/domSync'
+import {
+  syncUncontrolledInputs,
+  updateDomElement,
+  getInputElement,
+  getFocusableElement,
+} from './core/domSync'
 import {
   markFieldTouched,
   clearFieldDirty,
@@ -40,6 +45,23 @@ import {
   updateFieldDirtyState,
 } from './core/fieldState'
 import { hashValue } from './utils/hash'
+
+/**
+ * Internal flag to suppress getFieldState snapshot warnings when called from useController.
+ * When useController wraps getFieldState in a computed(), it's actually reactive,
+ * but the warning system doesn't know this. This flag lets useController signal
+ * that the call is intentionally inside a reactive effect.
+ */
+let isCalledFromController = false
+
+/**
+ * Set the internal flag to suppress getFieldState warnings.
+ * Used by useController before calling getFieldState inside computed().
+ * @internal
+ */
+export function setCalledFromController(value: boolean): void {
+  isCalledFromController = value
+}
 
 /**
  * Main form management composable
@@ -72,8 +94,8 @@ export function useForm<TSchema extends ZodType>(
   // and setting the reactive value.
   let isSubmissionLocked = false
 
-  // Cleanup watchers on unmount to prevent memory leaks
-  onUnmounted(() => {
+  // Cleanup watchers when scope is disposed (works in both component and effectScope contexts)
+  onScopeDispose(() => {
     ctx.cleanup()
   })
 
@@ -107,20 +129,18 @@ export function useForm<TSchema extends ZodType>(
       return
     }
 
-    const el = fieldRef.value
+    const el = getFocusableElement(fieldRef.value)
+    if (!el) return
 
-    // Check if element is focusable
-    if (typeof el.focus === 'function') {
-      el.focus()
+    el.focus()
 
-      // Select text if requested and element supports selection
-      if (
-        focusOptions?.shouldSelect &&
-        el instanceof HTMLInputElement &&
-        typeof el.select === 'function'
-      ) {
-        el.select()
-      }
+    // Select text if requested and element supports selection
+    if (
+      focusOptions?.shouldSelect &&
+      el instanceof HTMLInputElement &&
+      typeof el.select === 'function'
+    ) {
+      el.select()
     }
   }
 
@@ -482,7 +502,7 @@ export function useForm<TSchema extends ZodType>(
 
     // Update input elements
     for (const [name, fieldRef] of Array.from(ctx.fieldRefs.entries())) {
-      const el = fieldRef.value
+      const el = getInputElement(fieldRef.value)
       if (el) {
         const value = get(newValues as Record<string, unknown>, name)
         if (value !== undefined) {
@@ -568,10 +588,8 @@ export function useForm<TSchema extends ZodType>(
     if (!fieldOpts?.controlled) {
       const fieldRef = ctx.fieldRefs.get(name)
       if (fieldRef?.value) {
-        updateDomElement(
-          fieldRef.value,
-          clonedValue ?? (fieldRef.value.type === 'checkbox' ? false : ''),
-        )
+        const el = getInputElement(fieldRef.value)
+        updateDomElement(fieldRef.value, clonedValue ?? (el?.type === 'checkbox' ? false : ''))
       }
     }
   }
@@ -941,7 +959,8 @@ export function useForm<TSchema extends ZodType>(
       }
 
       // Warn about non-reactivity when called in component setup
-      if (getCurrentInstance()) {
+      // Skip warning if called from useController (which wraps this in a computed)
+      if (getCurrentInstance() && !isCalledFromController) {
         console.warn(
           `[vue-hook-form] getFieldState('${name}') returns a snapshot, not reactive refs.\n` +
             `For reactive error display, use one of these alternatives:\n` +

@@ -4,6 +4,7 @@ import { get, set } from '../utils/paths'
 import { hashValue } from '../utils/hash'
 import { analyzeSchemaPath } from '../utils/schemaExtract'
 import { clearFieldErrors } from './fieldState'
+import { getInputElement } from './domSync'
 
 /**
  * Helper to mark a field as validating.
@@ -95,10 +96,10 @@ export function createValidation<FormValues>(ctx: FormContext<FormValues>) {
     if (!ctx.options.shouldUseNativeValidation) return
 
     const fieldRef = ctx.fieldRefs.get(fieldPath)
-    const el = fieldRef?.value
+    const el = getInputElement(fieldRef?.value)
 
     if (el && 'setCustomValidity' in el) {
-      ;(el as HTMLInputElement).setCustomValidity(errorMessage || '')
+      el.setCustomValidity(errorMessage || '')
     }
   }
 

@@ -1,0 +1,7 @@
+# Cypress
+cypress/screenshots
+cypress/videos
+cypress/downloads
+
+# Build output
+dist

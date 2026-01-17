@@ -405,6 +405,42 @@ describe('useForm - values', () => {
       setValue('email', 'updated@test.com')
       expect(mockInput.value).toBe('updated@test.com')
     })
+
+    it('should update DOM for Vue component with $el as input', () => {
+      const { register, setValue } = useForm({
+        schema,
+        defaultValues: { email: '', password: '', name: '' },
+      })
+
+      // Simulate PrimeVue InputText: component.$el = <input>
+      const actualInput = document.createElement('input')
+      const mockVueComponent = { $el: actualInput }
+
+      const emailField = register('email')
+      emailField.ref(mockVueComponent)
+
+      setValue('email', 'primevue@test.com')
+      expect(actualInput.value).toBe('primevue@test.com')
+    })
+
+    it('should find input inside wrapped Vue component container', () => {
+      const { register, setValue } = useForm({
+        schema,
+        defaultValues: { email: '', password: '', name: '' },
+      })
+
+      // Simulate wrapper component: component.$el = <div><input></div>
+      const container = document.createElement('div')
+      const actualInput = document.createElement('input')
+      container.appendChild(actualInput)
+      const mockWrapperComponent = { $el: container }
+
+      const emailField = register('email')
+      emailField.ref(mockWrapperComponent)
+
+      setValue('email', 'wrapped@test.com')
+      expect(actualInput.value).toBe('wrapped@test.com')
+    })
   })
 
   describe('values prop', () => {
