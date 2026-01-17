@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.3](https://github.com/vuehookform/core/compare/v0.4.2...v0.4.3) (2026-01-17)
+
+
+### Bug Fixes
+
+* support Vue component libraries in uncontrolled mode ([be8da78](https://github.com/vuehookform/core/commit/be8da7818cfc496b62e0f37bafa8790cf07193bf))
+* update field array index cache before triggering Vue reactivity ([52c14fd](https://github.com/vuehookform/core/commit/52c14fdf3ea7fcc0cc9969b0854a869b74498aae))
+
 ## [0.4.2](https://github.com/vuehookform/core/compare/v0.4.1...v0.4.2) (2026-01-16)
 
 
