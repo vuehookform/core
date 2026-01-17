@@ -413,7 +413,7 @@ export interface RegisterReturn<TValue = unknown> {
   /** Input handler (fires on every keystroke) */
   onInput: (e: Event) => void
   /** Blur handler */
-  onBlur: (e: Event) => void
+  onBlur: () => void
   /** Current value (for controlled mode) - only present when controlled: true */
   value?: Ref<TValue>
   /** Disabled state from form-level disabled option */

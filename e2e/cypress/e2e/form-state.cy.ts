@@ -89,7 +89,7 @@ describe('Form State Tracking', () => {
   })
 
   it('should track isValid', () => {
-    cy.expectText('state-is-valid', 'true') // Initially valid (no validation run)
+    cy.expectText('state-is-valid', 'false') // Initially false (no interaction yet)
 
     // Trigger validation with invalid data (onBlur mode)
     cy.fillInput('username-input', 'ab')

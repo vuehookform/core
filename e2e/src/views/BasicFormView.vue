@@ -2,17 +2,25 @@
   <div class="form-page">
     <h1>Basic Form Registration</h1>
 
-    <form data-testid="basic-form" @submit.prevent="handleSubmit(onSubmit, onSubmitError)($event)">
+    <form
+      :key="formKey"
+      data-testid="basic-form"
+      @submit.prevent="form.handleSubmit(onSubmit, onSubmitError)($event)"
+    >
       <div class="field">
         <label for="email">Email</label>
         <InputText
           id="email"
-          v-bind="register('email')"
+          v-bind="form.register('email')"
           data-testid="email-input"
-          :class="{ 'p-invalid': formState.errors.email }"
+          :class="{ 'p-invalid': form.formState.value.errors.email }"
         />
-        <Message v-if="formState.errors.email" severity="error" data-testid="email-error">
-          {{ formState.errors.email }}
+        <Message
+          v-if="form.formState.value.errors.email"
+          severity="error"
+          data-testid="email-error"
+        >
+          {{ form.formState.value.errors.email }}
         </Message>
       </div>
 
@@ -20,12 +28,12 @@
         <label for="name">Name</label>
         <InputText
           id="name"
-          v-bind="register('name')"
+          v-bind="form.register('name')"
           data-testid="name-input"
-          :class="{ 'p-invalid': formState.errors.name }"
+          :class="{ 'p-invalid': form.formState.value.errors.name }"
         />
-        <Message v-if="formState.errors.name" severity="error" data-testid="name-error">
-          {{ formState.errors.name }}
+        <Message v-if="form.formState.value.errors.name" severity="error" data-testid="name-error">
+          {{ form.formState.value.errors.name }}
         </Message>
       </div>
 
@@ -33,13 +41,17 @@
         <label for="password">Password</label>
         <Password
           id="password"
-          v-bind="register('password')"
+          v-bind="form.register('password')"
           data-testid="password-input"
           :feedback="false"
-          :class="{ 'p-invalid': formState.errors.password }"
+          :class="{ 'p-invalid': form.formState.value.errors.password }"
         />
-        <Message v-if="formState.errors.password" severity="error" data-testid="password-error">
-          {{ formState.errors.password }}
+        <Message
+          v-if="form.formState.value.errors.password"
+          severity="error"
+          data-testid="password-error"
+        >
+          {{ form.formState.value.errors.password }}
         </Message>
       </div>
 
@@ -47,7 +59,7 @@
         type="submit"
         label="Submit"
         data-testid="submit-button"
-        :loading="formState.isSubmitting"
+        :loading="form.formState.value.isSubmitting"
       />
     </form>
 
@@ -59,22 +71,22 @@
     <div class="form-state-debug" data-testid="form-state">
       <h3>Form State:</h3>
       <ul>
-        <li data-testid="is-dirty">isDirty: {{ formState.isDirty }}</li>
-        <li data-testid="is-valid">isValid: {{ formState.isValid }}</li>
-        <li data-testid="submit-count">submitCount: {{ formState.submitCount }}</li>
+        <li data-testid="is-dirty">isDirty: {{ form.formState.value.isDirty }}</li>
+        <li data-testid="is-valid">isValid: {{ form.formState.value.isValid }}</li>
+        <li data-testid="submit-count">submitCount: {{ form.formState.value.submitCount }}</li>
       </ul>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useFormSubmission } from '../composables/useFormSubmission'
+import { useFormWithGlobalMode } from '../composables/useFormWithGlobalMode'
 
 const schema = z.object({
   email: z.email('Please enter a valid email'),
@@ -84,7 +96,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const { register, handleSubmit, formState } = useForm({
+const { form, formKey } = useFormWithGlobalMode({
   schema,
   defaultValues: { email: '', password: '', name: '' },
 })

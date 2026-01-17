@@ -52,7 +52,7 @@ export interface FieldHandlers {
   /** Handler for input events, triggers validation based on mode */
   onInput: (e: Event) => Promise<void>
   /** Handler for blur events, marks field as touched and may trigger validation */
-  onBlur: (e: Event) => Promise<void>
+  onBlur: () => Promise<void>
   /** Ref callback to capture the DOM element reference */
   refCallback: (el: unknown) => void
 }

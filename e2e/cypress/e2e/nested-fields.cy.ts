@@ -73,10 +73,10 @@ describe('Nested Fields', () => {
     cy.getByTestId('submit-button').click()
 
     // Verify actual nested structure by parsing JSON
-    cy.getByTestId('submitted-data')
+    cy.getByTestId('submitted-data-json')
       .invoke('text')
       .then((text) => {
-        const data = JSON.parse(text)
+        const data = JSON.parse(text.trim())
         expect(data).to.have.nested.property('user.firstName', 'Test')
         expect(data).to.have.nested.property('user.lastName', 'User')
         expect(data).to.have.nested.property('user.contact.email', 'test@test.com')

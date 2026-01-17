@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { useForm, type ValidationMode } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
@@ -127,12 +127,12 @@ const createForm = (mode: ValidationMode) => {
   })
 }
 
-let form = createForm(selectedMode.value)
+const form = shallowRef(createForm(selectedMode.value))
 
 const { submittedData, onSubmitSuccess, onSubmitError } = useFormSubmission<FormValues>()
 
 const onModeChange = () => {
-  form = createForm(selectedMode.value)
+  form.value = createForm(selectedMode.value)
   formKey.value++
   submittedData.value = null
 }

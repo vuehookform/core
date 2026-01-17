@@ -2,17 +2,25 @@
   <div class="form-page">
     <h1>Reset & setValue</h1>
 
-    <form data-testid="reset-form" @submit.prevent="handleSubmit(onSubmit, onSubmitError)($event)">
+    <form
+      :key="formKey"
+      data-testid="reset-form"
+      @submit.prevent="form.handleSubmit(onSubmit, onSubmitError)($event)"
+    >
       <div class="field">
         <label for="firstName">First Name</label>
         <InputText
           id="firstName"
-          v-bind="register('firstName')"
+          v-bind="form.register('firstName')"
           data-testid="firstname-input"
-          :class="{ 'p-invalid': formState.errors.firstName }"
+          :class="{ 'p-invalid': form.formState.value.errors.firstName }"
         />
-        <Message v-if="formState.errors.firstName" severity="error" data-testid="firstname-error">
-          {{ formState.errors.firstName }}
+        <Message
+          v-if="form.formState.value.errors.firstName"
+          severity="error"
+          data-testid="firstname-error"
+        >
+          {{ form.formState.value.errors.firstName }}
         </Message>
       </div>
 
@@ -20,12 +28,16 @@
         <label for="lastName">Last Name</label>
         <InputText
           id="lastName"
-          v-bind="register('lastName')"
+          v-bind="form.register('lastName')"
           data-testid="lastname-input"
-          :class="{ 'p-invalid': formState.errors.lastName }"
+          :class="{ 'p-invalid': form.formState.value.errors.lastName }"
         />
-        <Message v-if="formState.errors.lastName" severity="error" data-testid="lastname-error">
-          {{ formState.errors.lastName }}
+        <Message
+          v-if="form.formState.value.errors.lastName"
+          severity="error"
+          data-testid="lastname-error"
+        >
+          {{ form.formState.value.errors.lastName }}
         </Message>
       </div>
 
@@ -33,12 +45,16 @@
         <label for="email">Email</label>
         <InputText
           id="email"
-          v-bind="register('email')"
+          v-bind="form.register('email')"
           data-testid="email-input"
-          :class="{ 'p-invalid': formState.errors.email }"
+          :class="{ 'p-invalid': form.formState.value.errors.email }"
         />
-        <Message v-if="formState.errors.email" severity="error" data-testid="email-error">
-          {{ formState.errors.email }}
+        <Message
+          v-if="form.formState.value.errors.email"
+          severity="error"
+          data-testid="email-error"
+        >
+          {{ form.formState.value.errors.email }}
         </Message>
       </div>
 
@@ -98,11 +114,11 @@
     <div class="form-state-debug" data-testid="form-state">
       <h3>Form State:</h3>
       <ul>
-        <li data-testid="is-dirty">isDirty: {{ formState.isDirty }}</li>
+        <li data-testid="is-dirty">isDirty: {{ form.formState.value.isDirty }}</li>
         <li data-testid="dirty-fields">
-          dirtyFields: {{ Object.keys(formState.dirtyFields).join(', ') || 'none' }}
+          dirtyFields: {{ Object.keys(form.formState.value.dirtyFields).join(', ') || 'none' }}
         </li>
-        <li data-testid="submit-count">submitCount: {{ formState.submitCount }}</li>
+        <li data-testid="submit-count">submitCount: {{ form.formState.value.submitCount }}</li>
       </ul>
     </div>
 
@@ -120,12 +136,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useFormSubmission } from '../composables/useFormSubmission'
+import { useFormWithGlobalMode } from '../composables/useFormWithGlobalMode'
 
 const schema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -135,7 +151,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const { register, handleSubmit, formState, reset, resetField, setValue, getValues } = useForm({
+const { form, formKey } = useFormWithGlobalMode({
   schema,
   defaultValues: { firstName: 'John', lastName: 'Doe', email: 'john@example.com' },
 })
@@ -146,12 +162,12 @@ const currentValues = ref<FormValues | null>(null)
 const onSubmit = (data: FormValues) => onSubmitSuccess(data)
 
 const handleReset = () => {
-  reset()
+  form.value.reset()
   submittedData.value = null
 }
 
 const handleResetToCustom = () => {
-  reset({
+  form.value.reset({
     firstName: 'Jane',
     lastName: 'Smith',
     email: 'jane@example.com',
@@ -160,20 +176,20 @@ const handleResetToCustom = () => {
 }
 
 const handleResetFirstName = () => {
-  resetField('firstName')
+  form.value.resetField('firstName')
 }
 
 const handleSetEmail = () => {
-  setValue('email', 'updated@example.com')
+  form.value.setValue('email', 'updated@example.com')
 }
 
 const handleSetAllValues = () => {
-  setValue('firstName', 'Alice')
-  setValue('lastName', 'Wonder')
-  setValue('email', 'alice@example.com')
+  form.value.setValue('firstName', 'Alice')
+  form.value.setValue('lastName', 'Wonder')
+  form.value.setValue('email', 'alice@example.com')
 }
 
 const showCurrentValues = () => {
-  currentValues.value = getValues()
+  currentValues.value = form.value.getValues()
 }
 </script>

@@ -3,19 +3,24 @@
     <h1>Form State Tracking</h1>
 
     <form
+      :key="formKey"
       data-testid="form-state-form"
-      @submit.prevent="handleSubmit(onSubmit, onSubmitError)($event)"
+      @submit.prevent="form.handleSubmit(onSubmit, onSubmitError)($event)"
     >
       <div class="field">
         <label for="username">Username</label>
         <InputText
           id="username"
-          v-bind="register('username')"
+          v-bind="form.register('username')"
           data-testid="username-input"
-          :class="{ 'p-invalid': formState.errors.username }"
+          :class="{ 'p-invalid': form.formState.value.errors.username }"
         />
-        <Message v-if="formState.errors.username" severity="error" data-testid="username-error">
-          {{ formState.errors.username }}
+        <Message
+          v-if="form.formState.value.errors.username"
+          severity="error"
+          data-testid="username-error"
+        >
+          {{ form.formState.value.errors.username }}
         </Message>
       </div>
 
@@ -23,18 +28,22 @@
         <label for="email">Email</label>
         <InputText
           id="email"
-          v-bind="register('email')"
+          v-bind="form.register('email')"
           data-testid="email-input"
-          :class="{ 'p-invalid': formState.errors.email }"
+          :class="{ 'p-invalid': form.formState.value.errors.email }"
         />
-        <Message v-if="formState.errors.email" severity="error" data-testid="email-error">
-          {{ formState.errors.email }}
+        <Message
+          v-if="form.formState.value.errors.email"
+          severity="error"
+          data-testid="email-error"
+        >
+          {{ form.formState.value.errors.email }}
         </Message>
       </div>
 
       <div class="field">
         <label for="bio">Bio (optional)</label>
-        <InputText id="bio" v-bind="register('bio')" data-testid="bio-input" />
+        <InputText id="bio" v-bind="form.register('bio')" data-testid="bio-input" />
       </div>
 
       <div style="display: flex; gap: 0.5rem">
@@ -55,50 +64,50 @@
         <tbody>
           <tr>
             <td><strong>isDirty:</strong></td>
-            <td data-testid="state-is-dirty">{{ formState.isDirty }}</td>
+            <td data-testid="state-is-dirty">{{ form.formState.value.isDirty }}</td>
           </tr>
           <tr>
             <td><strong>isValid:</strong></td>
-            <td data-testid="state-is-valid">{{ formState.isValid }}</td>
+            <td data-testid="state-is-valid">{{ form.formState.value.isValid }}</td>
           </tr>
           <tr>
             <td><strong>isSubmitting:</strong></td>
-            <td data-testid="state-is-submitting">{{ formState.isSubmitting }}</td>
+            <td data-testid="state-is-submitting">{{ form.formState.value.isSubmitting }}</td>
           </tr>
           <tr>
             <td><strong>isSubmitted:</strong></td>
-            <td data-testid="state-is-submitted">{{ formState.isSubmitted }}</td>
+            <td data-testid="state-is-submitted">{{ form.formState.value.isSubmitted }}</td>
           </tr>
           <tr>
             <td><strong>isSubmitSuccessful:</strong></td>
             <td data-testid="state-is-submit-successful">
-              {{ formState.isSubmitSuccessful }}
+              {{ form.formState.value.isSubmitSuccessful }}
             </td>
           </tr>
           <tr>
             <td><strong>submitCount:</strong></td>
-            <td data-testid="state-submit-count">{{ formState.submitCount }}</td>
+            <td data-testid="state-submit-count">{{ form.formState.value.submitCount }}</td>
           </tr>
           <tr>
             <td><strong>isLoading:</strong></td>
-            <td data-testid="state-is-loading">{{ formState.isLoading }}</td>
+            <td data-testid="state-is-loading">{{ form.formState.value.isLoading }}</td>
           </tr>
           <tr>
             <td><strong>dirtyFields:</strong></td>
             <td data-testid="state-dirty-fields">
-              {{ Object.keys(formState.dirtyFields).join(', ') || 'none' }}
+              {{ Object.keys(form.formState.value.dirtyFields).join(', ') || 'none' }}
             </td>
           </tr>
           <tr>
             <td><strong>touchedFields:</strong></td>
             <td data-testid="state-touched-fields">
-              {{ Object.keys(formState.touchedFields).join(', ') || 'none' }}
+              {{ Object.keys(form.formState.value.touchedFields).join(', ') || 'none' }}
             </td>
           </tr>
           <tr>
             <td><strong>errors:</strong></td>
             <td data-testid="state-errors">
-              {{ Object.keys(formState.errors).join(', ') || 'none' }}
+              {{ Object.keys(form.formState.value.errors).join(', ') || 'none' }}
             </td>
           </tr>
         </tbody>
@@ -119,12 +128,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import type { FieldState } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useFormSubmission } from '../composables/useFormSubmission'
+import { useFormWithGlobalMode } from '../composables/useFormWithGlobalMode'
 
 const schema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -134,19 +144,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const { register, handleSubmit, formState, getFieldState } = useForm({
+const { form, formKey } = useFormWithGlobalMode({
   schema,
-  mode: 'onBlur',
   defaultValues: { username: '', email: '', bio: '' },
 })
 
 const { submittedData, onSubmitSuccess, onSubmitError } = useFormSubmission<FormValues>()
-const fieldStateSnapshot = ref<ReturnType<typeof getFieldState> | null>(null)
+const fieldStateSnapshot = ref<FieldState | null>(null)
 
 const onSubmit = (data: FormValues) => onSubmitSuccess(data)
 
 const captureUsernameState = () => {
-  fieldStateSnapshot.value = getFieldState('username')
+  fieldStateSnapshot.value = form.value.getFieldState('username')
 }
 </script>
 

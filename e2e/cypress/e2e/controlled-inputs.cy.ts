@@ -37,7 +37,7 @@ describe('Controlled Inputs', () => {
     cy.selectDate('birthdate-calendar')
 
     // Set age to 16
-    cy.fillNestedInput('age-input', '16')
+    cy.fillInputNumber('age-input', '16')
 
     cy.getByTestId('submit-button').click()
 
@@ -52,7 +52,7 @@ describe('Controlled Inputs', () => {
     cy.selectDate('birthdate-calendar')
 
     // Set valid age
-    cy.fillNestedInput('age-input', '25')
+    cy.fillInputNumber('age-input', '25')
 
     cy.getByTestId('submit-button').click()
 

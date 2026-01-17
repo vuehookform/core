@@ -1,6 +1,15 @@
+import { resolve } from 'node:path'
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  vite: {
+    resolve: {
+      alias: {
+        '@vuehookform/core': resolve(__dirname, '../../lib'),
+      },
+    },
+  },
+
   title: 'Vue Hook Form',
   titleTemplate: ':title - Vue Hook Form',
   description:

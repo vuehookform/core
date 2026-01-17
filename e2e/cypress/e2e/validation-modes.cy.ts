@@ -6,8 +6,7 @@ describe('Validation Modes', () => {
   describe('onSubmit mode (default)', () => {
     it('should not validate on input or blur', () => {
       cy.fillInput('email-input', 'invalid')
-      cy.getByTestId('username-input').focus()
-      cy.getByTestId('email-input').blur()
+      cy.getByTestId('username-input').focus() // This triggers blur on email-input
 
       cy.getByTestId('email-error').should('not.exist')
     })
@@ -23,8 +22,8 @@ describe('Validation Modes', () => {
   describe('onBlur mode', () => {
     beforeEach(() => {
       cy.selectDropdownOption('mode-selector', 'onBlur')
-      // Wait for form to re-render with new mode
-      cy.getByTestId('email-input').should('exist')
+      // Wait for mode description to confirm mode switch completed
+      cy.contains('Validation runs when a field loses focus').should('be.visible')
     })
 
     it('should validate when field loses focus', () => {
@@ -55,8 +54,8 @@ describe('Validation Modes', () => {
   describe('onChange mode', () => {
     beforeEach(() => {
       cy.selectDropdownOption('mode-selector', 'onChange')
-      // Wait for form to re-render with new mode
-      cy.getByTestId('email-input').should('exist')
+      // Wait for mode description to confirm mode switch completed
+      cy.contains('Validation runs on every input change').should('be.visible')
     })
 
     it('should validate on every keystroke', () => {
@@ -80,8 +79,8 @@ describe('Validation Modes', () => {
   describe('onTouched mode', () => {
     beforeEach(() => {
       cy.selectDropdownOption('mode-selector', 'onTouched')
-      // Wait for form to re-render with new mode
-      cy.getByTestId('email-input').should('exist')
+      // Wait for mode description to confirm mode switch completed
+      cy.contains('Validation runs after a field is touched').should('be.visible')
     })
 
     it('should not validate before touch', () => {

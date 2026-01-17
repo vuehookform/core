@@ -3,14 +3,15 @@
     <h1>Field Arrays</h1>
 
     <form
+      :key="formKey"
       data-testid="field-array-form"
-      @submit.prevent="handleSubmit(onSubmit, onSubmitError)($event)"
+      @submit.prevent="form.handleSubmit(onSubmit, onSubmitError)($event)"
     >
       <div class="field">
         <label for="name">Name</label>
-        <InputText id="name" v-bind="register('name')" data-testid="name-input" />
-        <Message v-if="formState.errors.name" severity="error" data-testid="name-error">
-          {{ formState.errors.name }}
+        <InputText id="name" v-bind="form.register('name')" data-testid="name-input" />
+        <Message v-if="form.formState.value.errors.name" severity="error" data-testid="name-error">
+          {{ form.formState.value.errors.name }}
         </Message>
       </div>
 
@@ -18,7 +19,9 @@
         <h2>Addresses</h2>
 
         <div
-          v-for="field in addressFields.value"
+          v-for="field in form.fields('addresses', {
+            rules: { minLength: { value: 1, message: 'At least one address required' } },
+          }).value"
           :key="field.key"
           class="address-item"
           :data-testid="`address-${field.index}`"
@@ -28,45 +31,45 @@
           <div class="field">
             <label>Street</label>
             <InputText
-              v-bind="register(`addresses.${field.index}.street`)"
+              v-bind="form.register(`addresses.${field.index}.street`)"
               :data-testid="`street-${field.index}`"
             />
             <Message
-              v-if="getErrors(`addresses.${field.index}.street`)"
+              v-if="form.getErrors(`addresses.${field.index}.street`)"
               severity="error"
               :data-testid="`street-error-${field.index}`"
             >
-              {{ getErrors(`addresses.${field.index}.street`) }}
+              {{ form.getErrors(`addresses.${field.index}.street`) }}
             </Message>
           </div>
 
           <div class="field">
             <label>City</label>
             <InputText
-              v-bind="register(`addresses.${field.index}.city`)"
+              v-bind="form.register(`addresses.${field.index}.city`)"
               :data-testid="`city-${field.index}`"
             />
             <Message
-              v-if="getErrors(`addresses.${field.index}.city`)"
+              v-if="form.getErrors(`addresses.${field.index}.city`)"
               severity="error"
               :data-testid="`city-error-${field.index}`"
             >
-              {{ getErrors(`addresses.${field.index}.city`) }}
+              {{ form.getErrors(`addresses.${field.index}.city`) }}
             </Message>
           </div>
 
           <div class="field">
             <label>Zip Code</label>
             <InputText
-              v-bind="register(`addresses.${field.index}.zipCode`)"
+              v-bind="form.register(`addresses.${field.index}.zipCode`)"
               :data-testid="`zipcode-${field.index}`"
             />
             <Message
-              v-if="getErrors(`addresses.${field.index}.zipCode`)"
+              v-if="form.getErrors(`addresses.${field.index}.zipCode`)"
               severity="error"
               :data-testid="`zipcode-error-${field.index}`"
             >
-              {{ getErrors(`addresses.${field.index}.zipCode`) }}
+              {{ form.getErrors(`addresses.${field.index}.zipCode`) }}
             </Message>
           </div>
 
@@ -115,12 +118,13 @@
 </template>
 
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { computed } from 'vue'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useFormSubmission } from '../composables/useFormSubmission'
+import { useFormWithGlobalMode } from '../composables/useFormWithGlobalMode'
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Street is required'),
@@ -135,7 +139,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const { register, fields, handleSubmit, formState, getErrors } = useForm({
+const { form, formKey } = useFormWithGlobalMode({
   schema,
   defaultValues: {
     name: '',
@@ -143,29 +147,44 @@ const { register, fields, handleSubmit, formState, getErrors } = useForm({
   },
 })
 
-const addressFields = fields('addresses')
+// Computed to get addressFields that updates when form is recreated
+const addressFields = computed(() =>
+  form.value.fields('addresses', {
+    rules: {
+      minLength: { value: 1, message: 'At least one address required' },
+    },
+  }),
+)
 
 const { submittedData, onSubmitSuccess, onSubmitError } = useFormSubmission<FormValues>()
 
 const onSubmit = (data: FormValues) => onSubmitSuccess(data)
 
 const addAddress = () => {
-  addressFields.append({ street: '', city: '', zipCode: '' })
+  addressFields.value.append({ street: '', city: '', zipCode: '' })
 }
 
 const removeAddress = (index: number) => {
-  addressFields.remove(index)
+  console.log('[DEBUG] Before remove:', {
+    index,
+    length: addressFields.value.value.length,
+  })
+  const result = addressFields.value.remove(index)
+  console.log('[DEBUG] After remove:', {
+    result,
+    length: addressFields.value.value.length,
+  })
 }
 
 const swapAddresses = () => {
-  if (addressFields.value.length >= 2) {
-    addressFields.swap(0, 1)
+  if (addressFields.value.value.length >= 2) {
+    addressFields.value.swap(0, 1)
   }
 }
 
 const moveAddressToFirst = () => {
-  if (addressFields.value.length >= 2) {
-    addressFields.move(addressFields.value.length - 1, 0)
+  if (addressFields.value.value.length >= 2) {
+    addressFields.value.move(addressFields.value.value.length - 1, 0)
   }
 }
 </script>

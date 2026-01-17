@@ -52,3 +52,214 @@
 .vp-doc .table-wrapper table {
   margin: 0;
 }
+
+/* Demo form styles */
+.demo-form {
+  max-width: 400px;
+}
+
+.demo-form .field {
+  margin-bottom: 1rem;
+}
+
+.demo-form label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-1);
+}
+
+.demo-form input,
+.demo-form select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.demo-form input:focus,
+.demo-form select:focus {
+  outline: none;
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 0 0 3px var(--vp-c-brand-soft);
+}
+
+.demo-form input.has-error,
+.demo-form select.has-error {
+  border-color: #ef4444;
+}
+
+.demo-form input.has-error:focus,
+.demo-form select.has-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.demo-form .error-message {
+  display: block;
+  margin-top: 0.25rem;
+  color: #ef4444;
+  font-size: 0.75rem;
+}
+
+.demo-form button[type='submit'],
+.demo-form .demo-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: var(--vp-c-brand-1);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.demo-form button[type='submit']:hover,
+.demo-form .demo-button:hover {
+  background: var(--vp-c-brand-2);
+}
+
+.demo-form button[type='submit']:disabled,
+.demo-form .demo-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.demo-form .demo-button-secondary {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.demo-form .demo-button-secondary:hover {
+  background: var(--vp-c-bg-mute);
+}
+
+.demo-form .demo-button-danger {
+  background: #ef4444;
+}
+
+.demo-form .demo-button-danger:hover {
+  background: #dc2626;
+}
+
+.demo-form .demo-button-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.demo-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 6px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.demo-result h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.demo-result pre {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  background: var(--vp-c-bg);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.demo-state {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.demo-state ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-state li {
+  padding: 0.25rem 0;
+  color: var(--vp-c-text-2);
+}
+
+.demo-state code {
+  padding: 0.125rem 0.25rem;
+  font-size: 0.6875rem;
+  background: var(--vp-c-bg);
+  border-radius: 3px;
+}
+
+/* Mode selector */
+.demo-mode-selector {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 6px;
+}
+
+.demo-mode-selector label {
+  margin-bottom: 0.5rem;
+}
+
+.demo-mode-description {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--vp-c-text-2);
+}
+
+/* Field array styles */
+.demo-array-item {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+}
+
+.demo-array-item h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+}
+
+.demo-array-item .field {
+  margin-bottom: 0.75rem;
+}
+
+.demo-array-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* Nested component visual indicator */
+.demo-nested {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--vp-c-divider);
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.demo-nested h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--vp-c-text-3);
+}

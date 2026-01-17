@@ -238,7 +238,7 @@ export function createFieldRegistration<FormValues>(
       /**
        * Handle field blur
        */
-      const onBlur = async (_e: Event) => {
+      const onBlur = async () => {
         // Mark as touched (optimized - skips clone if already touched)
         markFieldTouched(ctx.touchedFields, name)
 

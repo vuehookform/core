@@ -52,6 +52,15 @@ const router = createRouter({
       name: 'reset-setvalue',
       component: () => import('../views/ResetSetValueView.vue'),
     },
+    {
+      path: '/prime-input-number',
+      name: 'prime-input-number',
+      component: () => import('../views/PrimeInputNumberView.vue'),
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/basic',
+    },
   ],
 })
 

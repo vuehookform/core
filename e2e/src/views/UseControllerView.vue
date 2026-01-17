@@ -3,6 +3,7 @@
     <h1>useController Demo</h1>
 
     <form
+      :key="formKey"
       data-testid="controller-form"
       @submit.prevent="form.handleSubmit(onSubmit, onSubmitError)($event)"
     >
@@ -83,12 +84,14 @@
 </template>
 
 <script setup lang="ts">
-import { useForm, useController, provideForm } from '@vuehookform/core'
+import { watch, computed } from 'vue'
+import { useController, provideForm } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useFormSubmission } from '../composables/useFormSubmission'
+import { useFormWithGlobalMode } from '../composables/useFormWithGlobalMode'
 
 const schema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -98,27 +101,36 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-const form = useForm({
+const { form, formKey } = useFormWithGlobalMode({
   schema,
   defaultValues: { firstName: '', lastName: '', email: '' },
 })
 
-provideForm(form)
+// Provide form to child components, update when form is recreated
+provideForm(form.value)
+watch(form, (newForm) => provideForm(newForm))
 
-const firstNameController = useController({
-  name: 'firstName',
-  control: form,
-})
+// Controllers need to be computed to update when form is recreated
+const firstNameController = computed(() =>
+  useController({
+    name: 'firstName',
+    control: form.value,
+  }),
+)
 
-const lastNameController = useController({
-  name: 'lastName',
-  control: form,
-})
+const lastNameController = computed(() =>
+  useController({
+    name: 'lastName',
+    control: form.value,
+  }),
+)
 
-const emailController = useController({
-  name: 'email',
-  control: form,
-})
+const emailController = computed(() =>
+  useController({
+    name: 'email',
+    control: form.value,
+  }),
+)
 
 const { submittedData, onSubmitSuccess, onSubmitError } = useFormSubmission<FormValues>()
 
