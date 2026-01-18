@@ -49,10 +49,10 @@ const onSubmit = (data: FormValues) => {
         id="email"
         type="email"
         v-bind="register('email')"
-        :class="{ 'has-error': formState.value.errors.email }"
+        :class="{ 'has-error': formState.errors.email }"
       />
-      <span v-if="formState.value.errors.email" class="error">
-        {{ formState.value.errors.email }}
+      <span v-if="formState.errors.email" class="error">
+        {{ formState.errors.email }}
       </span>
     </div>
     <!-- Similar for name and password fields -->
@@ -99,14 +99,14 @@ const { value: bioValue, ...bioBindings } = register('bio', { controlled: true }
 
 <template>
   <form @submit="handleSubmit(onSubmit)">
-    <select v-model="countryValue.value" v-bind="countryBindings">
+    <select v-model="countryValue" v-bind="countryBindings">
       <option value="">Select a country</option>
       <option value="US">United States</option>
     </select>
 
-    <input type="number" v-model="ageValue.value" v-bind="ageBindings" />
+    <input type="number" v-model="ageValue" v-bind="ageBindings" />
 
-    <textarea v-model="bioValue.value" v-bind="bioBindings" />
+    <textarea v-model="bioValue" v-bind="bioBindings" />
   </form>
 </template>
 ```
@@ -163,9 +163,9 @@ const onModeChange = () => {
     <option value="onTouched">onTouched</option>
   </select>
 
-  <form :key="formKey" @submit.prevent="form.value.handleSubmit(onSubmit)($event)">
-    <input v-bind="form.value.register('email')" />
-    <input v-bind="form.value.register('username')" />
+  <form :key="formKey" @submit.prevent="form.handleSubmit(onSubmit)($event)">
+    <input v-bind="form.register('email')" />
+    <input v-bind="form.register('username')" />
   </form>
 </template>
 ```
@@ -358,8 +358,6 @@ const error = computed(() => formState.value.errors.childField)
 
 ### Simple Login Form
 
-### Simple Login Form
-
 A minimal login form with email and password validation.
 
 ```vue
@@ -368,7 +366,7 @@ import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
-  email: z.email('Invalid email'),
+  email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Min 8 characters'),
 })
 
@@ -401,7 +399,7 @@ import { z } from 'zod'
 const schema = z
   .object({
     name: z.string().min(2),
-    email: z.email(),
+    email: z.string().email(),
     password: z.string().min(8),
     confirmPassword: z.string(),
   })
@@ -449,7 +447,7 @@ const items = fields('items')
     <div v-for="field in items.value" :key="field.key">
       <input v-bind="register(`items.${field.index}.product`)" />
       <input v-bind="register(`items.${field.index}.quantity`)" type="number" />
-      <button type="button" @click="field.remove()">Remove</button>
+      <button type="button" @click="items.remove(field.index)">Remove</button>
     </div>
     <button type="button" @click="items.append({ product: '', quantity: 1 })">Add Item</button>
     <button type="submit">Checkout</button>

@@ -263,3 +263,69 @@
   font-weight: 500;
   color: var(--vp-c-text-3);
 }
+
+/* Toast notifications */
+.demo-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 9999;
+  max-width: calc(100vw - 3rem);
+}
+
+.demo-toast--success {
+  background: var(--vp-c-brand-1);
+  color: white;
+}
+
+.demo-toast--error {
+  background: #ef4444;
+  color: white;
+}
+
+.demo-toast__message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.demo-toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.demo-toast__close:hover {
+  opacity: 1;
+}
+
+/* Toast transition */
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  transform: translateY(1rem);
+  opacity: 0;
+}

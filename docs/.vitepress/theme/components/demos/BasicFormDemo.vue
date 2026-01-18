@@ -1,11 +1,12 @@
 <template>
   <div class="demo-form">
-    <form @submit="handleSubmit(onSubmit)">
+    <form autocomplete="off" @submit.prevent="handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="email">Email</label>
+        <label for="basic-email">Email</label>
         <input
-          id="email"
+          id="basic-email"
           type="email"
+          autocomplete="off"
           v-bind="register('email')"
           placeholder="you@example.com"
           :class="{ 'has-error': formState.errors.email }"
@@ -16,9 +17,10 @@
       </div>
 
       <div class="field">
-        <label for="name">Name</label>
+        <label for="basic-name">Name</label>
         <input
-          id="name"
+          id="basic-name"
+          autocomplete="off"
           v-bind="register('name')"
           placeholder="John Doe"
           :class="{ 'has-error': formState.errors.name }"
@@ -29,10 +31,11 @@
       </div>
 
       <div class="field">
-        <label for="password">Password</label>
+        <label for="basic-password">Password</label>
         <input
-          id="password"
+          id="basic-password"
           type="password"
+          autocomplete="new-password"
           v-bind="register('password')"
           placeholder="Min 8 characters"
           :class="{ 'has-error': formState.errors.password }"
@@ -70,6 +73,7 @@
 import { ref } from 'vue'
 import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -86,8 +90,10 @@ const { register, handleSubmit, formState } = useForm({
 })
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 </script>

@@ -1,10 +1,11 @@
 <template>
   <div class="demo-form">
-    <form @submit="form.handleSubmit(onSubmit)">
+    <form autocomplete="off" @submit.prevent="form.handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="parentField">Parent Field (direct register)</label>
+        <label for="context-parentField">Parent Field (direct register)</label>
         <input
-          id="parentField"
+          id="context-parentField"
+          autocomplete="off"
           v-bind="form.register('parentField')"
           placeholder="Parent input"
           :class="{ 'has-error': form.formState.value.errors.parentField }"
@@ -52,6 +53,7 @@
 import { ref, defineComponent, h, computed } from 'vue'
 import { useForm, provideForm, useFormContext } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const schema = z.object({
   parentField: z.string().min(2, 'Parent field must be at least 2 characters'),
@@ -74,9 +76,11 @@ const form = useForm({
 provideForm(form)
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 
 // Child component using useFormContext
@@ -91,9 +95,10 @@ const ChildField = defineComponent({
 
     return () =>
       h('div', { class: 'field' }, [
-        h('label', { for: 'childField' }, 'Child Field (via useFormContext)'),
+        h('label', { for: 'context-childField' }, 'Child Field (via useFormContext)'),
         h('input', {
-          id: 'childField',
+          id: 'context-childField',
+          autocomplete: 'off',
           placeholder: 'Child input',
           class: error.value ? 'has-error' : '',
           ...register('childField'),
@@ -115,9 +120,10 @@ const GrandchildField = defineComponent({
 
     return () =>
       h('div', { class: 'field' }, [
-        h('label', { for: 'grandchildField' }, 'Grandchild Field (via useFormContext)'),
+        h('label', { for: 'context-grandchildField' }, 'Grandchild Field (via useFormContext)'),
         h('input', {
-          id: 'grandchildField',
+          id: 'context-grandchildField',
+          autocomplete: 'off',
           placeholder: 'Grandchild input',
           class: error.value ? 'has-error' : '',
           ...register('grandchildField'),
