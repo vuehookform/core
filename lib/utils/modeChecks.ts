@@ -23,15 +23,15 @@ function validateMode(mode: ValidationMode, paramName: string): void {
  *
  * @param mode - The form's validation mode
  * @param isTouched - Whether the field has been touched
+ * @param hasSubmitted - Whether the form has been submitted at least once (for reValidateMode)
  * @param reValidateMode - The form's reValidateMode (used after first submit)
- * @param hasSubmitted - Whether the form has been submitted at least once (optional, for reValidateMode)
  * @returns true if validation should be triggered
  */
 export function shouldValidateOnChange(
   mode: ValidationMode,
   isTouched: boolean,
-  reValidateMode?: ValidationMode,
   hasSubmitted?: boolean,
+  reValidateMode?: ValidationMode,
 ): boolean {
   if (__DEV__) {
     validateMode(mode, 'validation mode')

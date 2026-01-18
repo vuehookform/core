@@ -154,8 +154,8 @@ export function createFieldRegistration<FormValues>(
         const shouldValidate = shouldValidateOnChange(
           ctx.options.mode ?? 'onSubmit',
           ctx.touchedFields.value[name] === true,
-          ctx.options.reValidateMode,
           ctx.submitCount.value > 0,
+          ctx.options.reValidateMode,
         )
 
         if (shouldValidate) {

@@ -3,6 +3,7 @@
  * All exports are designed to be tree-shaken in production
  */
 import type { ZodType, ZodObject, ZodArray } from 'zod'
+import { getPathSegments } from './paths'
 
 /**
  * DEV flag for tree-shaking
@@ -93,7 +94,7 @@ function traverseSchemaPath(
   schema: ZodType,
   path: string,
 ): { schema: ZodType } | { error: string; availableFields?: string[]; segmentIndex: number } {
-  const segments = path.split('.')
+  const segments = getPathSegments(path)
   let currentSchema: ZodType = schema
 
   for (let i = 0; i < segments.length; i++) {

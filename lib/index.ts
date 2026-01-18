@@ -33,6 +33,7 @@ export type {
   // Core form types
   UseFormOptions,
   UseFormReturn,
+  UseFormReturn as Control,
   RegisterOptions,
   RegisterReturn,
   FormState,
@@ -72,4 +73,4 @@ export type {
 } from './types'
 
 // Path utilities for advanced form data manipulation
-export { get, set, unset, generateId, clearPathCache } from './utils/paths'
+export { get, set, unset, clearPathCache } from './utils/paths'

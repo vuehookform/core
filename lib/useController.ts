@@ -109,7 +109,7 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     const mode = form.options.mode ?? 'onSubmit'
     const reValidateMode = form.options.reValidateMode
 
-    const shouldValidate = shouldValidateOnChange(mode, isTouched, reValidateMode, hasSubmitted)
+    const shouldValidate = shouldValidateOnChange(mode, isTouched, hasSubmitted, reValidateMode)
 
     form.setValue(name, newValue, { shouldValidate })
   }
