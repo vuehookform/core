@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/vuehookform/core/compare/v0.4.4...v0.4.5) (2026-01-18)
+
+
+### Bug Fixes
+
+* **ci:** add build step before npm publish ([887459b](https://github.com/vuehookform/core/commit/887459b3a2e99d287bfc6773560d857f7a229ed2))
+
 ## [0.4.4](https://github.com/vuehookform/core/compare/v0.4.3...v0.4.4) (2026-01-18)
 
 
