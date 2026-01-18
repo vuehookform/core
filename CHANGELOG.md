@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.4](https://github.com/vuehookform/core/compare/v0.4.3...v0.4.4) (2026-01-18)
+
+
+### Bug Fixes
+
+* correct parameter order and add null safety to path utilities ([4b3d844](https://github.com/vuehookform/core/commit/4b3d84464f939121b2e3e8b995f882395a8bf7f7))
+* improve docs demos and add null safety to path utilities ([54a120e](https://github.com/vuehookform/core/commit/54a120e9ef19a65241db2fd42b1af1a39f39ef6d))
+
 ## [0.4.3](https://github.com/vuehookform/core/compare/v0.4.2...v0.4.3) (2026-01-17)
 
 
