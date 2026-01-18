@@ -42,12 +42,12 @@ const onSubmit = (data) => {
 <template>
   <form @submit="handleSubmit(onSubmit)">
     <input v-bind="register('email')" type="email" />
-    <span v-if="formState.errors.email">{{ formState.errors.email }}</span>
+    <span v-if="formState.value.errors.email">{{ formState.value.errors.email }}</span>
 
     <input v-bind="register('password')" type="password" />
-    <span v-if="formState.errors.password">{{ formState.errors.password }}</span>
+    <span v-if="formState.value.errors.password">{{ formState.value.errors.password }}</span>
 
-    <button type="submit" :disabled="formState.isSubmitting">Submit</button>
+    <button type="submit" :disabled="formState.value.isSubmitting">Submit</button>
   </form>
 </template>
 ```
@@ -160,11 +160,15 @@ const emailError = computed(() => formState.value.errors.email)
 
 <!-- ✅ Option 3: Use useController for reusable components -->
 <script setup>
+import { useForm, useController, type Control } from '@vuehookform/core'
+
+// control comes from useForm (pass it as a prop to child components)
+const { control } = useForm({ schema })
 const { fieldState } = useController({ name: 'email', control })
 // fieldState is a ComputedRef that updates automatically
 </script>
 <template>
-  <span v-if="fieldState.error">{{ fieldState.error }}</span>
+  <span v-if="fieldState.value.error">{{ fieldState.value.error }}</span>
 </template>
 ```
 

@@ -1,10 +1,11 @@
 <template>
   <div class="demo-form">
-    <form @submit="handleSubmit(onSubmit)">
+    <form autocomplete="off" @submit.prevent="handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="country">Country (select)</label>
+        <label for="controlled-country">Country (select)</label>
         <select
-          id="country"
+          id="controlled-country"
+          autocomplete="off"
           v-model="countryValue"
           v-bind="countryBindings"
           :class="{ 'has-error': formState.errors.country }"
@@ -20,10 +21,11 @@
       </div>
 
       <div class="field">
-        <label for="age">Age (number)</label>
+        <label for="controlled-age">Age (number)</label>
         <input
-          id="age"
+          id="controlled-age"
           type="number"
+          autocomplete="off"
           v-model="ageValue"
           v-bind="ageBindings"
           placeholder="18"
@@ -35,9 +37,10 @@
       </div>
 
       <div class="field">
-        <label for="bio">Bio (textarea)</label>
+        <label for="controlled-bio">Bio (textarea)</label>
         <textarea
-          id="bio"
+          id="controlled-bio"
+          autocomplete="off"
           v-model="bioValue"
           v-bind="bioBindings"
           rows="3"
@@ -72,6 +75,7 @@
 import { ref } from 'vue'
 import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const schema = z.object({
   country: z.string().min(1, 'Please select a country'),
@@ -100,9 +104,11 @@ const { value: ageValue, ...ageBindings } = register('age', { controlled: true }
 const { value: bioValue, ...bioBindings } = register('bio', { controlled: true })
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 </script>
 

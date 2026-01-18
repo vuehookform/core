@@ -1,10 +1,11 @@
 <template>
   <div class="demo-form">
-    <form @submit="form.handleSubmit(onSubmit)">
+    <form autocomplete="off" @submit.prevent="form.handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="firstName">First Name</label>
+        <label for="controller-firstName">First Name</label>
         <input
-          id="firstName"
+          id="controller-firstName"
+          autocomplete="off"
           :value="firstNameController.field.value.value"
           :class="{ 'has-error': firstNameController.fieldState.value.error }"
           placeholder="John"
@@ -21,9 +22,10 @@
       </div>
 
       <div class="field">
-        <label for="lastName">Last Name</label>
+        <label for="controller-lastName">Last Name</label>
         <input
-          id="lastName"
+          id="controller-lastName"
+          autocomplete="off"
           :value="lastNameController.field.value.value"
           :class="{ 'has-error': lastNameController.fieldState.value.error }"
           placeholder="Doe"
@@ -40,10 +42,11 @@
       </div>
 
       <div class="field">
-        <label for="email">Email</label>
+        <label for="controller-email">Email</label>
         <input
-          id="email"
+          id="controller-email"
           type="email"
+          autocomplete="off"
           :value="emailController.field.value.value"
           :class="{ 'has-error': emailController.fieldState.value.error }"
           placeholder="john@example.com"
@@ -73,6 +76,7 @@
 import { ref } from 'vue'
 import { useForm, useController } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const schema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -105,9 +109,11 @@ const emailController = useController({
 })
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 </script>
 

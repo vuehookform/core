@@ -12,6 +12,7 @@
  * - `_def.element` for array elements
  */
 import type { ZodType, ZodObject, ZodArray } from 'zod'
+import { getPathSegments } from './paths'
 
 // --- Internal helpers for Zod v4 ---
 
@@ -92,7 +93,7 @@ export function extractSubSchema(
   schema: ZodType,
   path: string,
 ): { schema: ZodType; hasEffects: boolean } | null {
-  const segments = path.split('.')
+  const segments = getPathSegments(path)
   let currentSchema = schema
   let hasEffects = false
 

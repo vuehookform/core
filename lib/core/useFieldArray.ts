@@ -307,8 +307,8 @@ export function createFieldArrayManager<FormValues>(
       const shouldValidate = shouldValidateOnChange(
         ctx.options.mode ?? 'onSubmit',
         isTouched,
-        ctx.options.reValidateMode,
         hasSubmitted,
+        ctx.options.reValidateMode,
       )
       if (shouldValidate) {
         validate(name)

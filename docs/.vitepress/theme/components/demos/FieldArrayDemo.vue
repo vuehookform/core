@@ -1,10 +1,11 @@
 <template>
   <div class="demo-form">
-    <form @submit="handleSubmit(onSubmit)">
+    <form autocomplete="off" @submit.prevent="handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="name">Name</label>
+        <label for="array-name">Name</label>
         <input
-          id="name"
+          id="array-name"
+          autocomplete="off"
           v-bind="register('name')"
           placeholder="John Doe"
           :class="{ 'has-error': formState.errors.name }"
@@ -16,12 +17,13 @@
 
       <h4 style="margin: 1rem 0 0.5rem; font-size: 0.875rem; font-weight: 600">Addresses</h4>
 
-      <div v-for="field in addressFields" :key="field.key" class="demo-array-item">
+      <div v-for="field in addressFields.value" :key="field.key" class="demo-array-item">
         <h4>Address {{ field.index + 1 }}</h4>
 
         <div class="field">
           <label>Street</label>
           <input
+            autocomplete="off"
             v-bind="register(`addresses.${field.index}.street`)"
             placeholder="123 Main St"
             :class="{ 'has-error': getErrors(`addresses.${field.index}.street`) }"
@@ -34,6 +36,7 @@
         <div class="field">
           <label>City</label>
           <input
+            autocomplete="off"
             v-bind="register(`addresses.${field.index}.city`)"
             placeholder="San Francisco"
             :class="{ 'has-error': getErrors(`addresses.${field.index}.city`) }"
@@ -46,7 +49,7 @@
         <button
           type="button"
           class="demo-button demo-button-danger demo-button-sm"
-          :disabled="addressFields.length <= 1"
+          :disabled="addressFields.value.length <= 1"
           @click="removeAddress(field.index)"
         >
           Remove
@@ -70,10 +73,10 @@
     <div class="demo-state">
       <ul>
         <li>
-          Array length: <code>{{ addressFields.length }}</code>
+          Array length: <code>{{ addressFields.value.length }}</code>
         </li>
         <li>
-          Keys: <code>{{ addressFields.map((f) => f.key).join(', ') }}</code>
+          Keys: <code>{{ addressFields.value.map((f) => f.key).join(', ') }}</code>
         </li>
       </ul>
     </div>
@@ -84,6 +87,7 @@
 import { ref } from 'vue'
 import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Street is required'),
@@ -111,9 +115,11 @@ const addressFields = fields('addresses', {
 })
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 
 const addAddress = () => {

@@ -16,8 +16,11 @@ const MAX_ARRAY_INDEX = 10000
 /**
  * Get cached path segments or parse and cache them.
  * Uses simple LRU eviction (delete oldest when full).
+ *
+ * Exported for use by other utilities that need path parsing
+ * with caching benefits (devWarnings, schemaExtract).
  */
-function getPathSegments(path: string): string[] {
+export function getPathSegments(path: string): string[] {
   let segments = pathCache.get(path)
   if (segments) {
     return segments
@@ -74,7 +77,7 @@ export function get(obj: unknown, path: string): unknown {
  * @example set({}, 'user.name', 'John') => { user: { name: 'John' } }
  */
 export function set(obj: Record<string, unknown>, path: string, value: unknown): void {
-  if (!path) return
+  if (!path || obj === null || obj === undefined) return
 
   const keys = getPathSegments(path).slice() // Clone since we mutate with pop()
 
@@ -141,7 +144,7 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
  * @example unset({ user: { name: 'John' } }, 'user.name') => { user: {} }
  */
 export function unset(obj: Record<string, unknown>, path: string): void {
-  if (!path) return
+  if (!path || obj === null || obj === undefined) return
 
   const keys = getPathSegments(path).slice() // Clone since we mutate with pop()
   const lastKey = keys.pop()!

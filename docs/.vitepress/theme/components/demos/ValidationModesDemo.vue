@@ -1,8 +1,8 @@
 <template>
   <div class="demo-form">
     <div class="demo-mode-selector">
-      <label for="mode">Validation Mode:</label>
-      <select id="mode" v-model="selectedMode" @change="onModeChange">
+      <label for="validation-mode">Validation Mode:</label>
+      <select id="validation-mode" v-model="selectedMode" @change="onModeChange">
         <option v-for="mode in modes" :key="mode.value" :value="mode.value">
           {{ mode.name }}
         </option>
@@ -12,12 +12,13 @@
       </p>
     </div>
 
-    <form :key="formKey" @submit.prevent="form.handleSubmit(onSubmit)($event)">
+    <form :key="formKey" autocomplete="off" @submit.prevent="form.handleSubmit(onSubmit)($event)">
       <div class="field">
-        <label for="email">Email</label>
+        <label for="validation-email">Email</label>
         <input
-          id="email"
+          id="validation-email"
           type="email"
+          autocomplete="off"
           v-bind="form.register('email')"
           placeholder="you@example.com"
           :class="{ 'has-error': form.formState.value.errors.email }"
@@ -28,9 +29,10 @@
       </div>
 
       <div class="field">
-        <label for="username">Username</label>
+        <label for="validation-username">Username</label>
         <input
-          id="username"
+          id="validation-username"
+          autocomplete="off"
           v-bind="form.register('username')"
           placeholder="johndoe"
           :class="{ 'has-error': form.formState.value.errors.username }"
@@ -69,6 +71,7 @@
 import { ref, shallowRef } from 'vue'
 import { useForm, type ValidationMode } from '@vuehookform/core'
 import { z } from 'zod'
+import { useToast } from '../../composables/useToast'
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -106,6 +109,7 @@ const createForm = (mode: ValidationMode) => {
 const form = shallowRef(createForm(selectedMode.value))
 
 const submittedData = ref<FormValues | null>(null)
+const toast = useToast()
 
 const onModeChange = () => {
   form.value = createForm(selectedMode.value)
@@ -115,5 +119,6 @@ const onModeChange = () => {
 
 const onSubmit = (data: FormValues) => {
   submittedData.value = data
+  toast.success('Form submitted successfully!')
 }
 </script>
