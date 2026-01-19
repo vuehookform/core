@@ -21,6 +21,7 @@
           placeholder="Enter your age"
           :error="error"
           @update:model-value="field.onChange"
+          @input="field.onChange"
           @blur="field.onBlur"
         />
       </HookFormField>
@@ -36,6 +37,7 @@
           :max="100"
           :error="error"
           @update:model-value="field.onChange"
+          @input="field.onChange"
           @blur="field.onBlur"
         />
       </HookFormField>
@@ -52,6 +54,7 @@
           locale="en-US"
           :error="error"
           @update:model-value="field.onChange"
+          @input="field.onChange"
           @blur="field.onBlur"
         />
       </HookFormField>
@@ -73,6 +76,7 @@
           suffix=" °C"
           :error="error"
           @update:model-value="field.onChange"
+          @input="field.onChange"
           @blur="field.onBlur"
         />
       </HookFormField>
@@ -89,6 +93,7 @@
           :max="100"
           :error="error"
           @update:model-value="field.onChange"
+          @input="field.onChange"
           @blur="field.onBlur"
         />
       </HookFormField>
@@ -116,6 +121,7 @@
               :max="100"
               :error="error"
               @update:model-value="field.onChange"
+              @input="field.onChange"
               @blur="field.onBlur"
             />
           </HookFormField>

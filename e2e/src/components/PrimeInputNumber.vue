@@ -3,7 +3,7 @@
     <label v-if="label" :for="fieldId">{{ label }}</label>
     <InputNumber
       :id="fieldId"
-      v-model="model"
+      :model-value="model"
       :class="{ 'p-invalid': !!error }"
       :placeholder="placeholder"
       :min="min"
@@ -17,6 +17,9 @@
       :locale="locale"
       :disabled="disabled"
       :data-testid="testId ? `${testId}-input` : undefined"
+      @update:model-value="model = $event"
+      @input="onInput($event)"
+      @blur="$emit('blur', $event)"
     />
     <small v-if="error" class="p-error" :data-testid="testId ? `${testId}-error` : undefined">
       {{ error }}
@@ -26,7 +29,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber, {
+  type InputNumberInputEvent,
+  type InputNumberBlurEvent,
+} from 'primevue/inputnumber'
 
 const props = withDefaults(
   defineProps<{
@@ -68,5 +74,23 @@ const props = withDefaults(
 
 const model = defineModel<number | null>()
 
+const emit = defineEmits<{
+  (e: 'input', value: number | null): void
+  (e: 'blur', event: InputNumberBlurEvent): void
+}>()
+
 const fieldId = computed(() => props.id ?? undefined)
+
+function onInput(event: InputNumberInputEvent) {
+  const value = event.value
+  // PrimeVue can emit string during typing - convert to number or null
+  if (typeof value === 'number') {
+    emit('input', value)
+  } else if (typeof value === 'string') {
+    const parsed = parseFloat(value)
+    emit('input', isNaN(parsed) ? null : parsed)
+  } else {
+    emit('input', null)
+  }
+}
 </script>
