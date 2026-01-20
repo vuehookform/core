@@ -68,7 +68,7 @@ describe('Form Context', () => {
   })
 
   it('should maintain form validity state', () => {
-    cy.expectText('is-valid', 'false') // Initially false (no interaction yet)
+    cy.expectText('is-valid', 'true') // Initially true (no errors yet)
 
     cy.getByTestId('submit-button').click()
 

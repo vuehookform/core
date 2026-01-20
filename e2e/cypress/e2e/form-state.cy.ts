@@ -89,19 +89,19 @@ describe('Form State Tracking', () => {
   })
 
   it('should track isValid', () => {
-    cy.expectText('state-is-valid', 'false') // Initially false (no interaction yet)
+    cy.expectText('state-is-valid', 'true') // Initially true (no errors yet)
 
-    // Trigger validation with invalid data (onBlur mode)
+    // Trigger validation by submitting with invalid data (onSubmit mode)
     cy.fillInput('username-input', 'ab')
-    cy.getByTestId('email-input').focus()
+    cy.getByTestId('submit-button').click()
 
-    cy.expectText('state-is-valid', 'false')
+    cy.expectText('state-is-valid', 'false') // Now false (validation errors exist)
 
-    // Fix the errors
+    // Fix the errors and resubmit
     cy.clearInput('username-input')
     cy.fillInput('username-input', 'validuser')
     cy.fillInput('email-input', 'valid@example.com')
-    cy.getByTestId('bio-input').focus()
+    cy.getByTestId('submit-button').click()
 
     cy.expectText('state-is-valid', 'true')
   })

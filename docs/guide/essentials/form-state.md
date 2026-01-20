@@ -64,7 +64,7 @@ formState.value.isValid // boolean
 ```
 
 ::: tip
-This is updated after validation runs. With `mode: 'onSubmit'`, it may be `true` until the first submission attempt.
+`isValid` is `true` whenever the form has no validation errors, regardless of whether the user has interacted with any fields. This matches React Hook Form behavior.
 :::
 
 ### isSubmitting
