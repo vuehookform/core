@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.6](https://github.com/vuehookform/core/compare/v0.4.5...v0.4.6) (2026-01-20)
+
+
+### Bug Fixes
+
+* isValid now true initially when form has no errors ([8dcca74](https://github.com/vuehookform/core/commit/8dcca7410229cbf0c4d7188e144d73c6c6febc6d))
+* isValid now true initially when form has no errors ([6b9b86f](https://github.com/vuehookform/core/commit/6b9b86ff757f1cdfdf2ded677642d358636852fe))
+
 ## [0.4.5](https://github.com/vuehookform/core/compare/v0.4.4...v0.4.5) (2026-01-18)
 
 
