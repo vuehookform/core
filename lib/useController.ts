@@ -123,7 +123,7 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     const shouldValidate = shouldValidateOnBlur(mode, hasSubmitted, reValidateMode)
 
     // Use setValue with shouldTouch to properly mark the field as touched
-    // This ensures touchedFieldCount is updated, which isValid depends on
+    // Mark field as touched for proper validation mode handling (onBlur, onTouched, etc.)
     const currentValue = form.getValues(name)
     form.setValue(name, currentValue, {
       shouldTouch: true,

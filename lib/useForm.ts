@@ -206,11 +206,8 @@ export function useForm<TSchema extends ZodType>(
   // Memoized merged errors (internal + external)
   const errorsComputed = computed<FieldErrors<FormValues>>(() => getMergedErrors())
 
-  // isValid: only true after interaction AND no errors
+  // isValid: true if no errors (matches React Hook Form behavior)
   const isValidComputed = computed(() => {
-    const hasInteraction =
-      ctx.submitCount.value > 0 || Object.keys(ctx.touchedFields.value).length > 0
-    if (!hasInteraction) return false
     return Object.keys(errorsComputed.value).length === 0
   })
 

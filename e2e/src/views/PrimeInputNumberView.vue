@@ -13,13 +13,12 @@
     >
       <!-- Example 1: Basic number input -->
       <h2>1. Basic Number Input</h2>
-      <HookFormField name="age" :control="form" :show-error="false" v-slot="{ field, error }">
+      <HookFormField name="age" :control="form" v-slot="{ field }">
         <PrimeInputNumber
           :model-value="field.value"
           label="Age"
           test-id="age"
           placeholder="Enter your age"
-          :error="error"
           @update:model-value="field.onChange"
           @input="field.onChange"
           @blur="field.onBlur"
