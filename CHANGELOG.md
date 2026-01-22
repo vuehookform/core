@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7](https://github.com/vuehookform/core/compare/v0.4.6...v0.4.7) (2026-01-22)
+
+
+### Bug Fixes
+
+* improve field array operations and error handling ([4e8322f](https://github.com/vuehookform/core/commit/4e8322f3f1f379abb1d157a3dd0818b61d443773))
+
 ## [0.4.6](https://github.com/vuehookform/core/compare/v0.4.5...v0.4.6) (2026-01-20)
 
 
