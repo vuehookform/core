@@ -69,6 +69,19 @@ const fieldState = getFieldState(props.name) // Snapshot!
 The examples below demonstrate the correct reactive patterns.
 :::
 
+::: warning computed() Does NOT Help
+You might think wrapping `getFieldState()` in `computed()` would make it reactive:
+
+```typescript
+// ❌ Still NOT reactive - computed only runs once
+const fieldState = computed(() => getFieldState(props.name))
+```
+
+This doesn't work because `getFieldState()` reads from plain objects, not reactive refs. The `computed` will only re-run when its reactive dependencies change, but `getFieldState()` has none.
+
+**Always use `useController` for reactive field state in custom components.**
+:::
+
 ## Quick Integration with Controlled Mode
 
 For simple custom components, use controlled mode:
@@ -264,6 +277,16 @@ const { register, formState } = useFormContext()
   </div>
 </template>
 ```
+
+### Error Handling
+
+If `useFormContext()` is called outside a `provideForm()` tree, it throws an error:
+
+```
+"useFormContext must be used within a component tree where provideForm() has been called."
+```
+
+Always ensure your form field components are descendants of a component that calls `provideForm()`.
 
 ## Select Component
 

@@ -302,6 +302,34 @@ Persistent errors will NOT be cleared by:
 - setValue with shouldValidate: true
   :::
 
+### Clearing Persistent Errors on User Correction
+
+For a better user experience, you may want to clear a persistent server error when the user changes the field value. Use `watch()` to monitor field changes:
+
+```typescript
+const { setError, clearErrors, watch, handleSubmit } = useForm({ schema })
+
+// Watch the email field and clear its persistent error when it changes
+watch('email', () => {
+  clearErrors('email')
+})
+
+const onSubmit = async (data) => {
+  try {
+    await api.register(data)
+  } catch (error) {
+    if (error.response?.data?.field === 'email') {
+      setError('email', {
+        message: error.response.data.message,
+        persistent: true,
+      })
+    }
+  }
+}
+```
+
+This pattern ensures server-side errors persist until the user actively tries to correct them.
+
 ## Checking for Errors
 
 ### hasErrors

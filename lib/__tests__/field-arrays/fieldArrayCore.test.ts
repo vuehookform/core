@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useForm } from '../../useForm'
 import { schemas } from '../helpers/test-utils'
 
@@ -143,6 +143,98 @@ describe('field arrays - core', () => {
       tagsArray.remove(1)
 
       expect(getValues('tags')).toEqual(['vue', 'forms'])
+    })
+  })
+
+  describe('async defaultValues interaction', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should initialize empty when called before sync defaults are available', () => {
+      const { fields, getValues } = useForm({
+        schema,
+        // No default values - array should start empty
+      })
+
+      const usersArray = fields('users')
+
+      // Should be empty
+      expect(usersArray.value.length).toBe(0)
+      expect(getValues('users')).toEqual([])
+    })
+
+    it('should preserve operations performed on field arrays', async () => {
+      const { fields, getValues } = useForm({
+        schema,
+        defaultValues: {
+          users: [],
+        },
+      })
+
+      const usersArray = fields('users')
+
+      // Add items
+      usersArray.append({ name: 'First', email: 'first@test.com' })
+      usersArray.append({ name: 'Second', email: 'second@test.com' })
+
+      // Should have the appended items
+      expect(getValues('users')).toEqual([
+        { name: 'First', email: 'first@test.com' },
+        { name: 'Second', email: 'second@test.com' },
+      ])
+
+      // Operations are preserved
+      const values = getValues('users')
+      expect(Array.isArray(values)).toBe(true)
+      expect(values.length).toBe(2)
+    })
+
+    it('should handle reset with sync defaults', () => {
+      const { fields, getValues, reset } = useForm({
+        schema,
+        defaultValues: {
+          users: [{ name: 'John', email: 'john@test.com' }],
+        },
+      })
+
+      const usersArray = fields('users')
+
+      // Modify the array
+      usersArray.append({ name: 'New', email: 'new@test.com' })
+      expect(getValues('users')).toHaveLength(2)
+
+      // Reset should restore to the original defaults
+      reset()
+
+      const freshArray = fields('users')
+      expect(freshArray.value.length).toBe(1)
+      expect(getValues('users')).toEqual([{ name: 'John', email: 'john@test.com' }])
+    })
+
+    it('should handle fields() called multiple times returning same manager', () => {
+      const { fields } = useForm({
+        schema,
+        defaultValues: {
+          users: [{ name: 'John', email: 'john@test.com' }],
+        },
+      })
+
+      // Call fields() multiple times
+      const array1 = fields('users')
+      const array2 = fields('users')
+      const array3 = fields('users')
+
+      // All should reference the same underlying data
+      expect(array1.value).toBe(array2.value)
+      expect(array2.value).toBe(array3.value)
+
+      // All should have the same data
+      expect(array1.value.length).toBe(1)
     })
   })
 })

@@ -475,6 +475,7 @@ export function useForm<TSchema extends ZodType>(
     // Reset state based on options
     if (!opts.keepErrors) {
       ctx.errors.value = {} as FieldErrors<FormValues>
+      ctx.externalErrors.value = {} as FieldErrors<FormValues>
       // Also clear persistent error tracking so they don't survive validation cycles
       ctx.persistentErrorFields.clear()
     }
@@ -717,8 +718,13 @@ export function useForm<TSchema extends ZodType>(
       clearFieldErrors(ctx.errors, field)
       // Also clear from external errors (server-side errors)
       clearFieldErrors(ctx.externalErrors, field)
-      // Also remove from persistent tracking when explicitly cleared
-      ctx.persistentErrorFields.delete(field)
+      // Clear exact match AND nested paths from persistent tracking
+      const prefix = `${field}.`
+      for (const persistentField of ctx.persistentErrorFields) {
+        if (persistentField === field || persistentField.startsWith(prefix)) {
+          ctx.persistentErrorFields.delete(persistentField)
+        }
+      }
     }
   }
 

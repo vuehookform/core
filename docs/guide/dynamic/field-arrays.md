@@ -256,9 +256,9 @@ Each item in `items.value` has:
 
 ```typescript
 {
-  key: string,      // Stable unique key for v-for
-  index: number,    // Current position in array
-  remove: () => void // Remove this item
+  key: string,       // Stable unique key for v-for
+  index: number,     // Current position in array
+  remove: () => boolean // Remove this item (returns false if minLength violated)
 }
 ```
 

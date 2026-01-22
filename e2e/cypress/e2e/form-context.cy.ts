@@ -68,6 +68,8 @@ describe('Form Context', () => {
   })
 
   it('should maintain form validity state', () => {
+    // Wait for Vue to complete initial render (element should have content)
+    cy.getByTestId('is-valid').should('not.be.empty')
     cy.expectText('is-valid', 'true') // Initially true (no errors yet)
 
     cy.getByTestId('submit-button').click()
