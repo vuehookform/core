@@ -73,7 +73,7 @@ const schema = z.object({
   ),
 })
 
-// Access array items with index notation
+// Access array items with dot notation (numeric indices)
 register('tags.0')
 register('items.0.name')
 register(`items.${index}.quantity`)

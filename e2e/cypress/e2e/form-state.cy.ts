@@ -89,6 +89,8 @@ describe('Form State Tracking', () => {
   })
 
   it('should track isValid', () => {
+    // Wait for Vue to complete initial render (element should have content)
+    cy.getByTestId('state-is-valid').should('not.be.empty')
     cy.expectText('state-is-valid', 'true') // Initially true (no errors yet)
 
     // Trigger validation by submitting with invalid data (onSubmit mode)
