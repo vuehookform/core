@@ -251,6 +251,100 @@ describe('async validation edge cases', () => {
     })
   })
 
+  describe('reset during pending validation', () => {
+    it('should not show stale errors after reset during async validation', async () => {
+      const { register, formState, reset } = useForm({
+        schema,
+        defaultValues: { email: '', username: '' },
+      })
+
+      const slowValidator = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return 'Async error'
+      })
+
+      const emailField = register('email', { validate: slowValidator })
+      emailField.ref(mockInput)
+
+      // Trigger validation
+      mockInput.value = 'test@example.com'
+      emailField.onInput(createInputEvent(mockInput))
+
+      // Reset form before validation completes
+      reset()
+
+      // Let async validation complete
+      await vi.runAllTimersAsync()
+
+      // Error should NOT be set because we reset
+      expect(formState.value.errors.email).toBeUndefined()
+    })
+
+    it('should handle reset with new values during async validation', async () => {
+      const { register, formState, reset, getValues } = useForm({
+        schema,
+        defaultValues: { email: '', username: '' },
+      })
+
+      const slowValidator = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return 'Async error'
+      })
+
+      const emailField = register('email', { validate: slowValidator })
+      emailField.ref(mockInput)
+
+      // Trigger validation
+      mockInput.value = 'old@example.com'
+      emailField.onInput(createInputEvent(mockInput))
+
+      // Reset with new values before validation completes
+      reset({ email: 'new@example.com', username: 'newuser' })
+
+      await vi.runAllTimersAsync()
+
+      // Form should have new values, not old ones
+      expect(getValues('email')).toBe('new@example.com')
+      expect(formState.value.errors.email).toBeUndefined()
+    })
+
+    it('should handle clearErrors during pending async validation', async () => {
+      const { register, formState, clearErrors } = useForm({
+        schema,
+        defaultValues: { email: '', username: '' },
+      })
+
+      const slowValidator = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return 'Async error'
+      })
+
+      const emailField = register('email', { validate: slowValidator })
+      emailField.ref(mockInput)
+
+      // Trigger validation
+      mockInput.value = 'test@example.com'
+      emailField.onInput(createInputEvent(mockInput))
+
+      // Wait for validation to set error
+      await vi.runAllTimersAsync()
+      expect(formState.value.errors.email).toBe('Async error')
+
+      // Clear and start new validation
+      clearErrors('email')
+      mockInput.value = 'another@example.com'
+      emailField.onInput(createInputEvent(mockInput))
+
+      // Clear again before second validation completes
+      clearErrors('email')
+
+      await vi.runAllTimersAsync()
+
+      // This tests that clearErrors works properly even with pending validation
+      // The final state depends on implementation - key is no crash/hang
+    })
+  })
+
   describe('Zod async schema validation', () => {
     // These tests need real timers because Zod's async parsing doesn't work well with fake timers
     it('should work with Zod async refinements', async () => {

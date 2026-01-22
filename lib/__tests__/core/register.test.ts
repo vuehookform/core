@@ -646,6 +646,63 @@ describe('register', () => {
 
         expect(formState.value.dirtyFields.gender).toBe(true)
       })
+
+      it('should handle switching between radio options via setValue', async () => {
+        const { register, getValues, setValue } = useForm({ schema: extendedSchema })
+
+        // Register and select first option
+        const genderField = register('gender')
+        genderField.ref(mockRadio1)
+
+        mockRadio1.checked = true
+        await genderField.onInput(createInputEvent(mockRadio1))
+        expect(getValues('gender')).toBe('male')
+
+        // Switch to second option using setValue
+        setValue('gender', 'female')
+        expect(getValues('gender')).toBe('female')
+
+        // Form data updated via setValue
+        // Note: For full radio group behavior with multiple inputs,
+        // use controlled mode or useController
+      })
+
+      it('should preserve default value in form data for radio', () => {
+        const { getValues } = useForm({
+          schema: extendedSchema,
+          defaultValues: { gender: 'male' },
+        })
+
+        // Default value should be available in form data
+        expect(getValues('gender')).toBe('male')
+      })
+
+      it('should handle radio without initial checked state from ref', () => {
+        const { register, getValues } = useForm({
+          schema: extendedSchema,
+          defaultValues: { gender: 'female' },
+        })
+
+        const genderField = register('gender')
+        genderField.ref(mockRadio1) // mockRadio1 has value 'male'
+
+        // Form data preserves default value
+        // Note: DOM checked state is managed externally for uncontrolled radios
+        expect(getValues('gender')).toBe('female')
+      })
+
+      it('should track touched state for radio group', async () => {
+        const { register, formState } = useForm({ schema: extendedSchema })
+
+        const genderField = register('gender')
+        genderField.ref(mockRadio1)
+
+        expect(formState.value.touchedFields.gender).toBeUndefined()
+
+        await genderField.onBlur(createBlurEvent(mockRadio1))
+
+        expect(formState.value.touchedFields.gender).toBe(true)
+      })
     })
 
     describe('number inputs', () => {
@@ -748,6 +805,216 @@ describe('register', () => {
         await birthdateField.onInput(createInputEvent(mockDateInput))
 
         expect(formState.value.dirtyFields.birthdate).toBe(true)
+      })
+    })
+
+    describe('checkbox groups as arrays', () => {
+      const checkboxGroupSchema = z.object({
+        interests: z.array(z.string()).optional(),
+      })
+
+      let checkbox1: HTMLInputElement
+      let checkbox2: HTMLInputElement
+      let checkbox3: HTMLInputElement
+
+      beforeEach(() => {
+        checkbox1 = document.createElement('input')
+        checkbox1.type = 'checkbox'
+        checkbox1.value = 'sports'
+        document.body.appendChild(checkbox1)
+
+        checkbox2 = document.createElement('input')
+        checkbox2.type = 'checkbox'
+        checkbox2.value = 'music'
+        document.body.appendChild(checkbox2)
+
+        checkbox3 = document.createElement('input')
+        checkbox3.type = 'checkbox'
+        checkbox3.value = 'reading'
+        document.body.appendChild(checkbox3)
+      })
+
+      afterEach(() => {
+        document.body.removeChild(checkbox1)
+        document.body.removeChild(checkbox2)
+        document.body.removeChild(checkbox3)
+      })
+
+      it('should handle checkbox group with setValue for array values', () => {
+        const { setValue, getValues } = useForm({
+          schema: checkboxGroupSchema,
+          defaultValues: { interests: [] },
+        })
+
+        // Set array value
+        setValue('interests', ['sports', 'music'])
+
+        expect(getValues('interests')).toEqual(['sports', 'music'])
+      })
+
+      it('should handle adding and removing values from checkbox array', () => {
+        const { setValue, getValues } = useForm({
+          schema: checkboxGroupSchema,
+          defaultValues: { interests: ['sports'] },
+        })
+
+        expect(getValues('interests')).toEqual(['sports'])
+
+        // Add another interest
+        setValue('interests', ['sports', 'music'])
+        expect(getValues('interests')).toEqual(['sports', 'music'])
+
+        // Remove one
+        setValue('interests', ['music'])
+        expect(getValues('interests')).toEqual(['music'])
+      })
+
+      it('should initialize checkbox group with default values', () => {
+        const { getValues } = useForm({
+          schema: checkboxGroupSchema,
+          defaultValues: { interests: ['sports', 'reading'] },
+        })
+
+        expect(getValues('interests')).toEqual(['sports', 'reading'])
+      })
+
+      it('should handle empty checkbox group', () => {
+        const { setValue, getValues } = useForm({
+          schema: checkboxGroupSchema,
+          defaultValues: { interests: ['sports'] },
+        })
+
+        // Clear all
+        setValue('interests', [])
+        expect(getValues('interests')).toEqual([])
+      })
+
+      it('should track dirty state for checkbox array', () => {
+        const { setValue, formState } = useForm({
+          schema: checkboxGroupSchema,
+          defaultValues: { interests: [] },
+        })
+
+        expect(formState.value.dirtyFields.interests).toBeUndefined()
+
+        setValue('interests', ['sports'])
+
+        expect(formState.value.dirtyFields.interests).toBe(true)
+      })
+    })
+
+    describe('multiple select elements', () => {
+      const multiSelectSchema = z.object({
+        colors: z.array(z.string()).optional(),
+      })
+
+      let multiSelect: HTMLSelectElement
+
+      beforeEach(() => {
+        multiSelect = document.createElement('select')
+        multiSelect.multiple = true
+
+        const opt1 = document.createElement('option')
+        opt1.value = 'red'
+        opt1.text = 'Red'
+        multiSelect.appendChild(opt1)
+
+        const opt2 = document.createElement('option')
+        opt2.value = 'green'
+        opt2.text = 'Green'
+        multiSelect.appendChild(opt2)
+
+        const opt3 = document.createElement('option')
+        opt3.value = 'blue'
+        opt3.text = 'Blue'
+        multiSelect.appendChild(opt3)
+
+        document.body.appendChild(multiSelect)
+      })
+
+      afterEach(() => {
+        document.body.removeChild(multiSelect)
+      })
+
+      it('should handle multiple select with array values via setValue', () => {
+        const { setValue, getValues } = useForm({
+          schema: multiSelectSchema,
+          defaultValues: { colors: [] },
+        })
+
+        setValue('colors', ['red', 'blue'])
+
+        expect(getValues('colors')).toEqual(['red', 'blue'])
+      })
+
+      it('should handle selecting and deselecting options', () => {
+        const { setValue, getValues } = useForm({
+          schema: multiSelectSchema,
+          defaultValues: { colors: ['red'] },
+        })
+
+        expect(getValues('colors')).toEqual(['red'])
+
+        // Select more
+        setValue('colors', ['red', 'green', 'blue'])
+        expect(getValues('colors')).toEqual(['red', 'green', 'blue'])
+
+        // Deselect some
+        setValue('colors', ['green'])
+        expect(getValues('colors')).toEqual(['green'])
+      })
+
+      it('should initialize multiple select with default values', () => {
+        const { getValues } = useForm({
+          schema: multiSelectSchema,
+          defaultValues: { colors: ['red', 'green'] },
+        })
+
+        expect(getValues('colors')).toEqual(['red', 'green'])
+      })
+
+      it('should handle empty multiple select', () => {
+        const { setValue, getValues } = useForm({
+          schema: multiSelectSchema,
+          defaultValues: { colors: ['red'] },
+        })
+
+        setValue('colors', [])
+        expect(getValues('colors')).toEqual([])
+      })
+
+      it('should track dirty state for multiple select', () => {
+        const { setValue, formState } = useForm({
+          schema: multiSelectSchema,
+          defaultValues: { colors: [] },
+        })
+
+        expect(formState.value.dirtyFields.colors).toBeUndefined()
+
+        setValue('colors', ['red'])
+
+        expect(formState.value.dirtyFields.colors).toBe(true)
+      })
+
+      it('should validate multiple select array with schema constraints', async () => {
+        const constrainedSchema = z.object({
+          colors: z.array(z.string()).min(2, 'Select at least 2 colors'),
+        })
+
+        const { setValue, validate, formState } = useForm({
+          schema: constrainedSchema,
+          defaultValues: { colors: [] },
+        })
+
+        setValue('colors', ['red'])
+        await validate()
+
+        expect(formState.value.errors.colors).toBe('Select at least 2 colors')
+
+        setValue('colors', ['red', 'blue'])
+        await validate()
+
+        expect(formState.value.errors.colors).toBeUndefined()
       })
     })
   })
