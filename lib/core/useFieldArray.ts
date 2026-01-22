@@ -259,8 +259,10 @@ export function createFieldArrayManager<FormValues>(
       await nextTick()
 
       // Determine which item to focus (relative index within added items)
+      // Clamp focusIndex to valid range [0, addedCount - 1] to prevent invalid paths
       const focusItemOffset = focusOptions?.focusIndex ?? 0
-      const targetIndex = baseIndex + Math.min(focusItemOffset, addedCount - 1)
+      const clampedOffset = Math.max(0, Math.min(focusItemOffset, addedCount - 1))
+      const targetIndex = baseIndex + clampedOffset
 
       // Build the full field path
       let fieldPath = `${name}.${targetIndex}`
@@ -615,17 +617,16 @@ export function createFieldArrayManager<FormValues>(
       ;[newValues[indexA], newValues[indexB]] = [newValues[indexB], newValues[indexA]]
       set(ctx.formData, name, newValues)
 
-      // Swap items in array
+      // Swap items in array - always update to match formData state
       const newItems = [...fa.items.value]
       const itemA = newItems[indexA]
       const itemB = newItems[indexB]
-      if (itemA && itemB) {
-        newItems[indexA] = itemB
-        newItems[indexB] = itemA
-        fa.items.value = newItems
-        // O(1) cache update - only update 2 entries
-        swapInCache(indexA, indexB)
-      }
+      // Always swap even if items are falsy to keep items array in sync with formData
+      newItems[indexA] = itemB as FieldArrayItem
+      newItems[indexB] = itemA as FieldArrayItem
+      fa.items.value = newItems
+      // O(1) cache update - only update 2 entries
+      swapInCache(indexA, indexB)
 
       updateFieldDirtyState(
         ctx.dirtyFields,
@@ -665,20 +666,19 @@ export function createFieldArrayManager<FormValues>(
         set(ctx.formData, name, newValues)
       }
 
-      // Move item in array
+      // Move item in array - always update to match formData state
       const newItems = [...fa.items.value]
       const [removedItem] = newItems.splice(from, 1)
-      if (removedItem) {
-        newItems.splice(to, 0, removedItem)
-        fa.items.value = newItems
-        // Update affected range in cache (from min to max of from/to)
-        const minIdx = Math.min(from, to)
-        const maxIdx = Math.max(from, to)
-        const items = fa.items.value
-        for (let i = minIdx; i <= maxIdx; i++) {
-          const item = items[i]
-          if (item) indexCache.set(item.key, i)
-        }
+      // Always move even if item is undefined to keep items array in sync with formData
+      newItems.splice(to, 0, removedItem as FieldArrayItem)
+      fa.items.value = newItems
+      // Update affected range in cache (from min to max of from/to)
+      const minIdx = Math.min(from, to)
+      const maxIdx = Math.max(from, to)
+      const items = fa.items.value
+      for (let i = minIdx; i <= maxIdx; i++) {
+        const item = items[i]
+        if (item) indexCache.set(item.key, i)
       }
 
       updateFieldDirtyState(

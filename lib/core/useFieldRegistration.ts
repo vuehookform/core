@@ -91,6 +91,11 @@ export function createFieldRegistration<FormValues>(
         requestId: number,
         resetGenAtStart: number,
       ) => {
+        // Check if field still exists (may have been unmounted during debounce)
+        if (!ctx.fieldRefs.has(fieldName)) {
+          return
+        }
+
         const fieldOpts = ctx.fieldOptions.get(fieldName)
         if (!fieldOpts?.validate || fieldOpts.disabled) {
           return
