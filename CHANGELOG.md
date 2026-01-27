@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/vuehookform/core/compare/v0.4.7...v0.5.0) (2026-01-27)
+
+
+### Features
+
+* add scoped methods to field array items and loose type overloads ([565f31b](https://github.com/vuehookform/core/commit/565f31b5105207a810db49391cf266e154637ef0))
+* add scoped methods to field array items and loose type overloads ([3bd4cce](https://github.com/vuehookform/core/commit/3bd4cce976fa9721911dc99a3d504b7ce01c6604))
+
 ## [0.4.7](https://github.com/vuehookform/core/compare/v0.4.6...v0.4.7) (2026-01-22)
 
 
