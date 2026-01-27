@@ -270,29 +270,29 @@ interface FormData {
 Field array manager for dynamic lists.
 
 ```typescript
-interface FieldArrayReturn<T> {
+interface FieldArrayReturn<TItem> {
   /**
-   * Array of field objects with stable keys
+   * Array of field objects with stable keys and scoped methods
    */
-  value: Ref<FieldArrayItem[]>
+  value: Ref<FieldArrayItem<TItem>[]>
 
   /**
    * Add item to end of array
    * @returns false if maxLength exceeded
    */
-  append: (value: T) => boolean
+  append: (value: TItem) => boolean
 
   /**
    * Add item to start of array
    * @returns false if maxLength exceeded
    */
-  prepend: (value: T) => boolean
+  prepend: (value: TItem) => boolean
 
   /**
    * Insert item at index
    * @returns false if maxLength exceeded
    */
-  insert: (index: number, value: T) => boolean
+  insert: (index: number, value: TItem) => boolean
 
   /**
    * Remove item at index
@@ -315,7 +315,7 @@ interface FieldArrayReturn<T> {
   /**
    * Update item at index while preserving its key
    */
-  update: (index: number, value: T) => void
+  update: (index: number, value: TItem) => void
 
   /**
    * Swap two items
@@ -330,10 +330,16 @@ interface FieldArrayReturn<T> {
   /**
    * Replace all items
    */
-  replace: (values: T[]) => void
+  replace: (values: TItem[]) => void
 }
+```
 
-interface FieldArrayItem {
+## FieldArrayItem
+
+Field array item with metadata and scoped methods for type-safe field access.
+
+```typescript
+interface FieldArrayItem<TItem> {
   /**
    * Stable key for v-for
    */
@@ -348,7 +354,72 @@ interface FieldArrayItem {
    * Remove this item
    */
   remove: () => void
+
+  // --- Scoped Methods ---
+  // These methods operate on fields within this array item
+
+  /**
+   * Register a field within this array item
+   * Automatically builds the full path (e.g., 'items.0.name')
+   */
+  register: <TPath extends Path<TItem>>(
+    name: TPath,
+    options?: RegisterOptions<PathValue<TItem, TPath>>,
+  ) => RegisterReturn<PathValue<TItem, TPath>>
+
+  /**
+   * Set value for a field within this array item
+   */
+  setValue: <TPath extends Path<TItem>>(
+    name: TPath,
+    value: PathValue<TItem, TPath>,
+    options?: SetValueOptions,
+  ) => void
+
+  /**
+   * Get current value of a field within this array item
+   */
+  getValue: <TPath extends Path<TItem>>(name: TPath) => PathValue<TItem, TPath>
+
+  /**
+   * Watch a field within this array item reactively
+   */
+  watch: <TPath extends Path<TItem>>(name: TPath) => ComputedRef<PathValue<TItem, TPath>>
+
+  /**
+   * Get the state of a field within this array item
+   * Note: Returns a snapshot, not reactive
+   */
+  getFieldState: <TPath extends Path<TItem>>(name: TPath) => FieldState
+
+  /**
+   * Trigger validation for fields within this array item
+   */
+  trigger: <TPath extends Path<TItem>>(name?: TPath | TPath[]) => Promise<boolean>
+
+  /**
+   * Clear errors for fields within this array item
+   */
+  clearErrors: <TPath extends Path<TItem>>(name?: TPath | TPath[]) => void
+
+  /**
+   * Set an error for a field within this array item
+   */
+  setError: <TPath extends Path<TItem>>(name: TPath, error: ErrorOption) => void
 }
+```
+
+Example usage:
+
+```typescript
+const items = fields('items')
+
+items.value.forEach((field) => {
+  // All scoped methods are fully typed
+  field.register('name') // RegisterReturn<string>
+  field.setValue('price', 25) // Type-checked
+  field.watch('price') // ComputedRef<number>
+})
 ```
 
 ## Path
@@ -455,6 +526,73 @@ The `Control` type is primarily used to pass form context to:
 - `useFormState`
 - `useWatch`
 - Child components via props
+
+## LooseControl
+
+A type alias for building reusable form components where the schema type is unknown.
+
+```typescript
+type LooseControl = UseFormReturn<ZodType<any>>
+```
+
+Use `LooseControl` instead of `Control<any>` when building reusable field components:
+
+```typescript
+import { useController, type LooseControl } from '@vuehookform/core'
+
+// Reusable component that works with any form
+const props = defineProps<{
+  name: string
+  control: LooseControl
+}>()
+
+const { field, fieldState } = useController({
+  name: props.name,
+  control: props.control,
+})
+```
+
+::: tip Why LooseControl?
+
+- **Better semantics**: Clearly indicates the component accepts any form control
+- **Future-proof**: If internal types change, `LooseControl` will be updated
+- **IDE support**: Provides correct autocomplete for form methods
+  :::
+
+## LooseControllerOptions
+
+Options interface for `useController` when schema type is unknown.
+
+```typescript
+interface LooseControllerOptions {
+  /** Field name/path as a string */
+  name: string
+  /** Form control from useForm (uses context if not provided) */
+  control?: LooseControl
+  /** Default value for the field */
+  defaultValue?: unknown
+}
+```
+
+Example usage in a reusable component:
+
+```vue
+<script setup lang="ts">
+import { useController, type LooseControl } from '@vuehookform/core'
+
+const props = defineProps<{
+  name: string
+  control: LooseControl
+  label?: string
+}>()
+
+// No cast needed - useController accepts LooseControllerOptions
+const { field, fieldState } = useController({
+  name: props.name,
+  control: props.control,
+})
+</script>
+```
 
 ## RegisterOptions
 

@@ -1,6 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { ZodType } from 'zod'
-import type { UseFormReturn, Path, PathValue, InferSchema, FieldState } from './types'
+import type { UseFormReturn, Path, PathValue, InferSchema, FieldState, LooseControl } from './types'
 import { useFormContext } from './context'
 import { shouldValidateOnChange, shouldValidateOnBlur } from './utils/modeChecks'
 import { setCalledFromController } from './useForm'
@@ -47,6 +47,28 @@ export interface UseControllerReturn<TValue> {
 }
 
 /**
+ * Loose options for useController when schema type is unknown.
+ * Use this for building reusable field components that work with any form.
+ *
+ * @example
+ * ```ts
+ * // Reusable field component
+ * function FormInput(props: { name: string; control: LooseControl }) {
+ *   const { field, fieldState } = useController(props)
+ *   // field.value is unknown, fieldState is reactive
+ * }
+ * ```
+ */
+export interface LooseControllerOptions {
+  /** Field name/path as a string */
+  name: string
+  /** Form control from useForm (uses context if not provided) */
+  control?: LooseControl
+  /** Default value for the field */
+  defaultValue?: unknown
+}
+
+/**
  * Hook for controlled components that need fine-grained control over field state
  *
  * This composable is useful for integrating with custom input components or
@@ -69,10 +91,22 @@ export interface UseControllerReturn<TValue> {
  * // />
  * // <span v-if="fieldState.value.error">{{ fieldState.value.error }}</span>
  * ```
+ *
+ * @example Reusable component with loose typing
+ * ```ts
+ * // FormInput.vue
+ * const props = defineProps<{ name: string; control: LooseControl }>()
+ * const { field, fieldState } = useController(props)
+ * // No 'as never' cast needed!
+ * ```
  */
+export function useController(options: LooseControllerOptions): UseControllerReturn<unknown>
 export function useController<TSchema extends ZodType, TPath extends Path<InferSchema<TSchema>>>(
   options: UseControllerOptions<TSchema, TPath>,
-): UseControllerReturn<PathValue<InferSchema<TSchema>, TPath>> {
+): UseControllerReturn<PathValue<InferSchema<TSchema>, TPath>>
+export function useController<TSchema extends ZodType, TPath extends Path<InferSchema<TSchema>>>(
+  options: UseControllerOptions<TSchema, TPath> | LooseControllerOptions,
+): UseControllerReturn<unknown> {
   type TValue = PathValue<InferSchema<TSchema>, TPath>
 
   const { name, control, defaultValue } = options
@@ -149,10 +183,10 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     field: {
       value: value as unknown as Ref<TValue>,
       name,
-      onChange,
+      onChange: onChange as (value: unknown) => void,
       onBlur,
       ref: refCallback,
     },
     fieldState,
-  }
+  } as UseControllerReturn<unknown>
 }

@@ -84,12 +84,20 @@ const addresses = fields('addresses')
 
 <template>
   <div v-for="field in addresses.value" :key="field.key">
+    <!-- Option 1: Scoped methods (recommended) - type-safe, cleaner -->
+    <input v-bind="field.register('street')" />
+    <input v-bind="field.register('city')" />
+
+    <!-- Option 2: Manual path building -->
     <input v-bind="register(`addresses.${field.index}.street`)" />
+
     <button @click="field.remove()">Remove</button>
   </div>
   <button @click="addresses.append({ street: '', city: '' })">Add Address</button>
 </template>
 ```
+
+Field array items provide **scoped methods** (`field.register()`, `field.setValue()`, `field.watch()`, etc.) that automatically build the full path with type safety.
 
 ### Validation Modes
 

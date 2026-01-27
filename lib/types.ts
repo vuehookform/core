@@ -421,15 +421,122 @@ export interface RegisterReturn<TValue = unknown> {
 }
 
 /**
- * Field metadata for dynamic arrays
+ * Field metadata for dynamic arrays with scoped methods for type-safe field access.
+ *
+ * Scoped methods provide full type safety when accessing fields within array items,
+ * solving the type inference problem with dynamic paths like `items.${index}.name`.
+ *
+ * @template TItem - The type of items in the array (inferred from field path)
+ *
+ * @example Basic usage
+ * ```ts
+ * const items = fields('items')
+ * items.value.forEach((field) => {
+ *   field.register('name')           // RegisterReturn<string> - fully typed!
+ *   field.setValue('price', 25)      // Type-checked against TItem
+ *   field.watch('price')             // ComputedRef<number>
+ * })
+ * ```
+ *
+ * @example In template with v-for
+ * ```vue
+ * <div v-for="field in items.value" :key="field.key">
+ *   <input v-bind="field.register('name')" />
+ *   <span v-if="field.getFieldState('name').error">
+ *     {{ field.getFieldState('name').error }}
+ *   </span>
+ * </div>
+ * ```
  */
-export interface FieldArrayItem {
+export interface FieldArrayItem<TItem = unknown> {
   /** Stable key for v-for */
   key: string
   /** Current index in array */
   index: number
   /** Remove this item */
   remove: () => void
+
+  // --- Scoped Methods ---
+  // These methods operate on fields within this array item, providing full type safety
+
+  /**
+   * Register a field within this array item.
+   * Automatically builds the full path (e.g., 'items.0.name').
+   *
+   * @param name - Field path relative to the item (e.g., 'name', 'address.city')
+   * @param options - Registration options (validation, controlled mode, etc.)
+   * @returns Props to bind to the input element
+   *
+   * @example
+   * ```vue
+   * <input v-bind="field.register('name')" />
+   * ```
+   */
+  register: <TPath extends Path<TItem>>(
+    name: TPath,
+    options?: RegisterOptions<PathValue<TItem, TPath>>,
+  ) => RegisterReturn<PathValue<TItem, TPath>>
+
+  /**
+   * Set value for a field within this array item.
+   *
+   * @param name - Field path relative to the item
+   * @param value - New value (typed based on path)
+   * @param options - Control side effects (validation, dirty, touched)
+   */
+  setValue: <TPath extends Path<TItem>>(
+    name: TPath,
+    value: PathValue<TItem, TPath>,
+    options?: SetValueOptions,
+  ) => void
+
+  /**
+   * Get current value of a field within this array item.
+   *
+   * @param name - Field path relative to the item
+   * @returns The field's current value
+   */
+  getValue: <TPath extends Path<TItem>>(name: TPath) => PathValue<TItem, TPath>
+
+  /**
+   * Watch a field within this array item reactively.
+   *
+   * @param name - Field path relative to the item
+   * @returns ComputedRef that updates when the field changes
+   */
+  watch: <TPath extends Path<TItem>>(name: TPath) => ComputedRef<PathValue<TItem, TPath>>
+
+  /**
+   * Get the state of a field within this array item.
+   * Note: Returns a snapshot, not reactive. Use watch() or formState for reactive access.
+   *
+   * @param name - Field path relative to the item
+   * @returns Field state with isDirty, isTouched, invalid, error
+   */
+  getFieldState: <TPath extends Path<TItem>>(name: TPath) => FieldState
+
+  /**
+   * Trigger validation for fields within this array item.
+   *
+   * @param name - Optional field path(s) relative to the item. Validates entire item if omitted.
+   * @returns Promise resolving to true if valid
+   */
+  trigger: <TPath extends Path<TItem>>(name?: TPath | TPath[]) => Promise<boolean>
+
+  /**
+   * Clear errors for fields within this array item.
+   *
+   * @param name - Optional field path(s) relative to the item. Clears all item errors if omitted.
+   */
+  clearErrors: <TPath extends Path<TItem>>(name?: TPath | TPath[]) => void
+
+  /**
+   * Set an error for a field within this array item.
+   *
+   * @param name - Field path relative to the item
+   * @param error - Error option with message
+   */
+  setError: <TPath extends Path<TItem>>(name: TPath, error: ErrorOption) => void
 }
 
 /**
@@ -494,7 +601,7 @@ export interface FieldArrayOptions<T = unknown> {
  */
 export interface FieldArray<TItem = unknown> {
   /** Current field items with metadata. Reactive - updates when array methods are called. */
-  value: FieldArrayItem[]
+  value: FieldArrayItem<TItem>[]
   /** Append item(s) to end of array. Returns false if maxLength exceeded. */
   append: (value: TItem | TItem[], options?: FieldArrayFocusOptions) => boolean
   /** Prepend item(s) to beginning of array. Returns false if maxLength exceeded. */
@@ -767,6 +874,22 @@ export interface UseFormOptions<TSchema extends ZodType> {
 }
 
 /**
+ * Loose control type for reusable components where schema type is unknown.
+ * Use this when building form field components that accept any form control.
+ *
+ * @example
+ * ```ts
+ * // Reusable field component
+ * function FormInput(props: { name: string; control: LooseControl }) {
+ *   const { field } = useController(props)  // No cast needed
+ *   return <input v-bind="field" />
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type LooseControl = UseFormReturn<ZodType<any>>
+
+/**
  * Return value from useForm composable.
  * Provides full type safety with autocomplete for field paths and typed values.
  *
@@ -785,10 +908,14 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * <input v-bind="register('email')" />
    * <input v-bind="register('age', { validate: (v) => v >= 0 || 'Must be positive' })" />
    */
-  register: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath,
-    options?: RegisterOptions<PathValue<InferSchema<TSchema>, TPath>>,
-  ) => RegisterReturn<PathValue<InferSchema<TSchema>, TPath>>
+  register: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name: TPath,
+      options?: RegisterOptions<PathValue<InferSchema<TSchema>, TPath>>,
+    ): RegisterReturn<PathValue<InferSchema<TSchema>, TPath>>
+    /** Loose overload for dynamic paths - returns unknown-typed value */
+    (name: string, options?: RegisterOptions<unknown>): RegisterReturn<unknown>
+  }
 
   /**
    * Unregister a field to clean up refs and options
@@ -796,10 +923,11 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * @param name - Field path to unregister
    * @param options - Options for what state to preserve
    */
-  unregister: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath,
-    options?: UnregisterOptions,
-  ) => void
+  unregister: {
+    <TPath extends Path<InferSchema<TSchema>>>(name: TPath, options?: UnregisterOptions): void
+    /** Loose overload for dynamic paths */
+    (name: string, options?: UnregisterOptions): void
+  }
 
   /**
    * Handle form submission
@@ -837,11 +965,15 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * @param value - New value (typed to match field)
    * @param options - Options for validation/dirty/touched behavior
    */
-  setValue: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath,
-    value: PathValue<InferSchema<TSchema>, TPath>,
-    options?: SetValueOptions,
-  ) => void
+  setValue: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name: TPath,
+      value: PathValue<InferSchema<TSchema>, TPath>,
+      options?: SetValueOptions,
+    ): void
+    /** Loose overload for dynamic paths */
+    (name: string, value: unknown, options?: SetValueOptions): void
+  }
 
   /**
    * Reset form to default values
@@ -855,10 +987,14 @@ export interface UseFormReturn<TSchema extends ZodType> {
    * @param name - Field path
    * @param options - Options for what state to preserve (with typed defaultValue)
    */
-  resetField: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath,
-    options?: ResetFieldOptions<PathValue<InferSchema<TSchema>, TPath>>,
-  ) => void
+  resetField: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name: TPath,
+      options?: ResetFieldOptions<PathValue<InferSchema<TSchema>, TPath>>,
+    ): void
+    /** Loose overload for dynamic paths */
+    (name: string, options?: ResetFieldOptions<unknown>): void
+  }
 
   /**
    * Watch field value(s) reactively
@@ -874,31 +1010,47 @@ export interface UseFormReturn<TSchema extends ZodType> {
     <TPath extends Path<InferSchema<TSchema>>>(
       names: TPath[],
     ): ComputedRef<Partial<InferSchema<TSchema>>>
+    /** Loose overload for dynamic paths - returns unknown */
+    (name: string): ComputedRef<unknown>
+    /** Loose overload for dynamic path arrays */
+    (names: string[]): ComputedRef<Record<string, unknown>>
   }
 
   /**
    * Manually trigger validation
    * @param name - Optional field path (validates all if not provided)
    */
-  validate: <TPath extends Path<InferSchema<TSchema>>>(name?: TPath) => Promise<boolean>
+  validate: {
+    <TPath extends Path<InferSchema<TSchema>>>(name?: TPath): Promise<boolean>
+    /** Loose overload for dynamic paths */
+    (name?: string): Promise<boolean>
+  }
 
   /**
    * Clear errors for specified fields or all errors
    * @param name - Optional field path or array of paths
    */
-  clearErrors: <TPath extends Path<InferSchema<TSchema>>>(
-    name?: TPath | TPath[] | 'root' | `root.${string}`,
-  ) => void
+  clearErrors: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name?: TPath | TPath[] | 'root' | `root.${string}`,
+    ): void
+    /** Loose overload for dynamic paths */
+    (name?: string | string[]): void
+  }
 
   /**
    * Set an error for a specific field
    * @param name - Field path or root error
    * @param error - Error option with message
    */
-  setError: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath | 'root' | `root.${string}`,
-    error: ErrorOption,
-  ) => void
+  setError: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name: TPath | 'root' | `root.${string}`,
+      error: ErrorOption,
+    ): void
+    /** Loose overload for dynamic paths */
+    (name: string, error: ErrorOption): void
+  }
 
   /**
    * Set multiple errors at once. Useful for server-side validation errors
@@ -939,9 +1091,13 @@ export interface UseFormReturn<TSchema extends ZodType> {
    *   focusField('email')
    * }
    */
-  hasErrors: <TPath extends Path<InferSchema<TSchema>>>(
-    fieldPath?: TPath | 'root' | `root.${string}`,
-  ) => boolean
+  hasErrors: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      fieldPath?: TPath | 'root' | `root.${string}`,
+    ): boolean
+    /** Loose overload for dynamic paths */
+    (fieldPath?: string): boolean
+  }
 
   /**
    * Get validation errors for the form or a specific field
@@ -972,33 +1128,46 @@ export interface UseFormReturn<TSchema extends ZodType> {
     (): InferSchema<TSchema>
     <TPath extends Path<InferSchema<TSchema>>>(name: TPath): PathValue<InferSchema<TSchema>, TPath>
     <TPath extends Path<InferSchema<TSchema>>>(names: TPath[]): Partial<InferSchema<TSchema>>
+    /** Loose overload for dynamic paths - returns unknown */
+    (name: string): unknown
+    /** Loose overload for dynamic path arrays */
+    (names: string[]): Record<string, unknown>
   }
 
   /**
    * Get the state of an individual field
    * @param name - Field path
    */
-  getFieldState: <TPath extends Path<InferSchema<TSchema>>>(name: TPath) => FieldState
+  getFieldState: {
+    <TPath extends Path<InferSchema<TSchema>>>(name: TPath): FieldState
+    /** Loose overload for dynamic paths */
+    (name: string): FieldState
+  }
 
   /**
    * Manually trigger validation for specific fields or entire form
    * @param name - Optional field path or array of paths
    * @param options - Optional trigger options (e.g., markAsSubmitted)
    */
-  trigger: <TPath extends Path<InferSchema<TSchema>>>(
-    name?: TPath | TPath[],
-    options?: TriggerOptions,
-  ) => Promise<boolean>
+  trigger: {
+    <TPath extends Path<InferSchema<TSchema>>>(
+      name?: TPath | TPath[],
+      options?: TriggerOptions,
+    ): Promise<boolean>
+    /** Loose overload for dynamic paths */
+    (name?: string | string[], options?: TriggerOptions): Promise<boolean>
+  }
 
   /**
    * Programmatically focus a field
    * @param name - Field path
    * @param options - Focus options
    */
-  setFocus: <TPath extends Path<InferSchema<TSchema>>>(
-    name: TPath,
-    options?: SetFocusOptions,
-  ) => void
+  setFocus: {
+    <TPath extends Path<InferSchema<TSchema>>>(name: TPath, options?: SetFocusOptions): void
+    /** Loose overload for dynamic paths */
+    (name: string, options?: SetFocusOptions): void
+  }
 
   /**
    * Form configuration options (mode, reValidateMode).

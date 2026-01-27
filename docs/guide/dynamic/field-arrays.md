@@ -262,6 +262,176 @@ Each item in `items.value` has:
 }
 ```
 
+## Scoped Methods
+
+Each field array item provides **scoped methods** that automatically build the full path for you. This provides full type safety and cleaner code compared to manually constructing paths.
+
+### Why Scoped Methods?
+
+Without scoped methods, you must manually build paths with template literals:
+
+```vue
+<!-- Manual path building (verbose) -->
+<input v-bind="register(`items.${field.index}.name`)" />
+<input v-bind="register(`items.${field.index}.price`)" />
+```
+
+With scoped methods, the path building is handled automatically:
+
+```vue
+<!-- Scoped methods (cleaner, type-safe) -->
+<input v-bind="field.register('name')" />
+<input v-bind="field.register('price')" />
+```
+
+### Available Scoped Methods
+
+Each field in `items.value` provides these methods:
+
+| Method                            | Description                              |
+| --------------------------------- | ---------------------------------------- |
+| `register(name, options?)`        | Register a field within the item         |
+| `setValue(name, value, options?)` | Set a field value within the item        |
+| `getValue(name)`                  | Get a field value within the item        |
+| `watch(name)`                     | Watch a field value reactively           |
+| `getFieldState(name)`             | Get field state (snapshot, not reactive) |
+| `trigger(name?)`                  | Trigger validation for field(s)          |
+| `clearErrors(name?)`              | Clear errors for field(s)                |
+| `setError(name, error)`           | Set an error for a field                 |
+
+### Usage Example
+
+```vue
+<script setup lang="ts">
+import { useForm } from '@vuehookform/core'
+import { z } from 'zod'
+
+const schema = z.object({
+  items: z.array(
+    z.object({
+      name: z.string().min(1, 'Name required'),
+      price: z.number().min(0, 'Price must be positive'),
+    }),
+  ),
+})
+
+const { fields, formState, handleSubmit } = useForm({
+  schema,
+  defaultValues: { items: [{ name: '', price: 0 }] },
+})
+
+const items = fields('items')
+</script>
+
+<template>
+  <form @submit="handleSubmit(onSubmit)">
+    <div v-for="field in items.value" :key="field.key" class="item-row">
+      <!-- Scoped register - automatically builds 'items.0.name', 'items.1.name', etc. -->
+      <input v-bind="field.register('name')" placeholder="Item name" />
+      <input v-bind="field.register('price')" type="number" placeholder="Price" />
+
+      <!-- Scoped getFieldState for error display -->
+      <span v-if="field.getFieldState('name').error" class="error">
+        {{ field.getFieldState('name').error }}
+      </span>
+
+      <button type="button" @click="field.remove()">Remove</button>
+    </div>
+
+    <button type="button" @click="items.append({ name: '', price: 0 })">Add Item</button>
+    <button type="submit">Submit</button>
+  </form>
+</template>
+```
+
+### Scoped setValue and getValue
+
+```typescript
+// Get the current price value
+const price = field.getValue('price') // number
+
+// Update the price with validation
+field.setValue('price', 99.99, { shouldValidate: true })
+
+// Update multiple fields
+field.setValue('name', 'New Product')
+field.setValue('price', 49.99)
+```
+
+### Scoped watch
+
+```typescript
+// Watch a single field reactively
+const price = field.watch('price') // ComputedRef<number>
+
+// Use in template
+<span>Price: {{ field.watch('price').value }}</span>
+```
+
+### Scoped Validation Methods
+
+```typescript
+// Trigger validation for a specific field
+await field.trigger('name')
+
+// Trigger validation for multiple fields
+await field.trigger(['name', 'price'])
+
+// Trigger validation for entire item (all fields)
+await field.trigger()
+
+// Clear errors for a specific field
+field.clearErrors('name')
+
+// Clear all errors for the item
+field.clearErrors()
+
+// Set a custom error
+field.setError('name', { message: 'Name already exists' })
+```
+
+### Type Safety
+
+Scoped methods provide full TypeScript autocomplete:
+
+```typescript
+const schema = z.object({
+  items: z.array(
+    z.object({
+      name: z.string(),
+      price: z.number(),
+      category: z.object({
+        id: z.string(),
+        name: z.string(),
+      }),
+    }),
+  ),
+})
+
+const items = fields('items')
+
+items.value.forEach((field) => {
+  // ✅ Autocomplete for 'name', 'price', 'category', 'category.id', 'category.name'
+  field.register('name')
+  field.register('category.id')
+
+  // ✅ Type-safe values
+  field.setValue('price', 25) // value must be number
+  field.setValue('name', 'Product') // value must be string
+
+  // ❌ TypeScript error - 'invalid' is not a valid path
+  field.register('invalid')
+})
+```
+
+::: tip When to Use Scoped Methods
+
+- **Use scoped methods** when you want cleaner, more readable code with full type safety
+- **Use manual paths** when you need to construct paths dynamically or access fields outside the current item
+
+Both approaches work correctly - choose based on your preference and use case.
+:::
+
 ## Nested Arrays
 
 Handle arrays within arrays:
