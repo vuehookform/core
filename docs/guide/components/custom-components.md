@@ -143,11 +143,11 @@ For more control, use `useController`:
 <!-- FormInput.vue -->
 <script setup lang="ts">
 import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
-  control: Control<any>
+  control: LooseControl
   label?: string
   type?: string
   placeholder?: string
@@ -294,7 +294,7 @@ Always ensure your form field components are descendants of a component that cal
 <!-- FormSelect.vue -->
 <script setup lang="ts">
 import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 interface Option {
   value: string
@@ -303,7 +303,7 @@ interface Option {
 
 const props = defineProps<{
   name: string
-  control: Control<any>
+  control: LooseControl
   options: Option[]
   label?: string
   placeholder?: string
@@ -348,11 +348,11 @@ const { field, fieldState } = useController({
 <!-- FormCheckbox.vue -->
 <script setup lang="ts">
 import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
-  control: Control<any>
+  control: LooseControl
   label: string
 }>()
 
@@ -388,7 +388,7 @@ const { field, fieldState } = useController({
 <!-- FormRadioGroup.vue -->
 <script setup lang="ts">
 import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 interface Option {
   value: string
@@ -397,7 +397,7 @@ interface Option {
 
 const props = defineProps<{
   name: string
-  control: Control<any>
+  control: LooseControl
   options: Option[]
   label?: string
 }>()
@@ -435,19 +435,47 @@ const { field, fieldState } = useController({
 
 Add proper typing to your custom components:
 
-```typescript
-import type { Control, Path } from '@vuehookform/core'
+### Reusable Components (Recommended)
 
-// Generic component props
-interface FormFieldProps<T> {
-  name: Path<T>
-  control: Control<T>
+For components that work with any form, use `LooseControl`:
+
+```typescript
+import type { LooseControl } from '@vuehookform/core'
+
+// Reusable component props
+interface FormFieldProps {
+  name: string
+  control: LooseControl
   label?: string
 }
 
 // Usage with defineProps
-const props = defineProps<FormFieldProps<YourFormType>>()
+const props = defineProps<FormFieldProps>()
 ```
+
+### Type-Safe Components
+
+For components tied to a specific form schema:
+
+```typescript
+import type { UseFormReturn, Path } from '@vuehookform/core'
+
+// Generic component props with full type safety
+interface FormFieldProps<TSchema extends ZodType> {
+  name: Path<InferSchema<TSchema>>
+  control: UseFormReturn<TSchema>
+  label?: string
+}
+
+// Usage with defineProps
+const props = defineProps<FormFieldProps<typeof schema>>()
+```
+
+::: tip When to Use Each Approach
+
+- **LooseControl**: Reusable components in component libraries, shared across projects
+- **Typed Control**: Components specific to one form with full autocomplete for field names
+  :::
 
 ## Re-render Behavior with Custom Components
 
@@ -493,11 +521,11 @@ useForm({ schema, mode: 'onSubmit', reValidateMode: 'onChange' })
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
-  control: Control<any>
+  control: LooseControl
   label?: string
 }>()
 

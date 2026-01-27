@@ -280,6 +280,78 @@ const { field, fieldState } = useController({
 </template>
 ```
 
+## Loose Typing for Reusable Components
+
+When building reusable form field components, use `LooseControl` and `LooseControllerOptions` to avoid type casting:
+
+```vue
+<!-- FormInput.vue - Reusable component -->
+<script setup lang="ts">
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
+
+const props = defineProps<{
+  name: string
+  control: LooseControl // Works with any form
+  label?: string
+  placeholder?: string
+}>()
+
+// No cast needed - useController accepts loose options
+const { field, fieldState } = useController({
+  name: props.name,
+  control: props.control,
+})
+</script>
+
+<template>
+  <div class="form-field">
+    <label v-if="label" :for="name">{{ label }}</label>
+    <input
+      :id="name"
+      :name="field.name"
+      :value="field.value"
+      :placeholder="placeholder"
+      @input="field.onChange(($event.target as HTMLInputElement).value)"
+      @blur="field.onBlur"
+    />
+    <span v-if="fieldState.error" class="error">
+      {{ fieldState.error }}
+    </span>
+  </div>
+</template>
+```
+
+Usage with any form:
+
+```vue
+<script setup>
+import { useForm } from '@vuehookform/core'
+import FormInput from './FormInput.vue'
+import { z } from 'zod'
+
+const schema = z.object({
+  email: z.email(),
+  name: z.string().min(2),
+})
+
+const { control, handleSubmit } = useForm({ schema })
+</script>
+
+<template>
+  <form @submit="handleSubmit(onSubmit)">
+    <!-- FormInput works with any schema -->
+    <FormInput name="email" :control="control" label="Email" />
+    <FormInput name="name" :control="control" label="Name" />
+    <button type="submit">Submit</button>
+  </form>
+</template>
+```
+
+::: tip Why LooseControl?
+Previously you might have used `Control<any>` which loses all type information. `LooseControl` is semantically clearer and provides better IDE support for the form methods.
+:::
+
 ## Comparison with register
 
 | Feature                 | register                | useController   |

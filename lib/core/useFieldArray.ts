@@ -1,4 +1,4 @@
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, type ComputedRef } from 'vue'
 import type { FormContext } from './formContext'
 import type {
   FieldArray,
@@ -6,6 +6,11 @@ import type {
   FieldArrayOptions,
   FieldArrayFocusOptions,
   Path,
+  RegisterOptions,
+  RegisterReturn,
+  SetValueOptions,
+  FieldState,
+  ErrorOption,
 } from '../types'
 import { get, set, generateId } from '../utils/paths'
 import {
@@ -23,12 +28,28 @@ import { updateFieldDirtyState } from './fieldState'
 import { shouldValidateOnChange } from '../utils/modeChecks'
 
 /**
+ * Form methods required by field array for scoped item methods.
+ * Passed from useForm to enable type-safe field access within array items.
+ */
+export interface FieldArrayFormMethods {
+  register: (name: string, options?: RegisterOptions<unknown>) => RegisterReturn<unknown>
+  setValue: (name: string, value: unknown, options?: SetValueOptions) => void
+  getValues: (name: string) => unknown
+  watch: (name: string) => ComputedRef<unknown>
+  getFieldState: (name: string) => FieldState
+  trigger: (name?: string | string[]) => Promise<boolean>
+  clearErrors: (name?: string | string[]) => void
+  setError: (name: string, error: ErrorOption) => void
+}
+
+/**
  * Create field array management functions
  */
 export function createFieldArrayManager<FormValues>(
   ctx: FormContext<FormValues>,
   validate: (fieldPath?: string) => Promise<boolean>,
   setFocus: (name: string) => void,
+  formMethods: FieldArrayFormMethods,
 ) {
   /**
    * Manage dynamic field arrays with stable keys for Vue reconciliation.
@@ -222,21 +243,118 @@ export function createFieldArrayManager<FormValues>(
     }
 
     /**
-     * Helper to create items with cached index lookup
+     * Build a full field path from array name, index, and optional sub-path.
+     * e.g., ('items', 2, 'name') => 'items.2.name'
      */
-    const createItem = (key: string): FieldArrayItem => ({
-      key,
-      get index() {
-        // O(1) lookup instead of O(n) findIndex
-        return indexCache.get(key) ?? -1
-      },
-      remove() {
-        const currentIndex = indexCache.get(key) ?? -1
-        if (currentIndex !== -1) {
-          removeAt(currentIndex)
-        }
-      },
-    })
+    const buildPath = (index: number, subPath?: string): string => {
+      return subPath ? `${name}.${index}.${subPath}` : `${name}.${index}`
+    }
+
+    /**
+     * Create scoped methods for a field array item.
+     * These methods build full paths and delegate to form methods.
+     */
+    const createScopedMethods = (indexGetter: () => number) => {
+      return {
+        register: (subPath: string, options?: RegisterOptions<unknown>) =>
+          formMethods.register(buildPath(indexGetter(), subPath), options),
+
+        setValue: (subPath: string, value: unknown, options?: SetValueOptions) =>
+          formMethods.setValue(buildPath(indexGetter(), subPath), value, options),
+
+        getValue: (subPath: string) => formMethods.getValues(buildPath(indexGetter(), subPath)),
+
+        watch: (subPath: string) => formMethods.watch(buildPath(indexGetter(), subPath)),
+
+        getFieldState: (subPath: string) =>
+          formMethods.getFieldState(buildPath(indexGetter(), subPath)),
+
+        trigger: (subPath?: string | string[]) => {
+          const index = indexGetter()
+          if (!subPath) {
+            // Validate entire item
+            return formMethods.trigger(buildPath(index))
+          }
+          if (Array.isArray(subPath)) {
+            return formMethods.trigger(subPath.map((p) => buildPath(index, p)))
+          }
+          return formMethods.trigger(buildPath(index, subPath))
+        },
+
+        clearErrors: (subPath?: string | string[]) => {
+          const index = indexGetter()
+          if (!subPath) {
+            formMethods.clearErrors(buildPath(index))
+            return
+          }
+          if (Array.isArray(subPath)) {
+            formMethods.clearErrors(subPath.map((p) => buildPath(index, p)))
+            return
+          }
+          formMethods.clearErrors(buildPath(index, subPath))
+        },
+
+        setError: (subPath: string, error: ErrorOption) =>
+          formMethods.setError(buildPath(indexGetter(), subPath), error),
+      }
+    }
+
+    /**
+     * Helper to create items with cached index lookup and scoped methods.
+     * Scoped methods are lazily initialized on first access for performance.
+     *
+     * Note: Runtime implementations use string paths, but type safety is enforced
+     * at the FieldArray<TItem> level through the generic type parameter.
+     * The 'as unknown as' casts are safe because the public API is typed correctly.
+     */
+    const createItem = (key: string): FieldArrayItem<unknown> => {
+      const getIndex = () => indexCache.get(key) ?? -1
+
+      // Lazy initialization of scoped methods
+      let scoped: ReturnType<typeof createScopedMethods> | null = null
+      const getScoped = () => (scoped ??= createScopedMethods(getIndex))
+
+      // Type casts are needed because runtime uses strings but interface uses generics.
+      // Type safety is enforced at the FieldArray<TItem> level.
+      return {
+        key,
+        get index() {
+          // O(1) lookup instead of O(n) findIndex
+          return getIndex()
+        },
+        remove() {
+          const currentIndex = getIndex()
+          if (currentIndex !== -1) {
+            removeAt(currentIndex)
+          }
+        },
+        // Scoped methods - lazy getters delegate to form methods
+        get register() {
+          return getScoped().register as FieldArrayItem<unknown>['register']
+        },
+        get setValue() {
+          return getScoped().setValue as FieldArrayItem<unknown>['setValue']
+        },
+        get getValue() {
+          return getScoped().getValue as FieldArrayItem<unknown>['getValue']
+        },
+        get watch() {
+          return getScoped().watch as FieldArrayItem<unknown>['watch']
+        },
+        get getFieldState() {
+          return getScoped().getFieldState as FieldArrayItem<unknown>['getFieldState']
+        },
+        get trigger() {
+          return getScoped().trigger as FieldArrayItem<unknown>['trigger']
+        },
+        get clearErrors() {
+          return getScoped().clearErrors as FieldArrayItem<unknown>['clearErrors']
+        },
+        get setError() {
+          return getScoped().setError as FieldArrayItem<unknown>['setError']
+        },
+      }
+    }
 
     // Populate items if empty (first access after creation)
     if (fa.items.value.length === 0 && fa.values.length > 0) {

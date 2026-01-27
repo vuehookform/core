@@ -654,3 +654,67 @@ const { control } = useForm({ schema })
 // Child
 <ChildComponent :control="control" />
 ```
+
+## Dynamic Path Overloads
+
+Many form methods support **loose overloads** that accept string paths without requiring type casts. This is useful when working with dynamic paths (e.g., in field arrays or reusable components).
+
+### Methods with Loose Overloads
+
+The following methods have both strict and loose overloads:
+
+| Method          | Strict Signature                            | Loose Signature                          |
+| --------------- | ------------------------------------------- | ---------------------------------------- |
+| `register`      | `register(name: Path<T>)`                   | `register(name: string)`                 |
+| `setValue`      | `setValue(name: Path<T>, value: PathValue)` | `setValue(name: string, value: unknown)` |
+| `getValues`     | `getValues(name: Path<T>)`                  | `getValues(name: string)`                |
+| `watch`         | `watch(name: Path<T>)`                      | `watch(name: string)`                    |
+| `getFieldState` | `getFieldState(name: Path<T>)`              | `getFieldState(name: string)`            |
+| `trigger`       | `trigger(name: Path<T>)`                    | `trigger(name: string)`                  |
+| `clearErrors`   | `clearErrors(name: Path<T>)`                | `clearErrors(name: string)`              |
+| `setError`      | `setError(name: Path<T>)`                   | `setError(name: string)`                 |
+| `setFocus`      | `setFocus(name: Path<T>)`                   | `setFocus(name: string)`                 |
+| `resetField`    | `resetField(name: Path<T>)`                 | `resetField(name: string)`               |
+| `unregister`    | `unregister(name: Path<T>)`                 | `unregister(name: string)`               |
+| `hasErrors`     | `hasErrors(name: Path<T>)`                  | `hasErrors(name: string)`                |
+| `validate`      | `validate(name: Path<T>)`                   | `validate(name: string)`                 |
+
+### Why Loose Overloads?
+
+TypeScript's template literal types sometimes can't infer dynamic paths:
+
+```typescript
+// Without loose overloads, this would require a cast
+const index = 0
+register(`items.${index}.name`) // TypeScript can't verify this at compile time
+
+// With loose overloads, it works without casts
+register(`items.${index}.name`) // ✅ Accepted by loose overload
+```
+
+### Type Safety Trade-offs
+
+| Approach                                        | Type Safety                            | Flexibility |
+| ----------------------------------------------- | -------------------------------------- | ----------- |
+| Static paths (`register('email')`)              | Full autocomplete, compile-time errors | Static only |
+| Dynamic paths (`register(\`items.${i}.name\`)`) | Runtime only                           | Dynamic     |
+
+### Example: Field Arrays with Dynamic Paths
+
+```typescript
+const items = fields('items')
+
+// Option 1: Scoped methods (recommended) - full type safety
+items.value.forEach((field) => {
+  field.register('name') // ✅ Full type safety
+})
+
+// Option 2: Loose overloads - no cast needed
+items.value.forEach((field) => {
+  register(`items.${field.index}.name`) // ✅ Works without cast
+})
+```
+
+::: tip Best Practice
+For field arrays, prefer **scoped methods** (`field.register('name')`) which provide full type safety. Use loose overloads when you need to construct paths dynamically outside of field array items.
+:::

@@ -23,6 +23,7 @@ export {
   type UseControllerOptions,
   type UseControllerReturn,
   type ControllerFieldProps,
+  type LooseControllerOptions,
 } from './useController'
 export { useFormState, type UseFormStateOptions, type FormStateKey } from './useFormState'
 
@@ -34,6 +35,7 @@ export type {
   UseFormOptions,
   UseFormReturn,
   UseFormReturn as Control,
+  LooseControl,
   RegisterOptions,
   RegisterReturn,
   FormState,

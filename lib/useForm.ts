@@ -144,11 +144,6 @@ export function useForm<TSchema extends ZodType>(
     }
   }
 
-  // Create field array manager (pass setFocus for focusOptions feature)
-  // Wrap setFocus to accept string instead of Path<FormValues> for field array use
-  const setFocusWrapper = (name: string) => setFocus(name as Path<FormValues>)
-  const { fields } = createFieldArrayManager<FormValues>(ctx, validate, setFocusWrapper)
-
   // Track last sync time to avoid redundant DOM syncs
   let lastSyncTime = 0
   const SYNC_DEBOUNCE_MS = 16 // ~1 frame
@@ -1088,6 +1083,30 @@ export function useForm<TSchema extends ZodType>(
     // Validate single field
     return await validate(name)
   }
+
+  // Create field array manager after all form methods are defined
+  // This allows scoped methods on field array items to access the full form API
+  const setFocusWrapper = (name: string) => setFocus(name as Path<FormValues>)
+  const formMethods = {
+    register: (name: string, options?: unknown) =>
+      register(name as Path<FormValues>, options as Parameters<typeof register>[1]),
+    setValue: (name: string, value: unknown, options?: SetValueOptions) =>
+      setValue(name as Path<FormValues>, value as PathValue<FormValues, Path<FormValues>>, options),
+    getValues: (name: string) => getValues(name as Path<FormValues>),
+    watch: (name: string) => watch(name as Path<FormValues>),
+    getFieldState: (name: string) => getFieldState(name as Path<FormValues>),
+    trigger: (name?: string | string[]) =>
+      trigger(name as Path<FormValues> | Path<FormValues>[] | undefined),
+    clearErrors: (name?: string | string[]) =>
+      clearErrors(name as Path<FormValues> | Path<FormValues>[] | undefined),
+    setError: (name: string, error: ErrorOption) => setError(name as Path<FormValues>, error),
+  }
+  const { fields } = createFieldArrayManager<FormValues>(
+    ctx,
+    validate,
+    setFocusWrapper,
+    formMethods,
+  )
 
   // Type assertion needed because internal implementations use simpler types
   // but the public API provides full generic type safety

@@ -79,7 +79,9 @@
   border-radius: 6px;
   background: var(--vp-c-bg);
   color: var(--vp-c-text-1);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .demo-form input:focus,
