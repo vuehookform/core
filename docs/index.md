@@ -15,7 +15,7 @@ head:
 hero:
   name: Vue Hook Form
   text: TypeScript-first Form Library
-  tagline: One composable. Schema-driven. Perfect types.
+  tagline: One composable. Schema-driven. Perfect types. From OpenClaw with love ❤️
   actions:
     - theme: brand
       text: Get Started
