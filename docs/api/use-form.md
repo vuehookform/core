@@ -327,7 +327,7 @@ Create a submit handler that validates before calling your callback.
 
 **Parameters:**
 
-- `onValid` - Called with validated data if validation passes
+- `onValid` - Called with a deep clone of the validated data if validation passes (safe to mutate)
 - `onInvalid` - Called with errors if validation fails
 
 **Example:**
@@ -383,13 +383,15 @@ setValue('age', 25, { shouldValidate: true })
 
 ```typescript
 getValues(): T
+getValues(name: Path<T>): PathValue<T, Path>
 getValues(names: Path<T>[]): Partial<T>
 ```
 
-Get all form values or specific fields.
+Get all form values, a single field value, or specific fields. All overloads return **deep clones** — you can safely mutate the result without affecting form state.
 
 ```typescript
 const allValues = getValues()
+const email = getValues('email')
 const { email, name } = getValues(['email', 'name'])
 ```
 

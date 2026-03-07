@@ -70,6 +70,8 @@ const allData = getValues()
 const { email, name } = getValues(['email', 'name'])
 ```
 
+`getValues()` returns a deep clone — you can safely mutate the result without affecting form state.
+
 ### Use with API calls
 
 ```typescript

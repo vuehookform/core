@@ -38,7 +38,7 @@ const onSubmit = (data: z.infer<typeof schema>) => {
 1. Prevents the default form submission
 2. Syncs values from uncontrolled inputs
 3. Validates all fields against the schema
-4. If valid, calls your handler with typed data
+4. If valid, calls your handler with a **deep clone** of the typed data (safe to mutate)
 5. If invalid, populates `formState.value.errors` and auto-focuses first error field
 6. Manages `isSubmitting` state automatically
 7. Sets `isSubmitSuccessful` after successful submission
