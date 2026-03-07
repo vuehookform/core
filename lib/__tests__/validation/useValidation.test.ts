@@ -459,6 +459,54 @@ describe('useValidation', () => {
         ((errorsAfter.user as Record<string, unknown>)?.profile as Record<string, unknown>)?.bio,
       ).toBeUndefined()
     })
+
+    it('should clear nested field error on single-field revalidation', async () => {
+      const revalSchema = z.object({
+        user: z.object({
+          email: z.email('Invalid email'),
+          name: z.string().min(2, 'Name too short'),
+        }),
+      })
+
+      const { trigger, setValue, formState } = useForm({
+        schema: revalSchema,
+        defaultValues: { user: { email: '', name: 'John' } },
+        mode: 'onChange',
+      })
+
+      await trigger('user.email')
+      expect(formState.value.errors.user).toBeDefined()
+
+      setValue('user.email', 'valid@example.com')
+      await trigger('user.email')
+
+      const userErrors = formState.value.errors.user as Record<string, unknown> | undefined
+      expect(userErrors?.email).toBeUndefined()
+    })
+
+    it('should clear array item error on revalidation', async () => {
+      const arraySchema = z.object({
+        items: z.array(
+          z.object({
+            name: z.string().min(1, 'Name required'),
+          }),
+        ),
+      })
+
+      const { trigger, setValue, formState } = useForm({
+        schema: arraySchema,
+        defaultValues: { items: [{ name: '' }] },
+      })
+
+      await trigger('items.0.name')
+      expect(formState.value.errors.items).toBeDefined()
+
+      setValue('items.0.name', 'Valid')
+      await trigger('items.0.name')
+
+      const itemErrors = formState.value.errors.items as Array<Record<string, unknown>> | undefined
+      expect(itemErrors?.[0]?.name).toBeUndefined()
+    })
   })
 
   describe('setError', () => {
@@ -494,6 +542,47 @@ describe('useValidation', () => {
       setError('email', { message: 'Second error' })
 
       expect(formState.value.errors.email).toBe('Second error')
+    })
+
+    it('should store custom errors at nested paths correctly', () => {
+      const nestedErrSchema = z.object({
+        user: z.object({
+          email: z.email('Invalid email'),
+        }),
+      })
+
+      const { setError, formState } = useForm({
+        schema: nestedErrSchema,
+        defaultValues: { user: { email: '' } },
+      })
+
+      setError('user.email', { message: 'Email already taken' })
+
+      const userErrors = formState.value.errors.user as Record<string, unknown> | undefined
+      expect(userErrors?.email).toBe('Email already taken')
+    })
+
+    it('should clear custom errors for nested paths', () => {
+      const nestedErrSchema = z.object({
+        user: z.object({
+          email: z.email('Invalid email'),
+        }),
+      })
+
+      const { setError, clearErrors, formState } = useForm({
+        schema: nestedErrSchema,
+        defaultValues: { user: { email: '' } },
+      })
+
+      setError('user.email', { message: 'Email already taken' })
+
+      const userErrors = formState.value.errors.user as Record<string, unknown> | undefined
+      expect(userErrors?.email).toBe('Email already taken')
+
+      clearErrors('user.email')
+
+      const clearedErrors = formState.value.errors.user as Record<string, unknown> | undefined
+      expect(clearedErrors?.email).toBeUndefined()
     })
 
     it('should set error with type', () => {

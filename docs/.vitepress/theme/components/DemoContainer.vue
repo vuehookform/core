@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import '../demo.css'
 
 defineProps<{
   title?: string

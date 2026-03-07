@@ -306,8 +306,8 @@ export function useForm<TSchema extends ZodType>(
         const isValid = await validate()
 
         if (isValid) {
-          // Call success handler with validated data
-          await onValid(ctx.formData as FormValues)
+          // Call success handler with deep clone to prevent mutation of form state
+          await onValid(deepClone(ctx.formData) as FormValues)
           ctx.isSubmitSuccessful.value = true
         } else {
           // Call error handler if provided (use merged errors from formState)
@@ -531,9 +531,6 @@ export function useForm<TSchema extends ZodType>(
 
     const opts = resetFieldOptions || {}
 
-    // Increment reset generation to invalidate pending validations
-    ctx.resetGeneration.value++
-
     // Clear validation cache for this field (both partial and full strategy variants)
     ctx.validationCache.delete(`${name}:partial`)
     ctx.validationCache.delete(`${name}:full`)
@@ -545,6 +542,13 @@ export function useForm<TSchema extends ZodType>(
       ctx.errorDelayTimers.delete(name)
     }
     ctx.pendingErrors.delete(name)
+
+    // Clear schema validation debounce timer for this field
+    const schemaTimer = ctx.schemaValidationTimers.get(name)
+    if (schemaTimer) {
+      clearTimeout(schemaTimer)
+      ctx.schemaValidationTimers.delete(name)
+    }
 
     // Get default value (use provided or stored default)
     let defaultValue = opts.defaultValue
@@ -883,21 +887,21 @@ export function useForm<TSchema extends ZodType>(
     syncWithDebounce()
 
     if (nameOrNames === undefined) {
-      // Return all values
-      return { ...ctx.formData } as FormValues
+      // Return deep copy to prevent mutation of form state
+      return deepClone(ctx.formData) as FormValues
     }
 
     if (Array.isArray(nameOrNames)) {
       // Return multiple field values
       const result: Record<string, unknown> = {}
       for (const fieldName of nameOrNames) {
-        result[fieldName] = get(ctx.formData, fieldName)
+        result[fieldName] = deepClone(get(ctx.formData, fieldName))
       }
       return result as Partial<FormValues>
     }
 
-    // Return single field value
-    return get(ctx.formData, nameOrNames) as PathValue<FormValues, TPath>
+    // Return deep copy to prevent mutation of form state
+    return deepClone(get(ctx.formData, nameOrNames)) as PathValue<FormValues, TPath>
   }
 
   /**
@@ -1069,15 +1073,9 @@ export function useForm<TSchema extends ZodType>(
     }
 
     if (Array.isArray(name)) {
-      // Validate multiple fields
-      let allValid = true
-      for (const fieldName of name) {
-        const isValid = await validate(fieldName)
-        if (!isValid) {
-          allValid = false
-        }
-      }
-      return allValid
+      // Validate multiple fields in parallel
+      const results = await Promise.all(name.map((fieldName) => validate(fieldName)))
+      return results.every((isValid) => isValid)
     }
 
     // Validate single field

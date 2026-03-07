@@ -556,8 +556,14 @@ describe('superRefine validation', () => {
 
       await handleSubmit(vi.fn())(new Event('submit'))
 
-      // First error should be preserved
-      expect(formState.value.errors.username).toBe('Username must be at least 3 characters')
+      // In 'all' mode, always returns FieldError object with first error as primary
+      const error = formState.value.errors.username as {
+        type: string
+        message: string
+        types: Record<string, string | string[]>
+      }
+      expect(error.message).toBe('Username must be at least 3 characters')
+      expect(error.types).toBeDefined()
     })
   })
 

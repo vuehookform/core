@@ -1,6 +1,6 @@
 import type { ShallowRef } from 'vue'
 import { hashValue } from '../utils/hash'
-import { get } from '../utils/paths'
+import { get, unset } from '../utils/paths'
 
 /**
  * Mark a field as dirty (value has changed from default).
@@ -80,29 +80,32 @@ export function clearFieldErrors<T>(
   fieldName: string,
 ): void {
   const currentErrors = errors.value
-  const keys = Object.keys(currentErrors)
 
   // Early exit if no errors
-  if (keys.length === 0) return
+  if (Object.keys(currentErrors).length === 0) return
 
-  // Pre-compute prefix for nested path matching
+  // Check for nested path error (e.g., 'user.email' stored as { user: { email: "error" } })
+  const nestedError = get(currentErrors, fieldName)
+
+  // Check for flat key matches (e.g., 'user.email' or 'user.email.something' as top-level keys)
   const prefix = `${fieldName}.`
-
-  // Collect keys to delete
-  const keysToDelete: string[] = []
-  for (const key of keys) {
+  const flatKeysToDelete: string[] = []
+  for (const key of Object.keys(currentErrors)) {
     if (key === fieldName || key.startsWith(prefix)) {
-      keysToDelete.push(key)
+      flatKeysToDelete.push(key)
     }
   }
 
-  // Early exit if nothing to delete
-  if (keysToDelete.length === 0) return
+  // Early exit if nothing to clear
+  if (nestedError === undefined && flatKeysToDelete.length === 0) return
 
-  // Clone and delete
+  // Clone and clear
   const newErrors = { ...currentErrors }
-  for (const key of keysToDelete) {
+  for (const key of flatKeysToDelete) {
     delete newErrors[key]
+  }
+  if (nestedError !== undefined) {
+    unset(newErrors as Record<string, unknown>, fieldName)
   }
   errors.value = newErrors
 }

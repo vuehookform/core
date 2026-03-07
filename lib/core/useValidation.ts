@@ -57,13 +57,7 @@ function createFieldError(
     return firstError.message
   }
 
-  // criteriaMode: 'all' - return structured FieldError with all types
-  if (errors.length === 1) {
-    // Single error - return string for backward compatibility
-    return firstError.message
-  }
-
-  // Multiple errors - return structured FieldError
+  // criteriaMode: 'all' - always return structured FieldError with all types
   const types: Record<string, string | string[]> = {}
   for (const err of errors) {
     const existing = types[err.type]
