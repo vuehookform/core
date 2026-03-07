@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/vuehookform/core/compare/v0.5.0...v0.6.0) (2026-03-07)
+
+
+### Features
+
+* deep clone form data and parallelize validation ([8bb0bf3](https://github.com/vuehookform/core/commit/8bb0bf334bb8c9370c5d7e88bd4ee214a48b2c5e))
+
+
+### Bug Fixes
+
+* **validation:** handle nested error paths in field state and registration ([0cbab62](https://github.com/vuehookform/core/commit/0cbab62099d4a68f22951bb9b4fed1ded09a108c))
+
 ## [0.5.0](https://github.com/vuehookform/core/compare/v0.4.7...v0.5.0) (2026-01-27)
 
 
