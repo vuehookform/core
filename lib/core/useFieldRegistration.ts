@@ -115,11 +115,13 @@ export function createFieldRegistration<FormValues>(
         }
 
         if (error) {
-          ctx.errors.value = { ...ctx.errors.value, [fieldName]: error } as FieldErrors<FormValues>
+          const newErrors = { ...ctx.errors.value }
+          set(newErrors, fieldName, error)
+          ctx.errors.value = newErrors as FieldErrors<FormValues>
         } else {
           // Clear the error if validation passes
           const newErrors = { ...ctx.errors.value }
-          delete newErrors[fieldName as keyof typeof newErrors]
+          unset(newErrors as Record<string, unknown>, fieldName)
           ctx.errors.value = newErrors as FieldErrors<FormValues>
         }
       }
