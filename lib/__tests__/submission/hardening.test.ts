@@ -327,6 +327,31 @@ describe('Hardening Tests', () => {
       expect(valuesAfter.user.profile.name).toBe('John')
     })
   })
+
+  describe('handleSubmit deep clones data for onValid callback', () => {
+    it('should not mutate form state when onValid callback modifies data', async () => {
+      const submitSchema = z.object({
+        email: z.email(),
+        name: z.string().min(2),
+      })
+
+      const { handleSubmit, getValues } = useForm({
+        schema: submitSchema,
+        defaultValues: { email: 'test@example.com', name: 'John' },
+      })
+
+      const onValid = vi.fn((data: { email: string; name: string }) => {
+        data.email = 'mutated@example.com'
+        data.name = 'Mutated'
+      })
+
+      await handleSubmit(onValid)(new Event('submit'))
+
+      expect(onValid).toHaveBeenCalled()
+      expect(getValues('email')).toBe('test@example.com')
+      expect(getValues('name')).toBe('John')
+    })
+  })
 })
 
 describe('Field Array Hardening', () => {

@@ -51,6 +51,80 @@ describe('useForm - values', () => {
 
       expect(getValues('email')).toBe('new@example.com')
     })
+
+    it('should return deep copy that does not affect form state when mutated', () => {
+      const nestedSchema = z.object({
+        user: z.object({
+          name: z.string(),
+          tags: z.array(z.string()),
+        }),
+      })
+
+      const { getValues } = useForm({
+        schema: nestedSchema,
+        defaultValues: {
+          user: { name: 'John', tags: ['admin', 'user'] },
+        },
+      })
+
+      const values = getValues()
+      ;(values as Record<string, Record<string, unknown>>).user.name = 'Mutated'
+      ;(values as Record<string, Record<string, unknown[]>>).user.tags.push('hacker')
+
+      expect(getValues('user.name')).toBe('John')
+      const tags = getValues('user.tags') as unknown as string[]
+      expect(tags).toEqual(['admin', 'user'])
+    })
+
+    it('should return deep copy for single field getValues', () => {
+      const nestedSchema = z.object({
+        user: z.object({
+          name: z.string(),
+          tags: z.array(z.string()),
+        }),
+      })
+
+      const { getValues } = useForm({
+        schema: nestedSchema,
+        defaultValues: {
+          user: { name: 'John', tags: ['admin', 'user'] },
+        },
+      })
+
+      const user = getValues('user') as unknown as {
+        name: string
+        tags: string[]
+      }
+
+      user.name = 'Mutated'
+      user.tags.push('hacker')
+
+      expect(getValues('user.name')).toBe('John')
+      const tags = getValues('user.tags') as unknown as string[]
+      expect(tags).toEqual(['admin', 'user'])
+    })
+
+    it('should return deep copy for array of fields getValues', () => {
+      const arrSchema = z.object({
+        items: z.array(z.string()),
+        name: z.string(),
+      })
+
+      const { getValues } = useForm({
+        schema: arrSchema,
+        defaultValues: { items: ['a', 'b'], name: 'John' },
+      })
+
+      const values = getValues(['items', 'name']) as unknown as {
+        items: string[]
+        name: string
+      }
+
+      values.items.push('c')
+
+      const items = getValues('items') as unknown as string[]
+      expect(items).toEqual(['a', 'b'])
+    })
   })
 
   describe('getFieldState', () => {

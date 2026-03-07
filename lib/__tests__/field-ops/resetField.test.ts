@@ -195,4 +195,24 @@ describe('resetField', () => {
     resetField('email')
     expect(mockInput.value).toBe('default@test.com')
   })
+
+  it('should not discard other field validations when resetting one field', async () => {
+    const resetSchema = z.object({
+      email: z.email('Invalid email'),
+      name: z.string().min(2, 'Name too short'),
+    })
+
+    const { trigger, resetField, formState } = useForm({
+      schema: resetSchema,
+      defaultValues: { email: 'invalid', name: '' },
+    })
+
+    const emailPromise = trigger('email')
+
+    resetField('name')
+
+    const emailValid = await emailPromise
+    expect(emailValid).toBe(false)
+    expect(formState.value.errors.email).toBeDefined()
+  })
 })

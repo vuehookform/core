@@ -258,7 +258,7 @@ describe('Multi-Error Support', () => {
       expect(typeof form.formState.value.errors.password).toBe('string')
     })
 
-    it('should return string for single error with criteriaMode: all', async () => {
+    it('should return FieldError object for single error with criteriaMode: all', async () => {
       const simpleSchema = z.object({
         password: z.string().min(8, 'At least 8 characters'),
       })
@@ -273,8 +273,15 @@ describe('Multi-Error Support', () => {
       form.setValue('password', 'short')
       await form.trigger('password')
 
-      // Single error should still be a string for backward compatibility
-      expect(typeof form.formState.value.errors.password).toBe('string')
+      // In 'all' mode, always return FieldError object for consistent types
+      const error = form.formState.value.errors.password as {
+        type: string
+        message: string
+        types: Record<string, string | string[]>
+      }
+      expect(typeof error).toBe('object')
+      expect(error.message).toBe('At least 8 characters')
+      expect(error.types).toBeDefined()
     })
 
     it('should return FieldError with types for multiple errors', async () => {
