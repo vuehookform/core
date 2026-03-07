@@ -22,6 +22,7 @@ export default defineConfig({
   },
 
   head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/logo.png' }],
     ['link', { rel: 'icon', href: '/favicon.ico' }],
     ['meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }],
     ['meta', { name: 'theme-color', content: '#42b883' }],
@@ -35,6 +36,21 @@ export default defineConfig({
     ],
   ],
 
+  transformHead(ctx) {
+    if (ctx.pageData.relativePath === 'index.md') {
+      return [
+        [
+          'style',
+          {},
+          `.VPHero .name,.VPHero .text{font-size:32px;font-weight:700;line-height:40px}` +
+            `.VPHero .tagline{font-size:18px;line-height:28px;color:var(--vp-c-text-2)}` +
+            `@media(min-width:640px){.VPHero .name,.VPHero .text{font-size:48px;line-height:56px;white-space:nowrap}}` +
+            `@media(min-width:960px){.VPHero .name,.VPHero .text{font-size:56px;line-height:64px}}`,
+        ],
+      ]
+    }
+  },
+
   transformPageData(pageData) {
     const canonicalUrl = `https://vuehookform.com/${pageData.relativePath}`
       .replace(/index\.md$/, '')
@@ -45,7 +61,7 @@ export default defineConfig({
   },
 
   themeConfig: {
-    logo: '/logo.png',
+    logo: { src: '/logo.png', width: 25, height: 24, alt: 'Vue Hook Form' },
 
     nav: [
       { text: 'Guide', link: '/guide/' },
