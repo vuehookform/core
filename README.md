@@ -2,7 +2,7 @@
 
 A TypeScript-first form library for Vue 3, inspired by React Hook Form.
 
-[![npm version](https://img.shields.io/npm/v/vuehookform)](https://www.npmjs.com/package/vuehookform) [![CI](https://img.shields.io/github/actions/workflow/status/vuehookform/core/ci.yml?branch=main&label=CI)](https://github.com/vuehookform/core/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Coverage](https://img.shields.io/badge/coverage-90%25+-brightgreen)](https://github.com/vuehookform/core)
+[![npm version](https://img.shields.io/npm/v/@vuehookform/core)](https://www.npmjs.com/package/@vuehookform/core) [![CI](https://img.shields.io/github/actions/workflow/status/vuehookform/core/ci.yml?branch=main&label=CI)](https://github.com/vuehookform/core/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Coverage](https://img.shields.io/badge/coverage-90%25+-brightgreen)](https://github.com/vuehookform/core)
 
 ## Features
 
@@ -16,12 +16,12 @@ A TypeScript-first form library for Vue 3, inspired by React Hook Form.
 ## Quick Start
 
 ```bash
-npm install vuehookform zod
+npm install @vuehookform/core zod
 ```
 
 ```vue
 <script setup lang="ts">
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -168,7 +168,7 @@ const emailError = computed(() => formState.value.errors.email)
 
 <!-- ✅ Option 3: Use useController for reusable components -->
 <script setup>
-import { useForm, useController, type Control } from 'vuehookform'
+import { useForm, useController, type Control } from '@vuehookform/core'
 
 // control comes from useForm (pass it as a prop to child components)
 const { control } = useForm({ schema })

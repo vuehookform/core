@@ -8,7 +8,7 @@ Use `handleSubmit` to wrap your submission handler:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -259,7 +259,7 @@ The `isSubmitting` state prevents accidental double submissions:
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({

@@ -89,7 +89,7 @@ For simple custom components, use controlled mode:
 ```vue
 <!-- Parent form -->
 <script setup>
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import TextInput from './TextInput.vue'
 
 const { register, handleSubmit, formState } = useForm({ schema })
@@ -142,8 +142,8 @@ For more control, use `useController`:
 ```vue
 <!-- FormInput.vue -->
 <script setup lang="ts">
-import { useController } from 'vuehookform'
-import type { LooseControl } from 'vuehookform'
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
@@ -219,7 +219,7 @@ Usage:
 
 ```vue
 <script setup>
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import FormInput from './FormInput.vue'
 
 const { control, handleSubmit } = useForm({ schema })
@@ -241,7 +241,7 @@ For deeply nested components, use provideForm and useFormContext:
 ```vue
 <!-- Form wrapper -->
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema })
 provideForm(form) // Make form available to all descendants
@@ -257,7 +257,7 @@ provideForm(form) // Make form available to all descendants
 ```vue
 <!-- Deeply nested component -->
 <script setup>
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
@@ -293,8 +293,8 @@ Always ensure your form field components are descendants of a component that cal
 ```vue
 <!-- FormSelect.vue -->
 <script setup lang="ts">
-import { useController } from 'vuehookform'
-import type { LooseControl } from 'vuehookform'
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 interface Option {
   value: string
@@ -347,8 +347,8 @@ const { field, fieldState } = useController({
 ```vue
 <!-- FormCheckbox.vue -->
 <script setup lang="ts">
-import { useController } from 'vuehookform'
-import type { LooseControl } from 'vuehookform'
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
@@ -387,8 +387,8 @@ const { field, fieldState } = useController({
 ```vue
 <!-- FormRadioGroup.vue -->
 <script setup lang="ts">
-import { useController } from 'vuehookform'
-import type { LooseControl } from 'vuehookform'
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 interface Option {
   value: string
@@ -440,7 +440,7 @@ Add proper typing to your custom components:
 For components that work with any form, use `LooseControl`:
 
 ```typescript
-import type { LooseControl } from 'vuehookform'
+import type { LooseControl } from '@vuehookform/core'
 
 // Reusable component props
 interface FormFieldProps {
@@ -458,7 +458,7 @@ const props = defineProps<FormFieldProps>()
 For components tied to a specific form schema:
 
 ```typescript
-import type { UseFormReturn, Path } from 'vuehookform'
+import type { UseFormReturn, Path } from '@vuehookform/core'
 
 // Generic component props with full type safety
 interface FormFieldProps<TSchema extends ZodType> {
@@ -520,8 +520,8 @@ useForm({ schema, mode: 'onSubmit', reValidateMode: 'onChange' })
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useController } from 'vuehookform'
-import type { LooseControl } from 'vuehookform'
+import { useController } from '@vuehookform/core'
+import type { LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string

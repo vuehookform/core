@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 import { useToast } from '../../composables/useToast'
 

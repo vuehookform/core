@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, defineComponent, h, computed } from 'vue'
-import { useForm, provideForm, useFormContext } from 'vuehookform'
+import { useForm, provideForm, useFormContext } from '@vuehookform/core'
 import { z } from 'zod'
 import { useToast } from '../../composables/useToast'
 

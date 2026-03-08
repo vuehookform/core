@@ -17,7 +17,7 @@ In uncontrolled mode:
 
 ```vue
 <script setup>
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 
 const { register, handleSubmit } = useForm({ schema })
 </script>
@@ -116,7 +116,7 @@ Using `v-bind` spreads all these onto your input.
 
 ```vue
 <script setup lang="ts">
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -316,7 +316,7 @@ Understanding when your form component re-renders helps optimize performance.
 ```vue
 <script setup lang="ts">
 import { ref, onRenderTracked, onRenderTriggered } from 'vue'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -406,7 +406,7 @@ Vue Hook Form can detect input elements inside Vue components, enabling uncontro
 
 ```vue
 <script setup>
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import InputText from 'primevue/inputtext'
 
 const { register, handleSubmit, formState } = useForm({ schema })

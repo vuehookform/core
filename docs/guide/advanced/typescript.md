@@ -98,7 +98,7 @@ Create type-safe reusable components:
 
 ```typescript
 // FormField.vue
-import type { Control, Path } from 'vuehookform'
+import type { Control, Path } from '@vuehookform/core'
 import type { ZodSchema } from 'zod'
 
 interface Props<T extends ZodSchema> {
@@ -227,7 +227,7 @@ const itemError: string | undefined = formState.value.errors.items?.[0]?.name
 
 ```vue
 <script setup lang="ts">
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 // Define schema

@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { FieldState } from 'vuehookform'
+import type { FieldState } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'

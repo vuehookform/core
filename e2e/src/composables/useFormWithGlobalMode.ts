@@ -7,7 +7,7 @@ import {
   type Ref,
   type EffectScope,
 } from 'vue'
-import { useForm, type UseFormOptions, type UseFormReturn } from 'vuehookform'
+import { useForm, type UseFormOptions, type UseFormReturn } from '@vuehookform/core'
 import type { ZodType } from 'zod'
 import { useGlobalValidationMode } from './useGlobalValidationMode'
 
