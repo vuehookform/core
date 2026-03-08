@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/vuehookform/core/compare/v0.6.0...v0.6.1) (2026-03-08)
+
+
+### Reverts
+
+* undo npm package rename ([ded17c6](https://github.com/vuehookform/core/commit/ded17c6044a428d2a8042be2fa7aadc8b58471b5))
+* undo npm package rename (blocked by npm registry) ([f962fd8](https://github.com/vuehookform/core/commit/f962fd837e9444ca97a808474b1131769e7c7102))
+
 ## [0.6.0](https://github.com/vuehookform/core/compare/v0.5.0...v0.6.0) (2026-03-07)
 
 
