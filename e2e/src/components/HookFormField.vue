@@ -9,8 +9,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useController, useFormContext } from '@vuehookform/core'
-import type { UseFormReturn } from '@vuehookform/core'
+import { useController, useFormContext } from 'vuehookform'
+import type { UseFormReturn } from 'vuehookform'
 import type { ZodType } from 'zod'
 
 const props = withDefaults(

@@ -12,7 +12,7 @@ Call `provideForm()` in your setup script:
 
 ```vue
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -43,7 +43,7 @@ Use `useFormContext` in child components:
 ```vue
 <!-- PersonalInfo.vue -->
 <script setup>
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 
 const { register, formState } = useFormContext()
 </script>
@@ -72,7 +72,7 @@ const { register, formState } = useFormContext()
 ```vue
 <!-- FormActions.vue -->
 <script setup>
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 
 const { formState, reset } = useFormContext()
 </script>
@@ -117,7 +117,7 @@ Basic usage with context:
 
 ```vue
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 import FormField from './FormField.vue'
 
 const form = useForm({ schema })
@@ -141,7 +141,7 @@ Context flows through any depth of nesting:
 ```vue
 <!-- ContactForm.vue -->
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 
 const form = useForm({ schema })
 provideForm(form)
@@ -167,7 +167,7 @@ provideForm(form)
 ```vue
 <!-- BasicFields.vue -->
 <script setup>
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 const { register } = useFormContext()
 </script>
 
@@ -180,7 +180,7 @@ const { register } = useFormContext()
 ```vue
 <!-- AddressSection.vue -->
 <script setup>
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 const { register } = useFormContext()
 </script>
 
@@ -222,7 +222,7 @@ For multiple forms, create separate wrapper components that each call `provideFo
 ```vue
 <!-- ShippingFormWrapper.vue -->
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 
 const form = useForm({ schema: shippingSchema })
 provideForm(form)
@@ -239,7 +239,7 @@ provideForm(form)
 ```vue
 <!-- BillingFormWrapper.vue -->
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 
 const form = useForm({ schema: billingSchema })
 provideForm(form)
@@ -278,7 +278,7 @@ Handle this gracefully in reusable components:
 
 ```typescript
 import { inject } from 'vue'
-import { FormContextKey } from '@vuehookform/core'
+import { FormContextKey } from 'vuehookform'
 
 // Check if context exists
 const context = inject(FormContextKey, null)

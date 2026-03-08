@@ -8,7 +8,7 @@ Use the `fields()` method to manage arrays:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -303,7 +303,7 @@ Each field in `items.value` provides these methods:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -602,7 +602,7 @@ Access errors:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({

@@ -17,7 +17,7 @@ A simple form with email, name, and password validation. Uses `onBlur` validatio
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -77,7 +77,7 @@ Use controlled mode for select, number inputs, and textareas. Controlled mode is
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -128,7 +128,7 @@ Switch between different validation modes to see how they affect when validation
 ```vue
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
-import { useForm, type ValidationMode } from '@vuehookform/core'
+import { useForm, type ValidationMode } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -186,7 +186,7 @@ Dynamic arrays with add, remove, and validation support. Always use `field.key` 
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -250,7 +250,7 @@ For full control over field state, use `useController`. It provides reactive `fi
 
 ```vue
 <script setup lang="ts">
-import { useForm, useController } from '@vuehookform/core'
+import { useForm, useController } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -307,7 +307,7 @@ Share form across deeply nested components without prop drilling using `provideF
 ```vue
 <!-- Parent Form -->
 <script setup lang="ts">
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 import { z } from 'zod'
 import ChildField from './ChildField.vue'
 
@@ -336,7 +336,7 @@ provideForm(form)
 <!-- ChildField.vue -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 
 const { register, formState } = useFormContext()
 
@@ -362,7 +362,7 @@ A minimal login form with email and password validation.
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -393,7 +393,7 @@ User registration with password confirmation.
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z
@@ -420,7 +420,7 @@ Dynamic item list with quantity controls.
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -461,7 +461,7 @@ Create dynamic surveys with multiple question types.
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const questionSchema = z.discriminatedUnion('type', [
@@ -493,7 +493,7 @@ Form split into multiple steps with validation per step.
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const step = ref(1)
 const { register, handleSubmit, trigger } = useForm({ schema })
@@ -511,7 +511,7 @@ Share form across deeply nested components.
 
 ```vue
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 
 const form = useForm({ schema })
 provideForm(form) // Make form available to all descendants
@@ -539,7 +539,7 @@ This is a common mistake that causes errors to persist:
 
 ```vue
 <script setup lang="ts">
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 
 const props = defineProps<{ name: string }>()
 
@@ -563,7 +563,7 @@ Best for simple wrapper components where the parent manages the form:
 ```vue
 <!-- Parent Form -->
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 import CustomInput from './CustomInput.vue'
 
@@ -683,7 +683,7 @@ Best for reusable field components and third-party UI libraries:
 ```vue
 <!-- FormField.vue - Fully encapsulated reusable component -->
 <script setup lang="ts">
-import { useController, type Control } from '@vuehookform/core'
+import { useController, type Control } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -760,7 +760,7 @@ input {
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 import FormField from './FormField.vue'
 
@@ -812,7 +812,7 @@ Best for deeply nested component trees to avoid prop drilling:
 ```vue
 <!-- FormWrapper.vue -->
 <script setup lang="ts">
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -848,7 +848,7 @@ const onSubmit = (data) => {
 ```vue
 <!-- PersonalInfoSection.vue (nested component) -->
 <script setup lang="ts">
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 import FormInput from './FormInput.vue'
 
 // Access form from any depth in the component tree ✅
@@ -868,7 +868,7 @@ const { register, formState } = useFormContext()
 <!-- FormInput.vue (deeply nested) -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 
 const props = defineProps<{
   name: string

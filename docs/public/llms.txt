@@ -1,6 +1,6 @@
 # Vue Hook Form - LLM Quick Reference
 # TypeScript-first form library for Vue 3 with Zod validation
-# Package: vue-hook-form (or @vuehookform/core)
+# Package: vuehookform
 # Peer deps: vue ^3.3.0, zod ^3.0.0
 
 ================================================================================
@@ -8,7 +8,7 @@ MINIMAL WORKING EXAMPLE
 ================================================================================
 
 ```typescript
-import { useForm } from 'vue-hook-form'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -356,7 +356,7 @@ TYPE UTILITIES
 ================================================================================
 
 ```typescript
-import type { Path, PathValue, ArrayPath, FormValues } from 'vue-hook-form'
+import type { Path, PathValue, ArrayPath, FormValues } from 'vuehookform'
 
 // Get all valid paths for a type
 type ValidPaths = Path<{ user: { name: string }; items: { id: number }[] }>

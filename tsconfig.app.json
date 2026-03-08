@@ -3,7 +3,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "paths": {
       "@/*": ["./lib/*"],
-      "@vuehookform/core": ["./lib"]
+      "vuehookform": ["./lib"]
     },
 
     // Vue project settings

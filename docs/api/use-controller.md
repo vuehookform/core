@@ -5,7 +5,7 @@ A composable for building controlled input components that integrate with Vue Ho
 ## Import
 
 ```typescript
-import { useController } from '@vuehookform/core'
+import { useController } from 'vuehookform'
 ```
 
 ## Usage
@@ -140,8 +140,8 @@ This behavior is consistent with `register()` and field array operations, ensuri
 ```vue
 <!-- CustomInput.vue -->
 <script setup lang="ts">
-import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useController } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -179,7 +179,7 @@ Usage:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import CustomInput from './CustomInput.vue'
 
 const { control, handleSubmit } = useForm({ schema })
@@ -203,8 +203,8 @@ const { control, handleSubmit } = useForm({ schema })
 ```vue
 <!-- CustomSelect.vue -->
 <script setup lang="ts">
-import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useController } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -246,8 +246,8 @@ const { field, fieldState } = useController({
 ```vue
 <!-- CustomCheckbox.vue -->
 <script setup lang="ts">
-import { useController } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useController } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -287,8 +287,8 @@ When building reusable form field components, use `LooseControl` and `LooseContr
 ```vue
 <!-- FormInput.vue - Reusable component -->
 <script setup lang="ts">
-import { useController } from '@vuehookform/core'
-import type { LooseControl } from '@vuehookform/core'
+import { useController } from 'vuehookform'
+import type { LooseControl } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -326,7 +326,7 @@ Usage with any form:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import FormInput from './FormInput.vue'
 import { z } from 'zod'
 

@@ -5,7 +5,7 @@ Subscribe to specific form state changes for optimized re-renders.
 ## Import
 
 ```typescript
-import { useFormState } from '@vuehookform/core'
+import { useFormState } from 'vuehookform'
 ```
 
 ## Usage
@@ -126,8 +126,8 @@ Set of field names with values different from defaults.
 ```vue
 <!-- SubmitButton.vue -->
 <script setup lang="ts">
-import { useFormState } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useFormState } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<any>
@@ -152,8 +152,8 @@ const { isSubmitting, isDirty, isValid } = useFormState({
 <!-- ErrorSummary.vue -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useFormState } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useFormState } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<any>
@@ -190,8 +190,8 @@ const hasErrors = computed(() => errorList.value.length > 0)
 ```vue
 <!-- FormStatus.vue -->
 <script setup lang="ts">
-import { useFormState } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useFormState } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<any>

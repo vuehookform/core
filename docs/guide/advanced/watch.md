@@ -8,7 +8,7 @@ Use `watch` from `useForm` to observe field values:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch } = useForm({ schema })
 
@@ -66,7 +66,7 @@ console.log(allValues.value.email)
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, handleSubmit, watch } = useForm({ schema })
 const formData = watch()
@@ -92,7 +92,7 @@ const formData = watch()
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch } = useForm({ schema })
 
@@ -122,7 +122,7 @@ const formattedTotal = computed(() => {
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch } = useForm({ schema })
 const shippingMethod = watch('shippingMethod')
@@ -156,7 +156,7 @@ const shippingMethod = watch('shippingMethod')
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch } = useForm({ schema })
 const bio = watch('bio')
@@ -180,7 +180,7 @@ const remaining = computed(() => maxChars - charCount.value)
 ```vue
 <script setup>
 import { watchEffect } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch, setValue } = useForm({ schema })
 const country = watch('country')
@@ -204,7 +204,7 @@ watchEffect(() => {
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, watch } = useForm({
   schema,
@@ -244,7 +244,7 @@ For child components, use the `useWatch` composable:
 <!-- PasswordStrength.vue -->
 <script setup>
 import { computed } from 'vue'
-import { useWatch } from '@vuehookform/core'
+import { useWatch } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<any>
@@ -277,7 +277,7 @@ Usage:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import PasswordStrength from './PasswordStrength.vue'
 
 const { control, register } = useForm({ schema })

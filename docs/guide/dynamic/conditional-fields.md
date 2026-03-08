@@ -8,7 +8,7 @@ Use `watch` to reactively show/hide fields:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -91,7 +91,7 @@ Show different fields in array items based on a type:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const contactSchema = z.discriminatedUnion('type', [
@@ -175,7 +175,7 @@ Clear or update field values when dependencies change:
 ```vue
 <script setup>
 import { watchEffect } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const schema = z.object({
   country: z.string(),

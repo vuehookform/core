@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
-import { useForm, type ValidationMode } from '@vuehookform/core'
+import { useForm, type ValidationMode } from 'vuehookform'
 import { z } from 'zod'
 import { useToast } from '../../composables/useToast'
 

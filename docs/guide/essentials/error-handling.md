@@ -374,7 +374,7 @@ const emailError = getErrors('email')
 By default, only the first error per field is shown. Use `criteriaMode: 'all'` to collect all validation errors:
 
 ```typescript
-import { useForm, isFieldError } from '@vuehookform/core'
+import { useForm, isFieldError } from 'vuehookform'
 
 const { register, formState } = useForm({
   schema,
@@ -406,7 +406,7 @@ This is useful for password requirements or complex validation where users need 
 Use `isFieldError` to safely check if an error is a structured `FieldError`:
 
 ```typescript
-import { isFieldError } from '@vuehookform/core'
+import { isFieldError } from 'vuehookform'
 
 const error = formState.value.errors.email
 

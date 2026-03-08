@@ -52,7 +52,7 @@ features:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -94,7 +94,7 @@ Your IDE knows every field path. Invalid paths cause TypeScript errors at compil
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -134,7 +134,7 @@ Built-in array management with stable keys. No external libraries needed.
 
 ```vue
 <script setup lang="ts">
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({

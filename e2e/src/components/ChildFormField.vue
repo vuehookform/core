@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 import type { FormContextSchema } from '../schemas/formContextSchema'
 
 const { register, formState } = useFormContext<FormContextSchema>()
