@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
-import { useForm, type ValidationMode } from 'vuehookform'
+import { useForm, type ValidationMode } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'

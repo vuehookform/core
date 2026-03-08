@@ -1,5 +1,5 @@
 import { ref, inject, provide, type InjectionKey, type Ref } from 'vue'
-import type { ValidationMode } from 'vuehookform'
+import type { ValidationMode } from '@vuehookform/core'
 
 /**
  * Available validation modes for the selector

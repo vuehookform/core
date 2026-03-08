@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { watch, computed } from 'vue'
-import { useController, provideForm } from 'vuehookform'
+import { useController, provideForm } from '@vuehookform/core'
 import { z } from 'zod'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'

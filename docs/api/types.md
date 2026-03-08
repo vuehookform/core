@@ -538,7 +538,7 @@ type LooseControl = UseFormReturn<ZodType<any>>
 Use `LooseControl` instead of `Control<any>` when building reusable field components:
 
 ```typescript
-import { useController, type LooseControl } from 'vuehookform'
+import { useController, type LooseControl } from '@vuehookform/core'
 
 // Reusable component that works with any form
 const props = defineProps<{
@@ -578,7 +578,7 @@ Example usage in a reusable component:
 
 ```vue
 <script setup lang="ts">
-import { useController, type LooseControl } from 'vuehookform'
+import { useController, type LooseControl } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string

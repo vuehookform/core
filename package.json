@@ -1,6 +1,6 @@
 {
-  "name": "vuehookform",
-  "version": "0.6.1",
+  "name": "@vuehookform/core",
+  "version": "0.6.0",
   "description": "TypeScript-first form library for Vue 3, inspired by React Hook Form. Form-level state management with Zod validation.",
   "type": "module",
   "workspaces": [

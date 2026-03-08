@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "list",
+      "dependencies": {
+        "primevue": "^4.5.4",
+      },
       "devDependencies": {
         "@prettier/plugin-oxc": "^0.0.5",
         "@tsconfig/node24": "^24.0.3",
@@ -43,11 +46,11 @@
       "version": "0.0.0",
       "dependencies": {
         "@primevue/themes": "^4.3.0",
+        "@vuehookform/core": "file:..",
         "primeicons": "^7.0.0",
         "primevue": "^4.3.0",
         "vue": "^3.5.25",
         "vue-router": "^4.5.0",
-        "vuehookform": "file:..",
         "zod": "^4.2.1",
       },
       "devDependencies": {
@@ -580,6 +583,8 @@
     "@vue/shared": ["@vue/shared@3.5.26", "", {}, "sha512-7Z6/y3uFI5PRoKeorTOSXKcDj0MSasfNNltcslbFrPpcw6aXRUALq4IfJlaTRspiWIUOEZbrpM+iQGmCOiWe4A=="],
 
     "@vue/test-utils": ["@vue/test-utils@2.4.6", "", { "dependencies": { "js-beautify": "^1.14.9", "vue-component-type-helpers": "^2.0.0" } }, "sha512-FMxEjOpYNYiFe0GkaHsnJPXFHxQ6m4t8vI/ElPGpMWxZKpmRvQ33OIrvRXemy6yha03RxhOlQuy+gZMC3CQSow=="],
+
+    "@vuehookform/core": ["list@root:", {}],
 
     "@vuehookform/e2e": ["@vuehookform/e2e@workspace:e2e"],
 
@@ -1452,8 +1457,6 @@
     "vue-router": ["vue-router@4.6.4", "", { "dependencies": { "@vue/devtools-api": "^6.6.4" }, "peerDependencies": { "vue": "^3.5.0" } }, "sha512-Hz9q5sa33Yhduglwz6g9skT8OBPii+4bFn88w6J+J4MfEo4KRRpmiNG/hHHkdbRFlLBOqxN8y8gf2Fb0MTUgVg=="],
 
     "vue-tsc": ["vue-tsc@3.2.1", "", { "dependencies": { "@volar/typescript": "2.4.27", "@vue/language-core": "3.2.1" }, "peerDependencies": { "typescript": ">=5.0.0" }, "bin": { "vue-tsc": "bin/vue-tsc.js" } }, "sha512-I23Rk8dkQfmcSbxDO0dmg9ioMLjKA1pjlU3Lz6Jfk2pMGu3Uryu9810XkcZH24IzPbhzPCnkKo2rEMRX0skSrw=="],
-
-    "vuehookform": ["list@root:", {}],
 
     "wait-on": ["wait-on@9.0.3", "", { "dependencies": { "axios": "^1.13.2", "joi": "^18.0.1", "lodash": "^4.17.21", "minimist": "^1.2.8", "rxjs": "^7.8.2" }, "bin": { "wait-on": "bin/wait-on" } }, "sha512-13zBnyYvFDW1rBvWiJ6Av3ymAaq8EDQuvxZnPIw3g04UqGi4TyoIJABmfJ6zrvKo9yeFQExNkOk7idQbDJcuKA=="],
 

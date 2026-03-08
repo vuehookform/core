@@ -17,14 +17,14 @@ Provides form context to all descendant components.
 ### Import
 
 ```typescript
-import { provideForm } from 'vuehookform'
+import { provideForm } from '@vuehookform/core'
 ```
 
 ### Usage
 
 ```vue
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema })
 
@@ -55,7 +55,7 @@ Access the form context in child components.
 ### Import
 
 ```typescript
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 ```
 
 ### Usage
@@ -99,7 +99,7 @@ Returns the same object as `useForm`:
 ```vue
 <!-- TextField.vue -->
 <script setup lang="ts">
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string
@@ -130,7 +130,7 @@ Usage:
 
 ```vue
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 import TextField from './TextField.vue'
 
 const form = useForm({ schema })
@@ -152,7 +152,7 @@ provideForm(form)
 ```vue
 <!-- SubmitButton.vue -->
 <script setup lang="ts">
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 
 const props = defineProps<{
   label?: string
@@ -174,7 +174,7 @@ const { formState } = useFormContext()
 ```vue
 <!-- AddressSection.vue -->
 <script setup>
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 import TextField from './TextField.vue'
 
 const { register } = useFormContext()
@@ -193,7 +193,7 @@ const { register } = useFormContext()
 ```vue
 <!-- ContactForm.vue -->
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 import TextField from './TextField.vue'
 import AddressSection from './AddressSection.vue'
 import SubmitButton from './SubmitButton.vue'
@@ -222,7 +222,7 @@ For multiple forms on the same page, create separate wrapper components that eac
 ```vue
 <!-- ShippingForm.vue -->
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema: shippingSchema })
 provideForm(form)
@@ -239,7 +239,7 @@ provideForm(form)
 ```vue
 <!-- BillingForm.vue -->
 <script setup>
-import { useForm, provideForm } from 'vuehookform'
+import { useForm, provideForm } from '@vuehookform/core'
 
 const form = useForm({ schema: billingSchema })
 provideForm(form)
@@ -269,7 +269,7 @@ For type-safe context access:
 
 ```vue
 <script setup lang="ts">
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 import type { z } from 'zod'
 
 // Define your schema type

@@ -24,7 +24,7 @@ export type UserFormData = z.infer<typeof userSchema>
 ```vue
 <!-- UserForm.vue -->
 <script setup>
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { userSchema, type UserFormData } from '@/schemas/user'
 
 const form = useForm({ schema: userSchema })
@@ -37,7 +37,7 @@ Create a composable for forms you use multiple times:
 
 ```typescript
 // composables/useUserForm.ts
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { userSchema } from '@/schemas/user'
 
 export function useUserForm(defaultValues?: Partial<UserFormData>) {
@@ -220,7 +220,7 @@ export type CheckoutFormData = z.infer<typeof checkoutSchema>
 ```vue
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { checkoutSchema, type CheckoutFormData } from '@/schemas/checkout'
 
 // Step configuration with field mappings
@@ -473,7 +473,7 @@ For complex wizards where steps are completely independent (different data model
 
 ```typescript
 import { ref, reactive } from 'vue'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { personalInfoSchema, shippingSchema, paymentSchema } from '@/schemas/checkout'
 
 // Store completed step data outside of forms
@@ -528,7 +528,7 @@ This approach is better when:
 ```vue
 <!-- FormField.vue -->
 <script setup>
-import { useFormContext } from 'vuehookform'
+import { useFormContext } from '@vuehookform/core'
 
 const props = defineProps<{
   name: string

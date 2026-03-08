@@ -237,7 +237,7 @@ For arrays with 50+ visible items, use virtual scrolling to render only visible 
 <script setup lang="ts">
 import { computed, nextTick } from 'vue'
 import { useVirtualList } from '@vueuse/core'
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 const schema = z.object({

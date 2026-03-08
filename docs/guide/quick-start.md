@@ -7,19 +7,19 @@ Get up and running with Vue Hook Form in minutes.
 ::: code-group
 
 ```bash [npm]
-npm install vuehookform zod
+npm install @vuehookform/core zod
 ```
 
 ```bash [pnpm]
-pnpm add vuehookform zod
+pnpm add @vuehookform/core zod
 ```
 
 ```bash [yarn]
-yarn add vuehookform zod
+yarn add @vuehookform/core zod
 ```
 
 ```bash [bun]
-bun add vuehookform zod
+bun add @vuehookform/core zod
 ```
 
 :::
@@ -30,7 +30,7 @@ Here's a complete login form example:
 
 ```vue
 <script setup lang="ts">
-import { useForm } from 'vuehookform'
+import { useForm } from '@vuehookform/core'
 import { z } from 'zod'
 
 // 1. Define your schema

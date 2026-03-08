@@ -8,7 +8,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       // Ensure library resolves to built dist
-      vuehookform: fileURLToPath(new URL('../dist/vuehookform.js', import.meta.url)),
+      '@vuehookform/core': fileURLToPath(new URL('../dist/vuehookform.js', import.meta.url)),
     },
     dedupe: ['vue', 'zod'],
   },
