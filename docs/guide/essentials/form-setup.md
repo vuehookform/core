@@ -7,7 +7,7 @@ Learn how to properly configure `useForm` for your needs.
 The simplest form setup requires only a schema:
 
 ```typescript
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -254,7 +254,7 @@ See [Programmatic Control](/guide/advanced/programmatic-control) for detailed us
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({

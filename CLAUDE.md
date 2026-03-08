@@ -207,7 +207,7 @@ const { value, ...bindings } = register('email', { controlled: true })
 ```vue
 <!-- FormInput.vue - Fully encapsulated -->
 <script setup lang="ts">
-import { useController, type Control } from '@vuehookform/core'
+import { useController, type Control } from 'vuehookform'
 
 const props = defineProps<{
   name: string
@@ -244,14 +244,14 @@ const { field, fieldState } = useController({
 ```vue
 <!-- Parent -->
 <script setup>
-import { useForm, provideForm } from '@vuehookform/core'
+import { useForm, provideForm } from 'vuehookform'
 const form = useForm({ schema })
 provideForm(form)
 </script>
 
 <!-- Child (any depth) -->
 <script setup>
-import { useFormContext } from '@vuehookform/core'
+import { useFormContext } from 'vuehookform'
 const { register, formState } = useFormContext()
 </script>
 <template>

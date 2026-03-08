@@ -5,7 +5,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        '@vuehookform/core': resolve(__dirname, '../../lib'),
+        vuehookform: resolve(__dirname, '../../lib'),
       },
     },
   },
@@ -71,7 +71,7 @@ export default defineConfig({
         text: 'Links',
         items: [
           { text: 'GitHub', link: 'https://github.com/vuehookform/core' },
-          { text: 'npm', link: 'https://www.npmjs.com/package/@vuehookform/core' },
+          { text: 'npm', link: 'https://www.npmjs.com/package/vuehookform' },
         ],
       },
     ],

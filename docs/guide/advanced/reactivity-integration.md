@@ -23,7 +23,7 @@ Sync external state into the form without triggering dirty state:
 
 ```typescript
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const externalData = ref({ name: 'John', email: 'john@example.com' })
 
@@ -245,7 +245,7 @@ When external state changes should trigger re-validation of dependent fields.
 ```vue
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 // External state (e.g., from a parent component or store)
@@ -304,7 +304,7 @@ watch(selectedCountry, async () => {
 import { watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const userStore = useUserStore()
 const { permissions, region } = storeToRefs(userStore)
@@ -350,7 +350,7 @@ For scenarios requiring true bidirectional synchronization between form and exte
 ```vue
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { z } from 'zod'
 
 const schema = z.object({

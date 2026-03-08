@@ -5,7 +5,7 @@ The main composable for managing form state, validation, and submission.
 ## Import
 
 ```typescript
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 ```
 
 ## Usage

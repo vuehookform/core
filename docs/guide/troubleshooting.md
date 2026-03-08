@@ -337,7 +337,7 @@ For reusable components, use generics:
 
 ```typescript
 import type { ZodType } from 'zod'
-import type { Control, FormPath } from '@vuehookform/core'
+import type { Control, FormPath } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<ZodType>

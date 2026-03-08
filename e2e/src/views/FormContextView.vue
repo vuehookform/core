@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue'
-import { provideForm } from '@vuehookform/core'
+import { provideForm } from 'vuehookform'
 import { z } from 'zod'
 import Button from 'primevue/button'
 import ChildFormField from '../components/ChildFormField.vue'

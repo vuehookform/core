@@ -5,7 +5,7 @@ Watch form field values reactively.
 ## Import
 
 ```typescript
-import { useWatch } from '@vuehookform/core'
+import { useWatch } from 'vuehookform'
 ```
 
 ## Usage
@@ -77,7 +77,7 @@ const all: Ref<FormValues> = useWatch({ control })
 
 ```vue
 <script setup>
-import { useForm, useWatch } from '@vuehookform/core'
+import { useForm, useWatch } from 'vuehookform'
 
 const { control, register } = useForm({ schema })
 const email = useWatch({ control, name: 'email' })
@@ -93,7 +93,7 @@ const email = useWatch({ control, name: 'email' })
 
 ```vue
 <script setup>
-import { useForm, useWatch } from '@vuehookform/core'
+import { useForm, useWatch } from 'vuehookform'
 
 const { control, register } = useForm({ schema })
 const accountType = useWatch({ control, name: 'accountType' })
@@ -118,7 +118,7 @@ const accountType = useWatch({ control, name: 'accountType' })
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm, useWatch } from '@vuehookform/core'
+import { useForm, useWatch } from 'vuehookform'
 
 const { control, register } = useForm({ schema })
 
@@ -141,7 +141,7 @@ const total = computed(() => {
 
 ```vue
 <script setup>
-import { useForm, useWatch } from '@vuehookform/core'
+import { useForm, useWatch } from 'vuehookform'
 
 const { control, register, handleSubmit } = useForm({ schema })
 const formData = useWatch({ control })
@@ -168,7 +168,7 @@ const formData = useWatch({ control })
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm, useWatch } from '@vuehookform/core'
+import { useForm, useWatch } from 'vuehookform'
 
 const { control, register } = useForm({ schema })
 
@@ -195,8 +195,8 @@ const fullName = computed(() => {
 <!-- PasswordStrength.vue -->
 <script setup>
 import { computed } from 'vue'
-import { useWatch } from '@vuehookform/core'
-import type { Control } from '@vuehookform/core'
+import { useWatch } from 'vuehookform'
+import type { Control } from 'vuehookform'
 
 const props = defineProps<{
   control: Control<any>

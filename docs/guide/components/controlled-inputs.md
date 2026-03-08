@@ -19,7 +19,7 @@ Add `{ controlled: true }` to register:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register } = useForm({ schema })
 
@@ -56,7 +56,7 @@ Custom components typically require v-model:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import CustomInput from './CustomInput.vue'
 import DatePicker from 'some-date-library'
 
@@ -83,7 +83,7 @@ const { value: dateValue, ...dateBindings } = register('birthDate', { controlled
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, formState, handleSubmit } = useForm({ schema })
 
@@ -106,7 +106,7 @@ const { value: emailValue, ...emailBindings } = register('email', { controlled: 
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import InputText from 'primevue/inputtext'
 
 const { register, formState, handleSubmit } = useForm({ schema })
@@ -136,7 +136,7 @@ For simple PrimeVue inputs like `InputText`, controlled mode with `register()` w
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, formState, handleSubmit } = useForm({ schema })
 
@@ -164,7 +164,7 @@ With controlled mode, you can use the value reactively:
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, handleSubmit } = useForm({ schema })
 
@@ -189,7 +189,7 @@ const passwordStrength = computed(() => {
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, handleSubmit, formState } = useForm({ schema })
 

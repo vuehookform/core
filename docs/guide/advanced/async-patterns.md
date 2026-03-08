@@ -8,7 +8,7 @@ Load initial form values from an API or database:
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, handleSubmit, formState } = useForm({
   schema,
@@ -105,7 +105,7 @@ Validate fields asynchronously (e.g., checking username availability):
 
 ```vue
 <script setup>
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const { register, formState } = useForm({ schema })
 
@@ -213,7 +213,7 @@ Pass server-side validation errors into the form:
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const serverErrors = ref({})
 
@@ -269,7 +269,7 @@ Sync form values with external state (e.g., parent component, store, or URL para
 ```vue
 <script setup>
 import { computed } from 'vue'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -312,7 +312,7 @@ A user profile form with async loading, async validation, and server error handl
 <script setup>
 import { ref } from 'vue'
 import { z } from 'zod'
-import { useForm } from '@vuehookform/core'
+import { useForm } from 'vuehookform'
 
 const schema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
