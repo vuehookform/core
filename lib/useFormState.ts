@@ -27,17 +27,16 @@ export interface UseFormStateOptions<TSchema extends ZodType> {
  * @example
  * ```ts
  * // Subscribe to all form state
- * const formState = useFormState({})
+ * const state = useFormState({})
+ * // Access: state.value.errors, state.value.isDirty, etc.
  *
  * // Subscribe to specific properties
- * const { isSubmitting, errors } = useFormState({ name: ['isSubmitting', 'errors'] })
- *
- * // Subscribe to single property
- * const isDirty = useFormState({ name: 'isDirty' })
+ * const state = useFormState({ name: ['isSubmitting', 'errors'] })
+ * // Access: state.value.isSubmitting, state.value.errors
  *
  * // With explicit control
  * const { control } = useForm({ schema })
- * const formState = useFormState({ control })
+ * const state = useFormState({ control })
  * ```
  */
 export function useFormState<TSchema extends ZodType>(

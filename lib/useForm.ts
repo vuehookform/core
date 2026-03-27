@@ -29,7 +29,7 @@ import {
 } from './utils/devWarnings'
 import { createFormContext } from './core/formContext'
 import { createValidation } from './core/useValidation'
-import { createFieldRegistration } from './core/useFieldRegistration'
+import { createFieldRegistration, type OnChangeHelpers } from './core/useFieldRegistration'
 import { createFieldArrayManager } from './core/useFieldArray'
 import {
   syncUncontrolledInputs,
@@ -102,8 +102,19 @@ export function useForm<TSchema extends ZodType>(
   // Create validation functions
   const { validate, clearAllPendingErrors } = createValidation<FormValues>(ctx)
 
+  // Create onChange helpers with mutable reference - setValue is assigned after definition.
+  // This is safe because onInput handlers only execute during user interaction,
+  // long after setup completes (same pattern as formMethods for field arrays).
+  const onChangeHelpers: OnChangeHelpers = {
+    setValue: null!,
+  }
+
   // Create field registration functions
-  const { register, unregister } = createFieldRegistration<FormValues>(ctx, validate)
+  const { register, unregister } = createFieldRegistration<FormValues>(
+    ctx,
+    validate,
+    onChangeHelpers,
+  )
 
   // Define setFocus early so it can be passed to field array manager
   function setFocus<TPath extends Path<FormValues>>(
@@ -269,6 +280,17 @@ export function useForm<TSchema extends ZodType>(
     get disabled() {
       return ctx.isDisabled.value
     },
+    get isPristine() {
+      return !isDirtyComputed.value
+    },
+    get canSubmit() {
+      return (
+        isValidComputed.value &&
+        !ctx.isSubmitting.value &&
+        !ctx.isLoading.value &&
+        !ctx.isDisabled.value
+      )
+    },
   }) as FormState<FormValues>
 
   // Wrap in computed for backward compatibility with formState.value access pattern
@@ -420,6 +442,13 @@ export function useForm<TSchema extends ZodType>(
       validate(name)
     }
   }
+
+  // Assign setValue to onChange helpers now that it's defined
+  onChangeHelpers.setValue = setValue as (
+    name: string,
+    value: unknown,
+    options?: SetValueOptions,
+  ) => void
 
   /**
    * Reset form to default values

@@ -157,6 +157,10 @@ This is useful for:
 | `mode`           | Before first submission |
 | `reValidateMode` | After first submission  |
 
+::: tip When does reValidateMode activate?
+`reValidateMode` activates when `submitCount > 0`. This happens either through `handleSubmit` or by calling `trigger(name, { markAsSubmitted: true })`. Until that condition is met, only `mode` controls validation timing.
+:::
+
 ### Delay Error Display
 
 Prevent error "flash" during typing with `delayError`:

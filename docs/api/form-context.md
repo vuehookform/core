@@ -82,7 +82,6 @@ Returns the same object as `useForm`:
   fields,
   control,
   setValue,
-  getValue,
   getValues,
   reset,
   trigger,

@@ -11,7 +11,8 @@ import { useFormState } from '@vuehookform/core'
 ## Usage
 
 ```typescript
-const { isDirty, errors } = useFormState({ control })
+const state = useFormState({ control })
+// Access: state.value.isDirty, state.value.errors
 ```
 
 ## When to Use
@@ -38,88 +39,31 @@ const { control } = useForm({ schema })
 const state = useFormState({ control })
 ```
 
-## Return Values
+## Return Value
 
-All properties are reactive refs:
-
-### errors
+Returns a single `ComputedRef<Partial<FormState<T>>>` containing the requested state properties. Access properties via `.value`:
 
 ```typescript
-errors: Ref<FieldErrors<T>>
-```
-
-Current validation errors.
-
-```typescript
-const { errors } = useFormState({ control })
+const state = useFormState({ control })
 
 // In template
-<span v-if="errors.email">{{ errors.email }}</span>
+<span v-if="state.value.errors.email">{{ state.value.errors.email }}</span>
+<button :disabled="state.value.isSubmitting">Submit</button>
 ```
 
-### isDirty
+### Available Properties
 
-```typescript
-isDirty: Ref<boolean>
-```
-
-True if any field has been modified from default values.
-
-### isValid
-
-```typescript
-isValid: Ref<boolean>
-```
-
-True if the form has no validation errors.
-
-### isSubmitting
-
-```typescript
-isSubmitting: Ref<boolean>
-```
-
-True while form submission is in progress.
-
-### isSubmitted
-
-```typescript
-isSubmitted: Ref<boolean>
-```
-
-True after the form has been submitted at least once.
-
-### isSubmitSuccessful
-
-```typescript
-isSubmitSuccessful: Ref<boolean>
-```
-
-True if the last submission completed without errors.
-
-### submitCount
-
-```typescript
-submitCount: Ref<number>
-```
-
-Number of times the form has been submitted.
-
-### touchedFields
-
-```typescript
-touchedFields: Ref<Set<string>>
-```
-
-Set of field names that have been touched (blurred).
-
-### dirtyFields
-
-```typescript
-dirtyFields: Ref<Set<string>>
-```
-
-Set of field names with values different from defaults.
+| Property             | Type             | Description                      |
+| -------------------- | ---------------- | -------------------------------- |
+| `errors`             | `FieldErrors<T>` | Current validation errors        |
+| `isDirty`            | `boolean`        | Any field modified from defaults |
+| `isValid`            | `boolean`        | No validation errors             |
+| `isSubmitting`       | `boolean`        | Submission in progress           |
+| `isSubmitted`        | `boolean`        | Submitted at least once          |
+| `isSubmitSuccessful` | `boolean`        | Last submission succeeded        |
+| `submitCount`        | `number`         | Number of submissions            |
+| `touchedFields`      | `Set<string>`    | Fields that have been blurred    |
+| `dirtyFields`        | `Set<string>`    | Fields different from defaults   |
 
 ## Example: Submit Button Component
 
@@ -133,14 +77,18 @@ const props = defineProps<{
   control: Control<any>
 }>()
 
-const { isSubmitting, isDirty, isValid } = useFormState({
+const state = useFormState({
   control: props.control,
 })
 </script>
 
 <template>
-  <button type="submit" :disabled="isSubmitting || !isDirty" :class="{ loading: isSubmitting }">
-    <span v-if="isSubmitting">Saving...</span>
+  <button
+    type="submit"
+    :disabled="state.value.isSubmitting || !state.value.isDirty"
+    :class="{ loading: state.value.isSubmitting }"
+  >
+    <span v-if="state.value.isSubmitting">Saving...</span>
     <span v-else>Save Changes</span>
   </button>
 </template>
@@ -159,12 +107,13 @@ const props = defineProps<{
   control: Control<any>
 }>()
 
-const { errors, isSubmitted } = useFormState({
+const state = useFormState({
   control: props.control,
 })
 
 const errorList = computed(() => {
-  return Object.entries(errors.value).map(([field, message]) => ({
+  const errors = state.value.errors ?? {}
+  return Object.entries(errors).map(([field, message]) => ({
     field,
     message,
   }))
@@ -174,7 +123,7 @@ const hasErrors = computed(() => errorList.value.length > 0)
 </script>
 
 <template>
-  <div v-if="isSubmitted && hasErrors" class="error-summary" role="alert">
+  <div v-if="state.value.isSubmitted && hasErrors" class="error-summary" role="alert">
     <h3>Please fix the following errors:</h3>
     <ul>
       <li v-for="error in errorList" :key="error.field">
@@ -197,16 +146,18 @@ const props = defineProps<{
   control: Control<any>
 }>()
 
-const { isDirty, isValid, isSubmitting } = useFormState({
+const state = useFormState({
   control: props.control,
 })
 </script>
 
 <template>
   <div class="form-status">
-    <span v-if="isSubmitting" class="status submitting"> Submitting... </span>
-    <span v-else-if="isDirty && !isValid" class="status invalid"> Form has errors </span>
-    <span v-else-if="isDirty" class="status dirty"> Unsaved changes </span>
+    <span v-if="state.value.isSubmitting" class="status submitting"> Submitting... </span>
+    <span v-else-if="state.value.isDirty && !state.value.isValid" class="status invalid">
+      Form has errors
+    </span>
+    <span v-else-if="state.value.isDirty" class="status dirty"> Unsaved changes </span>
     <span v-else class="status clean"> No changes </span>
   </div>
 </template>

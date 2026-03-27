@@ -106,11 +106,6 @@ interface UseFormReturn<T> {
   ) => void
 
   /**
-   * Get a field value
-   */
-  getValue: (name: Path<T>) => any
-
-  /**
    * Get all or specific field values
    */
   getValues: (names?: Path<T>[]) => T | Partial<T>

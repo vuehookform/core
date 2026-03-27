@@ -13,6 +13,7 @@ import { useForm } from '../../useForm'
 import { useWatch } from '../../useWatch'
 import { useController } from '../../useController'
 import { useFormState } from '../../useFormState'
+import { useFieldError } from '../../useFieldError'
 
 const schema = z.object({
   email: z.email(),
@@ -91,6 +92,37 @@ describe('useWatch', () => {
       form.setValue('email', 'new@example.com')
 
       expect(email.value).toBe('new@example.com')
+    })
+
+    it('should apply defaultValue fallback for multiple fields', () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: 'test@example.com', name: 'John' },
+      })
+
+      const fields = useWatch({
+        control: form,
+        name: ['age', 'email'],
+        defaultValue: 'fallback',
+      })
+
+      expect(fields.value).toEqual({
+        age: 'fallback',
+        email: 'test@example.com',
+      })
+    })
+
+    it('should reactively update in watch-all mode', () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: 'test@example.com', name: 'John' },
+      })
+
+      const all = useWatch({ control: form })
+      expect(all.value).toEqual({ email: 'test@example.com', name: 'John' })
+
+      form.setValue('name', 'Jane')
+      expect(all.value).toEqual({ email: 'test@example.com', name: 'Jane' })
     })
   })
 
@@ -526,6 +558,83 @@ describe('useFormState', () => {
     it('should export useFormState from index', async () => {
       const exports = await import('../../index')
       expect(exports.useFormState).toBeDefined()
+    })
+  })
+})
+
+describe('useFieldError', () => {
+  describe('with explicit control', () => {
+    it('should return undefined when no error exists', () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: 'valid@test.com', name: 'John' },
+      })
+
+      const error = useFieldError({ control: form, name: 'email' })
+      expect(error.value).toBeUndefined()
+    })
+
+    it('should return error message string after validation fails', async () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: '', name: '' },
+      })
+
+      const emailError = useFieldError({ control: form, name: 'email' })
+
+      const onSubmit = form.handleSubmit(() => {})
+      await onSubmit(new Event('submit'))
+
+      expect(emailError.value).toBeDefined()
+      expect(typeof emailError.value).toBe('string')
+    })
+
+    it('should clear when error is resolved', async () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: '', name: 'John' },
+      })
+
+      const emailError = useFieldError({ control: form, name: 'email' })
+
+      const onSubmit = form.handleSubmit(() => {})
+      await onSubmit(new Event('submit'))
+      expect(emailError.value).toBeDefined()
+
+      form.setValue('email', 'valid@test.com')
+      await onSubmit(new Event('submit'))
+      expect(emailError.value).toBeUndefined()
+    })
+
+    it('should handle setError with structured FieldError', () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: 'a@b.com', name: 'John' },
+      })
+
+      const emailError = useFieldError({ control: form, name: 'email' })
+
+      form.setError('email', { type: 'custom', message: 'Already taken' })
+      expect(emailError.value).toBe('Already taken')
+    })
+
+    it('should handle setError with simple message', () => {
+      const form = useForm({
+        schema,
+        defaultValues: { email: 'a@b.com', name: 'John' },
+      })
+
+      const emailError = useFieldError({ control: form, name: 'email' })
+
+      form.setError('email', { message: 'Server error' })
+      expect(emailError.value).toBe('Server error')
+    })
+  })
+
+  describe('exports', () => {
+    it('should export useFieldError from index', async () => {
+      const exports = await import('../../index')
+      expect(exports.useFieldError).toBeDefined()
     })
   })
 })

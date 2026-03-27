@@ -35,9 +35,9 @@ Use `useWatch` when you need to:
 ### control
 
 **Type:** `Control<T>`\
-**Required:** Yes
+**Required:** No (uses form context if not provided)
 
-The control object from `useForm`.
+The control object from `useForm`. If omitted, falls back to the nearest `provideForm()` context.
 
 ### name
 
@@ -55,20 +55,22 @@ Value to use before the field has a value.
 
 ## Return Value
 
-Returns a reactive ref containing the watched value(s):
+Returns a `ComputedRef` containing the watched value(s):
 
 ```typescript
-// Single field
-const email: Ref<string> = useWatch({ control, name: 'email' })
+// Single field — ComputedRef<string>
+const email = useWatch({ control, name: 'email' })
 
-// Multiple fields
-const values: Ref<[string, string]> = useWatch({
+// Multiple fields — ComputedRef<Partial<FormValues>>
+// Returns an object keyed by field name, NOT a tuple
+const values = useWatch({
   control,
   name: ['email', 'password'],
 })
+// Access: values.value.email, values.value.password
 
-// All fields
-const all: Ref<FormValues> = useWatch({ control })
+// All fields — ComputedRef<FormValues>
+const all = useWatch({ control })
 ```
 
 ## Examples
@@ -172,13 +174,13 @@ import { useForm, useWatch } from '@vuehookform/core'
 
 const { control, register } = useForm({ schema })
 
-const [firstName, lastName] = useWatch({
+const values = useWatch({
   control,
   name: ['firstName', 'lastName'],
 })
 
 const fullName = computed(() => {
-  return `${firstName.value || ''} ${lastName.value || ''}`.trim()
+  return `${values.value.firstName || ''} ${values.value.lastName || ''}`.trim()
 })
 </script>
 
