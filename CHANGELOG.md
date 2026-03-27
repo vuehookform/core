@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.0](https://github.com/vuehookform/core/compare/v0.6.0...v0.7.0) (2026-03-27)
+
+
+### Features
+
+* add useFieldError composable, onChange listener, and formState enhancements ([81da74d](https://github.com/vuehookform/core/commit/81da74d11bdccf20f78070c3118b45722b81280b))
+* add useFieldError, onChange listener, and formState enhancements ([34ffb9c](https://github.com/vuehookform/core/commit/34ffb9ce0c13a4932dabdf4f013f0ab9e04398d2))
+
+
+### Reverts
+
+* undo npm package rename ([ded17c6](https://github.com/vuehookform/core/commit/ded17c6044a428d2a8042be2fa7aadc8b58471b5))
+* undo npm package rename (blocked by npm registry) ([f962fd8](https://github.com/vuehookform/core/commit/f962fd837e9444ca97a808474b1131769e7c7102))
+
 ## [0.6.0](https://github.com/vuehookform/core/compare/v0.5.0...v0.6.0) (2026-03-07)
 
 
