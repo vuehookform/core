@@ -223,6 +223,10 @@ export interface FormState<T> {
   isSubmitSuccessful: boolean
   /** Whether the form is disabled */
   disabled: boolean
+  /** Whether form values match default values (opposite of isDirty) */
+  isPristine: boolean
+  /** Whether the form can be submitted (isValid && !isSubmitting && !isLoading && !disabled) */
+  canSubmit: boolean
 }
 
 /**
@@ -375,6 +379,27 @@ export interface RegisterOptions<TValue = unknown> {
   shouldUnregister?: boolean
   /** Dependent fields to re-validate when this field changes */
   deps?: string[]
+  /**
+   * Called after the field value changes via user input.
+   * Use for side effects like resetting dependent fields.
+   * Does NOT fire on programmatic setValue() calls.
+   *
+   * @param value - The new field value (typed based on field path)
+   * @param helpers - Helper functions for triggering side effects
+   *
+   * @example Reset dependent field when parent changes
+   * ```ts
+   * register('country', {
+   *   onChange: (country, { setValue }) => {
+   *     setValue('province', '')  // Reset province when country changes
+   *   },
+   * })
+   * ```
+   */
+  onChange?: (
+    value: TValue,
+    helpers: { setValue: (name: string, value: unknown, options?: SetValueOptions) => void },
+  ) => void
 }
 
 /**

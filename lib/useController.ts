@@ -122,15 +122,17 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
     form.setValue(name, defaultValue)
   }
 
+  // Use form.watch() for the reactive getter instead of form.getValues().
+  // watch() reads directly from reactive formData (O(1)), while getValues()
+  // triggers syncUncontrolledInputs + deepClone (O(N)) on every evaluation.
+  const watchedValue = form.watch(name)
+
   // Create reactive value for v-model binding.
   // The setter marks the field dirty by default (shouldDirty: true),
   // which is the expected behavior for controlled inputs.
   // For programmatic value loading without marking dirty, use form.setValue with { shouldDirty: false }.
   const value = computed({
-    get: () => {
-      const currentValue = form.getValues(name)
-      return (currentValue ?? defaultValue) as TValue
-    },
+    get: () => (watchedValue.value ?? defaultValue) as TValue,
     set: (newValue: TValue) => {
       form.setValue(name, newValue)
     },
@@ -181,7 +183,7 @@ export function useController<TSchema extends ZodType, TPath extends Path<InferS
 
   return {
     field: {
-      value: value as unknown as Ref<TValue>,
+      value: value as Ref<TValue>,
       name,
       onChange: onChange as (value: unknown) => void,
       onBlur,

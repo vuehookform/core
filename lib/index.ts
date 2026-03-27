@@ -26,6 +26,11 @@ export {
   type LooseControllerOptions,
 } from './useController'
 export { useFormState, type UseFormStateOptions, type FormStateKey } from './useFormState'
+export {
+  useFieldError,
+  type UseFieldErrorOptions,
+  type LooseFieldErrorOptions,
+} from './useFieldError'
 
 // Type guard functions
 export { isFieldError } from './types'

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useForm } from '../../useForm'
 import { z } from 'zod'
 import { nextTick } from 'vue'
-import { schemas, createInputEvent, createBlurEvent } from '../helpers/test-utils'
+import { schemas, createInputEvent, createBlurEvent, createMockInput } from '../helpers/test-utils'
 
 const schema = schemas.withOptional
 
@@ -1016,6 +1016,71 @@ describe('register', () => {
 
         expect(formState.value.errors.colors).toBeUndefined()
       })
+    })
+  })
+
+  describe('onChange listener', () => {
+    it('should fire onChange on user input', () => {
+      const onChangeSpy = vi.fn()
+
+      const { register } = useForm({
+        schema,
+        defaultValues: { email: '', password: '', name: '' },
+      })
+
+      const input = createMockInput()
+      const bindings = register('email', { onChange: onChangeSpy })
+
+      bindings.ref(input, {})
+      input.value = 'new@example.com'
+      bindings.onInput(createInputEvent(input))
+
+      expect(onChangeSpy).toHaveBeenCalledTimes(1)
+      expect(onChangeSpy).toHaveBeenCalledWith(
+        'new@example.com',
+        expect.objectContaining({ setValue: expect.any(Function) }),
+      )
+    })
+
+    it('should provide a working setValue in helpers', () => {
+      const depSchema = z.object({
+        country: z.string(),
+        province: z.string(),
+      })
+
+      const { register, getValues } = useForm({
+        schema: depSchema,
+        defaultValues: { country: 'US', province: 'NY' },
+      })
+
+      const input = createMockInput()
+      const bindings = register('country', {
+        onChange: (_value, { setValue }) => {
+          setValue('province', '')
+        },
+      })
+
+      bindings.ref(input, {})
+      input.value = 'CA'
+      bindings.onInput(createInputEvent(input))
+
+      expect(getValues('province')).toBe('')
+      expect(getValues('country')).toBe('CA')
+    })
+
+    it('should NOT fire onChange on programmatic setValue', () => {
+      const onChangeSpy = vi.fn()
+
+      const { register, setValue } = useForm({
+        schema,
+        defaultValues: { email: '', password: '', name: '' },
+      })
+
+      register('email', { onChange: onChangeSpy })
+
+      setValue('email', 'programmatic@test.com')
+
+      expect(onChangeSpy).not.toHaveBeenCalled()
     })
   })
 })

@@ -45,6 +45,23 @@ formState.value.errors.profile?.name // string | undefined
 formState.value.errors.items?.[0]?.title // string | undefined
 ```
 
+### Structured Errors (criteriaMode: 'all')
+
+When using `criteriaMode: 'all'`, errors may be structured `FieldError` objects instead of plain strings. Use the exported `isFieldError()` type guard to distinguish them:
+
+```typescript
+import { isFieldError } from '@vuehookform/core'
+
+const error = formState.value.errors.email
+if (isFieldError(error)) {
+  // Structured: error.type, error.message, error.types
+  console.log(error.types) // Record<string, string | string[]>
+} else if (typeof error === 'string') {
+  // Simple string message
+  console.log(error)
+}
+```
+
 ## Error Display Patterns
 
 ### Inline Errors

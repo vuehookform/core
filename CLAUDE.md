@@ -23,6 +23,7 @@ npm run test:run     # Run tests once
 ### Library Core (`lib/`)
 
 - **useForm.ts** - Main composable managing form state, validation, and field registration
+- **useFieldError.ts** - Convenience composable returning `ComputedRef<string | undefined>` for a single field's error
 - **types.ts** - TypeScript types including `Path<T>` for type-safe nested field paths
 - **utils/paths.ts** - Utilities for dot-notation object access (`get`, `set`, `unset`)
 
@@ -269,11 +270,42 @@ const { register, formState } = useFormContext()
 - **Flexibility:** Allows imperative usage in callbacks and computed functions
 - **Consistency:** Matches React Hook Form's design for cross-framework knowledge transfer
 
+#### Pattern 4: Use `useFieldError` (Simplest Reactive Error Access)
+
+```vue
+<script setup>
+import { useForm, provideForm, useFieldError } from '@vuehookform/core'
+const form = useForm({ schema })
+provideForm(form)
+
+const emailError = useFieldError({ name: 'email' })
+// Returns ComputedRef<string | undefined> — auto-unwraps in templates
+</script>
+<template>
+  <input v-bind="form.register('email')" />
+  <span v-if="emailError">{{ emailError }}</span>
+  <!-- ✅ Reactive -->
+</template>
+```
+
 **When to use each pattern:**
 
 - **Pattern 1:** Simple custom input wrappers (parent passes error)
 - **Pattern 2:** Reusable field components, third-party UI libraries (component owns error display)
 - **Pattern 3:** Deeply nested forms, avoiding prop drilling
+- **Pattern 4:** Quick reactive error access for individual fields without full `useController` setup
+
+### Dependent Field Side Effects (onChange)
+
+Use the `onChange` option in `register()` to run side effects when a field changes via user input. This does NOT fire on programmatic `setValue()` calls.
+
+```typescript
+register('country', {
+  onChange: (country, { setValue }) => {
+    setValue('province', '') // Reset province when country changes
+  },
+})
+```
 
 ### Accessing State
 
@@ -284,6 +316,11 @@ Always use `.value` for reactive refs:
   {{ formState.value.errors.email }}
 </span>
 ```
+
+**Convenience state properties:**
+
+- `formState.value.isPristine` — `true` when form values match defaults (opposite of `isDirty`)
+- `formState.value.canSubmit` — `true` when form is valid, not submitting, not loading, and not disabled
 
 ### Quick Reference
 

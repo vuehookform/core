@@ -2,7 +2,6 @@ import { computed, type ComputedRef } from 'vue'
 import type { ZodType } from 'zod'
 import type { UseFormReturn, Path, PathValue, InferSchema } from './types'
 import { useFormContext } from './context'
-import { get } from './utils/paths'
 
 /**
  * Options for useWatch composable
@@ -16,7 +15,7 @@ export interface UseWatchOptions<
   /** Field path or array of paths to watch (watches all if not provided) */
   name?: TPath | TPath[]
   /** Default value when field is undefined */
-  defaultValue?: unknown
+  defaultValue?: PathValue<InferSchema<TSchema>, TPath>
 }
 
 /**
@@ -69,26 +68,46 @@ export function useWatch<
   // Get form control from context if not provided
   const form = control ?? useFormContext<TSchema>()
 
-  return computed(() => {
-    if (name === undefined) {
-      // Watch all values
-      return form.getValues()
-    }
+  // Delegate to form.watch() which reads directly from reactive formData.
+  // This avoids the O(N) syncUncontrolledInputs + deepClone overhead that
+  // form.getValues() would trigger on every computed evaluation.
+  if (name === undefined) {
+    return form.watch() as ComputedRef<
+      InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>
+    >
+  }
 
-    if (Array.isArray(name)) {
-      // Watch multiple fields
-      const result: Record<string, unknown> = {}
+  if (Array.isArray(name)) {
+    const watched = form.watch(name)
+    if (defaultValue === undefined) {
+      return watched as ComputedRef<
+        | InferSchema<TSchema>
+        | PathValue<InferSchema<TSchema>, TPath>
+        | Partial<InferSchema<TSchema>>
+      >
+    }
+    // Apply defaultValue fallback for undefined entries
+    return computed(() => {
+      const result = { ...watched.value } as Record<string, unknown>
       for (const fieldName of name) {
-        const value = get(form.getValues(), fieldName)
-        result[fieldName] = value ?? defaultValue
+        if (result[fieldName] === undefined) {
+          result[fieldName] = defaultValue
+        }
       }
       return result
-    }
+    }) as ComputedRef<
+      InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>
+    >
+  }
 
-    // Watch single field
-    const value = get(form.getValues(), name)
-    return value ?? defaultValue
-  }) as ComputedRef<
+  // Single field watch with optional defaultValue fallback
+  const watched = form.watch(name)
+  if (defaultValue === undefined) {
+    return watched as ComputedRef<
+      InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>
+    >
+  }
+  return computed(() => watched.value ?? defaultValue) as ComputedRef<
     InferSchema<TSchema> | PathValue<InferSchema<TSchema>, TPath> | Partial<InferSchema<TSchema>>
   >
 }

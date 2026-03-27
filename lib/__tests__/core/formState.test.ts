@@ -74,4 +74,124 @@ describe('formState', () => {
     // Now isValid should be false due to validation errors
     expect(formState.value.isValid).toBe(false)
   })
+
+  it('should have isPristine=true initially', () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState } = useForm({
+      schema,
+      defaultValues: { email: 'a@b.com', name: 'John' },
+    })
+
+    expect(formState.value.isPristine).toBe(true)
+  })
+
+  it('should have isPristine=false when a field is dirtied', () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState, setValue } = useForm({
+      schema,
+      defaultValues: { email: 'a@b.com', name: 'John' },
+    })
+
+    setValue('email', 'changed@b.com')
+
+    expect(formState.value.isPristine).toBe(false)
+    expect(formState.value.isDirty).toBe(true)
+  })
+
+  it('should have isPristine=true after reset', () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState, setValue, reset } = useForm({
+      schema,
+      defaultValues: { email: 'a@b.com', name: 'John' },
+    })
+
+    setValue('email', 'changed@b.com')
+    expect(formState.value.isPristine).toBe(false)
+
+    reset()
+    expect(formState.value.isPristine).toBe(true)
+  })
+
+  it('should have canSubmit=true initially', () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState } = useForm({
+      schema,
+      defaultValues: { email: 'a@b.com', name: 'John' },
+    })
+
+    expect(formState.value.canSubmit).toBe(true)
+  })
+
+  it('should have canSubmit=false during submission', async () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    let resolveSubmit: () => void
+    const submitPromise = new Promise<void>((resolve) => {
+      resolveSubmit = resolve
+    })
+
+    const { formState, handleSubmit } = useForm({
+      schema,
+      defaultValues: { email: 'valid@test.com', name: 'John' },
+    })
+
+    const onSubmit = handleSubmit(async () => {
+      expect(formState.value.canSubmit).toBe(false)
+      resolveSubmit!()
+    })
+
+    await onSubmit(new Event('submit'))
+    await submitPromise
+  })
+
+  it('should have canSubmit=false when form has validation errors', async () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState, handleSubmit } = useForm({
+      schema,
+      defaultValues: { email: '', name: '' },
+    })
+
+    const onSubmit = handleSubmit(() => {})
+    await onSubmit(new Event('submit'))
+
+    expect(formState.value.canSubmit).toBe(false)
+  })
+
+  it('should have canSubmit=false when form is disabled', () => {
+    const schema = z.object({
+      email: z.string().email(),
+      name: z.string().min(2),
+    })
+
+    const { formState } = useForm({
+      schema,
+      defaultValues: { email: 'a@b.com', name: 'John' },
+      disabled: true,
+    })
+
+    expect(formState.value.canSubmit).toBe(false)
+  })
 })

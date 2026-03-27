@@ -371,6 +371,7 @@ Set a field value programmatically.
 
 - `shouldValidate` - Trigger validation after setting (default: false)
 - `shouldDirty` - Evaluate dirty state after setting (default: true). When true, the field's dirty state is updated based on whether the new value differs from the default. When false, dirty state is not modified.
+- `shouldTouch` - Mark the field as touched (default: false). Simulates user interaction with the field.
 
 **Example:**
 
@@ -431,6 +432,10 @@ await trigger('email', { markAsSubmitted: true })
 
 ::: tip Multi-Step Forms
 Use `markAsSubmitted: true` when validating individual steps to ensure subsequent changes trigger re-validation according to your `reValidateMode` setting.
+:::
+
+::: info trigger vs validate
+`trigger()` is the recommended API — it supports path arrays, the `markAsSubmitted` option, and dev-mode path validation. `validate()` is also available as a simpler alias that accepts a single path (or none) without options. Both use the same underlying validation logic.
 :::
 
 ### watch

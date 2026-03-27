@@ -5,6 +5,7 @@ import type {
   RegisterReturn,
   FieldErrors,
   UnregisterOptions,
+  SetValueOptions,
   Path,
 } from '../types'
 import { get, set, unset } from '../utils/paths'
@@ -29,11 +30,20 @@ import { getInputElement } from './domSync'
 let validationRequestCounter = 0
 
 /**
+ * Helpers object for onChange callbacks.
+ * Populated after useForm's setValue is defined (mutable reference pattern).
+ */
+export interface OnChangeHelpers {
+  setValue: (name: string, value: unknown, options?: SetValueOptions) => void
+}
+
+/**
  * Create field registration functions
  */
 export function createFieldRegistration<FormValues>(
   ctx: FormContext<FormValues>,
   validate: (fieldPath?: string) => Promise<boolean>,
+  onChangeHelpers?: OnChangeHelpers,
 ) {
   /**
    * Register an input field
@@ -156,6 +166,18 @@ export function createFieldRegistration<FormValues>(
 
         // Cache field options lookup (avoid multiple Map.get calls)
         const fieldOpts = ctx.fieldOptions.get(name)
+
+        // Fire onChange listener for side effects (e.g., resetting dependent fields).
+        // Wrapped in try-catch so user-supplied code cannot kill the validation pipeline.
+        if (fieldOpts?.onChange && onChangeHelpers?.setValue) {
+          try {
+            fieldOpts.onChange(value, { setValue: onChangeHelpers.setValue })
+          } catch (err) {
+            if (__DEV__) {
+              console.error(`[vue-hook-form] Error in onChange callback for field '${name}':`, err)
+            }
+          }
+        }
 
         // Validate based on mode
         const shouldValidate = shouldValidateOnChange(
